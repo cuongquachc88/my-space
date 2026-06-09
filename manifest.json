@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "KeyVault",
+  "version": "0.1.0",
+  "description": "Notes and encrypted secrets in your browser sidebar",
+  "permissions": [
+    "storage",
+    "offscreen",
+    "identity",
+    "sidePanel"
+  ],
+  "host_permissions": [
+    "https://www.googleapis.com/*"
+  ],
+  "background": {
+    "service_worker": "src/service-worker/index.ts",
+    "type": "module"
+  },
+  "side_panel": {
+    "default_path": "src/sidepanel/index.html"
+  },
+  "action": {
+    "default_title": "Open KeyVault"
+  },
+  "oauth2": {
+    "client_id": "YOUR_GOOGLE_CLIENT_ID",
+    "scopes": ["https://www.googleapis.com/auth/drive.appdata"]
+  }
+}
