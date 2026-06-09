@@ -30,9 +30,12 @@ export function NotesView({ sendMsg }: Props) {
   async function save() {
     if (!selected) return
     setSaving(true)
-    await sendMsg('NOTES_UPDATE', { id: selected.id, title: editTitle, content: editContent })
-    await load(query)
-    setSaving(false)
+    try {
+      await sendMsg('NOTES_UPDATE', { id: selected.id, title: editTitle, content: editContent })
+      await load(query)
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function createNote() {

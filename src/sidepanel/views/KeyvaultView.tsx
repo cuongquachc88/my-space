@@ -40,7 +40,7 @@ export function KeyvaultView({ sendMsg }: Props) {
       const secs = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000))
       const m = Math.floor(secs / 60), s = secs % 60
       setCountdown(`${m}m ${s.toString().padStart(2,'0')}s`)
-      if (secs === 0) { setLocked(true); clearInterval(id) }
+      if (secs === 0) { setLocked(true); setSecrets([]); clearInterval(id) }
     }, 1000)
     return () => clearInterval(id)
   }, [expiresAt])
@@ -72,14 +72,20 @@ export function KeyvaultView({ sendMsg }: Props) {
 
   async function copySecret(id: string) {
     const val = await revealSecret(id)
-    await navigator.clipboard.writeText(val)
+    try {
+      await navigator.clipboard.writeText(val)
+    } catch {
+      // Clipboard API failed (focus issue or permissions) — silently ignore in extension context
+    }
   }
 
   async function addSecret() {
     if (!newLabel || !newValue) return
-    await sendMsg('SECRETS_CREATE', { label: newLabel, value: newValue })
-    setNewLabel(''); setNewValue('')
-    await loadSecrets(query)
+    const res = await sendMsg('SECRETS_CREATE', { label: newLabel, value: newValue })
+    if (res.ok) {
+      setNewLabel(''); setNewValue('')
+      await loadSecrets(query)
+    }
   }
 
   async function deleteSecret(id: string) {

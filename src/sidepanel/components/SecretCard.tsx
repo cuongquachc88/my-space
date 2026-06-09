@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import type { SecretMeta } from '../../shared/messages'
 
 interface Props {
@@ -11,14 +11,27 @@ interface Props {
 export function SecretCard({ secret, onReveal, onCopy, onDelete }: Props) {
   const [revealed, setRevealed] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => { if (timerRef.current) clearTimeout(timerRef.current) }
+  }, [])
 
   async function handleReveal() {
-    if (revealed) { setRevealed(null); return }
+    if (revealed) {
+      if (timerRef.current) clearTimeout(timerRef.current)
+      setRevealed(null)
+      return
+    }
     setLoading(true)
-    const val = await onReveal(secret.id)
-    setRevealed(val)
-    setLoading(false)
-    setTimeout(() => setRevealed(null), 30_000)
+    try {
+      const val = await onReveal(secret.id)
+      setRevealed(val)
+      if (timerRef.current) clearTimeout(timerRef.current)
+      timerRef.current = setTimeout(() => setRevealed(null), 30_000)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

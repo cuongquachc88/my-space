@@ -1,4 +1,4 @@
-interface IconProps {
+export interface IconProps {
   active?: boolean
   accentColor?: string
   size?: number
@@ -49,7 +49,7 @@ export function SyncIcon({ active, accentColor = '#3b82f6', size = 20 }: IconPro
 
 export function SettingsIcon({ active, accentColor = '#3b82f6', size = 20 }: IconProps) {
   const stroke = active ? accentColor : baseStroke
-  const fill = active ? `${accentColor}22` : 'transparent'
+  const fill = active ? `${accentColor}22` : 'rgba(255,255,255,0.06)'
   return (
     <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
       <line x1="3" y1="5" x2="17" y2="5" stroke={stroke} strokeWidth="1.4" strokeLinecap="round" />

@@ -40,7 +40,7 @@ export function IconRail({ active, onChange }: Props) {
     <div
       className="flex flex-col items-center py-4 gap-2 border-r"
       style={{
-        width: 48,
+        width: '48px',
         background: 'rgba(255,255,255,0.03)',
         borderColor: 'rgba(255,255,255,0.07)',
         minHeight: '100vh',

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface Props {
   sendMsg: (type: string, payload?: unknown) => Promise<{ ok: boolean; data?: unknown; error?: string }>
@@ -17,35 +17,58 @@ export function SettingsView({ sendMsg }: Props) {
   const [confirmPw, setConfirmPw] = useState('')
   const [pwMsg, setPwMsg] = useState('')
   const [timeout, setTimeout_] = useState(15 * 60 * 1000)
+  const [changingPw, setChangingPw] = useState(false)
+
+  useEffect(() => {
+    chrome.storage.local.get('autoLockMs').then(res => {
+      if (typeof res.autoLockMs === 'number') setTimeout_(res.autoLockMs)
+    })
+  }, [])
+
+  function selectTimeout(ms: number) {
+    setTimeout_(ms)
+    chrome.storage.local.set({ autoLockMs: ms })
+  }
 
   async function changePw() {
     if (newPw !== confirmPw) { setPwMsg('Passwords do not match'); return }
     if (newPw.length < 8) { setPwMsg('Password must be at least 8 characters'); return }
+    setChangingPw(true)
+    try {
+      const saltRes = await chrome.storage.local.get('vaultSalt')
+      if (!saltRes.vaultSalt) { setPwMsg('Vault not initialised'); return }
 
-    const saltRes = await chrome.storage.local.get('vaultSalt')
-    if (!saltRes.vaultSalt) { setPwMsg('Vault not initialised'); return }
+      // 1. Unlock with current password (old key)
+      const unlockRes = await sendMsg('VAULT_UNLOCK', { password: currentPw, salt: saltRes.vaultSalt })
+      if (!unlockRes.ok) { setPwMsg('Current password is incorrect'); return }
 
-    const unlockRes = await sendMsg('VAULT_UNLOCK', { password: currentPw, salt: saltRes.vaultSalt })
-    if (!unlockRes.ok) { setPwMsg('Current password is incorrect'); return }
+      // 2. Export raw rows to get list of secret IDs
+      const exportRes = await sendMsg('DB_EXPORT')
+      if (!exportRes.ok) { setPwMsg('Export failed'); return }
+      const data = exportRes.data as { secrets: Array<{ id: string }> }
 
-    const exportRes = await sendMsg('DB_EXPORT')
-    if (!exportRes.ok) { setPwMsg('Export failed'); return }
-
-    const newSalt = Array.from(crypto.getRandomValues(new Uint8Array(16)))
-    await chrome.storage.local.set({ vaultSalt: newSalt })
-
-    await sendMsg('VAULT_UNLOCK', { password: newPw, salt: newSalt })
-
-    const data = exportRes.data as { notes: unknown[]; secrets: Array<{ id: string; label: string; ciphertext: string; iv: string; created_at: string; updated_at: string }> }
-    for (const s of data.secrets) {
-      const decRes = await sendMsg('SECRETS_GET', { id: s.id })
-      if (decRes.ok) {
-        await sendMsg('SECRETS_UPDATE', { id: s.id, value: (decRes.data as { value: string }).value })
+      // 3. Fetch plaintext for ALL secrets NOW (while old key is active)
+      const plaintexts: Array<{ id: string; value: string }> = []
+      for (const s of data.secrets) {
+        const decRes = await sendMsg('SECRETS_GET', { id: s.id })
+        if (decRes.ok) plaintexts.push({ id: s.id, value: (decRes.data as { value: string }).value })
       }
-    }
 
-    setPwMsg('Password changed successfully')
-    setCurrentPw(''); setNewPw(''); setConfirmPw('')
+      // 4. Switch to new key
+      const newSalt = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+      await chrome.storage.local.set({ vaultSalt: newSalt })
+      await sendMsg('VAULT_UNLOCK', { password: newPw, salt: newSalt })
+
+      // 5. Re-encrypt all secrets with new key
+      for (const { id, value } of plaintexts) {
+        await sendMsg('SECRETS_UPDATE', { id, value })
+      }
+
+      setPwMsg('Password changed successfully')
+      setCurrentPw(''); setNewPw(''); setConfirmPw('')
+    } finally {
+      setChangingPw(false)
+    }
   }
 
   return (
@@ -74,10 +97,10 @@ export function SettingsView({ sendMsg }: Props) {
           placeholder="Confirm new password"
           value={confirmPw} onChange={e => setConfirmPw(e.target.value)}
         />
-        <button onClick={changePw}
-          className="py-2 rounded-lg text-xs font-semibold"
+        <button onClick={changePw} disabled={changingPw}
+          className="py-2 rounded-lg text-xs font-semibold disabled:opacity-50"
           style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.25)', color: 'rgba(239,68,68,0.8)' }}>
-          Change Password
+          {changingPw ? 'Changing...' : 'Change Password'}
         </button>
         {pwMsg && (
           <p className="text-xs" style={{ color: pwMsg.includes('success') ? 'rgba(134,239,172,0.8)' : 'rgba(239,68,68,0.8)' }}>
@@ -92,7 +115,7 @@ export function SettingsView({ sendMsg }: Props) {
         </p>
         <div className="flex gap-2">
           {TIMEOUTS.map(t => (
-            <button key={t.label} onClick={() => setTimeout_(t.ms)}
+            <button key={t.label} onClick={() => selectTimeout(t.ms)}
               className="flex-1 py-2 rounded-lg text-xs font-semibold"
               style={timeout === t.ms
                 ? { background: 'linear-gradient(135deg,#818cf8,#6366f1)', color: 'white' }
