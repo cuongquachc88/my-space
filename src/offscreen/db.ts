@@ -60,6 +60,9 @@ export async function updateNote(
   id: string,
   fields: { title?: string; content?: string }
 ): Promise<Note> {
+  if (fields.title === undefined && fields.content === undefined) {
+    throw new Error('No fields to update')
+  }
   const sets: string[] = []
   const values: unknown[] = []
   let i = 1
@@ -118,6 +121,9 @@ export async function updateSecretRow(
   id: string,
   fields: { label?: string; ciphertext?: string; iv?: string }
 ): Promise<{ id: string; label: string }> {
+  if (fields.label === undefined && fields.ciphertext === undefined && fields.iv === undefined) {
+    throw new Error('No fields to update')
+  }
   const sets: string[] = []
   const values: unknown[] = []
   let i = 1
@@ -159,7 +165,7 @@ export async function importRows(
         [n.id, n.title, n.content, n.created_at, n.updated_at]
       )
       notesUpdated++
-    } else if (n.updated_at > existing.rows[0].updated_at) {
+    } else if (new Date(n.updated_at) > new Date(existing.rows[0].updated_at)) {
       await d.query(
         `UPDATE notes SET title=$1, content=$2, updated_at=$3 WHERE id=$4`,
         [n.title, n.content, n.updated_at, n.id]
@@ -175,11 +181,12 @@ export async function importRows(
         [s.id, s.label, s.ciphertext, s.iv, s.created_at, s.updated_at]
       )
       secretsAdded++
-    } else if (s.updated_at > existing.rows[0].updated_at) {
+    } else if (new Date(s.updated_at) > new Date(existing.rows[0].updated_at)) {
       await d.query(
         `UPDATE secrets SET label=$1, ciphertext=$2, iv=$3, updated_at=$4 WHERE id=$5`,
         [s.label, s.ciphertext, s.iv, s.updated_at, s.id]
       )
+      secretsAdded++
     }
   }
   return { notesUpdated, secretsAdded }
