@@ -21,7 +21,7 @@ export async function deriveKey(password: string, salt: Uint8Array): Promise<Cry
     'raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']
   )
   return crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt, iterations: 600_000, hash: 'SHA-256' },
+    { name: 'PBKDF2', salt: salt.buffer as ArrayBuffer, iterations: 600_000, hash: 'SHA-256' },
     baseKey,
     { name: 'AES-GCM', length: 256 },
     false,
@@ -83,10 +83,10 @@ export function resetLockTimer(timeoutMs: number): void {
 }
 
 // --- helpers ---
-function bufToBase64(buf: Uint8Array): string {
+function bufToBase64(buf: Uint8Array<ArrayBuffer>): string {
   return btoa(String.fromCharCode(...buf))
 }
 
-function base64ToBuf(b64: string): Uint8Array {
-  return Uint8Array.from(atob(b64), c => c.charCodeAt(0))
+function base64ToBuf(b64: string): Uint8Array<ArrayBuffer> {
+  return Uint8Array.from(atob(b64), c => c.charCodeAt(0)) as Uint8Array<ArrayBuffer>
 }
