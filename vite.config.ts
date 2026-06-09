@@ -10,6 +10,13 @@ export default defineConfig({
     tailwindcss(),
     crx({ manifest }),
   ],
+  build: {
+    rollupOptions: {
+      input: {
+        offscreen: 'src/offscreen/index.html',
+      },
+    },
+  },
   test: {
     environment: 'node',
     globals: true,
