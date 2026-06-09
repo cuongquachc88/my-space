@@ -33,30 +33,38 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     'DB_EXPORT','DB_IMPORT',
   ]
   if (noteOrVaultTypes.includes(msg.type)) {
-    sendToOffscreen(msg).then(sendResponse)
+    sendToOffscreen(msg).then(sendResponse).catch(e =>
+      sendResponse({ ok: false, error: String(e) })
+    )
     return true
   }
 
   if (msg.type === 'SYNC_STATUS') {
-    chrome.storage.local.get(['syncedAt', 'googleToken'], result => {
-      sendResponse({
-        ok: true,
-        data: {
-          connected: !!result.googleToken,
-          lastSync: result.syncedAt ?? null,
-        }
+    chrome.storage.session.get(['googleToken'], sessionResult => {
+      chrome.storage.local.get(['syncedAt'], localResult => {
+        sendResponse({
+          ok: true,
+          data: {
+            connected: !!sessionResult.googleToken,
+            lastSync: localResult.syncedAt ?? null,
+          }
+        })
       })
     })
     return true
   }
 
   if (msg.type === 'SYNC_PUSH') {
-    handlePush().then(sendResponse)
+    handlePush().then(sendResponse).catch(e =>
+      sendResponse({ ok: false, error: String(e) })
+    )
     return true
   }
 
   if (msg.type === 'SYNC_PULL') {
-    handlePull().then(sendResponse)
+    handlePull().then(sendResponse).catch(e =>
+      sendResponse({ ok: false, error: String(e) })
+    )
     return true
   }
 })
@@ -70,6 +78,17 @@ async function getToken(): Promise<string> {
   if (!token) throw new Error('Failed to obtain auth token')
   await chrome.storage.session.set({ googleToken: token })
   return token as string
+}
+
+async function driveRequest(url: string, options: RequestInit, token: string): Promise<Response> {
+  const res = await fetch(url, options)
+  if (res.status === 401) {
+    chrome.identity.removeCachedAuthToken({ token })
+    await chrome.storage.session.remove('googleToken')
+    throw new Error('Google auth token expired — please try again')
+  }
+  if (!res.ok) throw new Error(`Drive API error: ${res.status} ${res.statusText}`)
+  return res
 }
 
 async function handlePush(): Promise<{ ok: boolean; data?: { syncedAt: string }; error?: string }> {
@@ -91,23 +110,25 @@ async function handlePush(): Promise<{ ok: boolean; data?: { syncedAt: string };
     let fileId: string = stored.driveFileId as string
 
     if (fileId) {
-      await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
+      await driveRequest(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body,
-      })
+      }, token)
     } else {
-      const meta = await fetch('https://www.googleapis.com/drive/v3/files', {
+      const metaRes = await driveRequest('https://www.googleapis.com/drive/v3/files', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: 'keyvault-backup.json', parents: ['appDataFolder'] }),
-      }).then(r => r.json())
+      }, token)
+      const meta = await metaRes.json() as { id?: string }
+      if (!meta.id) throw new Error('Drive file creation returned no id')
       fileId = meta.id
-      await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
+      await driveRequest(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body,
-      })
+      }, token)
     }
 
     const syncedAt = new Date().toISOString()
@@ -124,9 +145,9 @@ async function handlePull(): Promise<{ ok: boolean; data?: { syncedAt: string; n
     const stored = await chrome.storage.local.get('driveFileId')
     if (!stored.driveFileId) throw new Error('No Drive file found — push first')
 
-    const res = await fetch(`https://www.googleapis.com/drive/v3/files/${stored.driveFileId}?alt=media`, {
+    const res = await driveRequest(`https://www.googleapis.com/drive/v3/files/${stored.driveFileId}?alt=media`, {
       headers: { Authorization: `Bearer ${token}` },
-    })
+    }, token)
     const { ciphertext, iv } = await res.json()
 
     const decReply = await sendToOffscreen({ type: 'SYNC_DECRYPT', payload: { ciphertext, iv } }) as { ok: boolean; data: { plaintext: string } }
@@ -134,6 +155,7 @@ async function handlePull(): Promise<{ ok: boolean; data?: { syncedAt: string; n
 
     const { notes, secrets } = JSON.parse(decReply.data.plaintext)
     const importReply = await sendToOffscreen({ type: 'DB_IMPORT', payload: { notes, secrets } }) as { ok: boolean; data: { notesUpdated: number; secretsAdded: number } }
+    if (!importReply.ok) throw new Error('DB import failed')
 
     const syncedAt = new Date().toISOString()
     await chrome.storage.local.set({ syncedAt })
