@@ -93,11 +93,19 @@ export async function dispatch(msg: AnyMsg & { payload?: Record<string, unknown>
         return { ok: true, data: summary }
       }
 
+      case 'SYNC_ENCRYPT': {
+        const { plaintext } = (msg as { payload: { plaintext: string } }).payload
+        const result = await encrypt(getKey(), plaintext)
+        return { ok: true, data: result }
+      }
+      case 'SYNC_DECRYPT': {
+        const { ciphertext, iv } = (msg as { payload: { ciphertext: string; iv: string } }).payload
+        const plaintext = await decrypt(getKey(), ciphertext, iv)
+        return { ok: true, data: { plaintext } }
+      }
       case 'SYNC_PUSH':
       case 'SYNC_PULL':
       case 'SYNC_STATUS':
-      case 'SYNC_ENCRYPT':
-      case 'SYNC_DECRYPT':
         return { ok: false, error: `Sync message type not handled in offscreen: ${msg.type}` }
 
       default:
