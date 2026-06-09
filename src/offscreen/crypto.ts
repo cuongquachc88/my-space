@@ -77,6 +77,7 @@ export function lockVault(): void {
 }
 
 export function resetLockTimer(timeoutMs: number): void {
+  if (_key === null) return
   if (_lockTimer) clearTimeout(_lockTimer)
   _expiresAt = Date.now() + timeoutMs
   _lockTimer = setTimeout(lockVault, timeoutMs)
@@ -84,7 +85,9 @@ export function resetLockTimer(timeoutMs: number): void {
 
 // --- helpers ---
 function bufToBase64(buf: Uint8Array<ArrayBuffer>): string {
-  return btoa(String.fromCharCode(...buf))
+  let binary = ''
+  for (let i = 0; i < buf.length; i++) binary += String.fromCharCode(buf[i])
+  return btoa(binary)
 }
 
 function base64ToBuf(b64: string): Uint8Array<ArrayBuffer> {
