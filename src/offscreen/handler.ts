@@ -28,7 +28,8 @@ export async function dispatch(msg: AnyMsg & { payload?: Record<string, unknown>
       }
       case 'NOTES_DELETE': {
         const { id } = (msg as { payload: { id: string } }).payload
-        await db.getNote(id)  // throws if not found → caught below
+        // getNote throws "not found" → caught below; deleteNote silently no-ops on missing rows
+        await db.getNote(id)
         await db.deleteNote(id)
         return { ok: true }
       }
@@ -72,9 +73,10 @@ export async function dispatch(msg: AnyMsg & { payload?: Record<string, unknown>
           const enc = await encrypt(getKey(), value)
           fields.ciphertext = enc.ciphertext
           fields.iv = enc.iv
-          resetLockTimer(LOCK_TIMEOUT_MS)
         }
-        return { ok: true, data: await db.updateSecretRow(id, fields) }
+        const result = await db.updateSecretRow(id, fields)
+        resetLockTimer(LOCK_TIMEOUT_MS)
+        return { ok: true, data: result }
       }
       case 'SECRETS_DELETE': {
         const { id } = (msg as { payload: { id: string } }).payload
