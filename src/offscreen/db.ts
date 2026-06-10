@@ -23,6 +23,18 @@ export async function initDb(): Promise<void> {
       created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
       updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+    CREATE TABLE IF NOT EXISTS subscriptions (
+      id           TEXT PRIMARY KEY DEFAULT gen_random_uuid(),
+      name         TEXT NOT NULL,
+      amount       NUMERIC(10,2) NOT NULL DEFAULT 0,
+      currency     TEXT NOT NULL DEFAULT 'USD',
+      cycle        TEXT NOT NULL DEFAULT 'monthly',
+      start_date   TEXT NOT NULL,
+      tags         TEXT[] NOT NULL DEFAULT '{}',
+      notes        TEXT NOT NULL DEFAULT '',
+      created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
     -- Migrate: add tags column if upgrading from schema without it
     ALTER TABLE notes    ADD COLUMN IF NOT EXISTS tags TEXT[] NOT NULL DEFAULT '{}';
     ALTER TABLE secrets  ADD COLUMN IF NOT EXISTS tags TEXT[] NOT NULL DEFAULT '{}';
@@ -204,4 +216,84 @@ export async function importRows(
     }
   }
   return { notesUpdated, secretsAdded }
+}
+
+// --- Subscriptions ---
+export interface Subscription {
+  id: string
+  name: string
+  amount: string  // NUMERIC comes back as string from PGlite
+  currency: string
+  cycle: string
+  start_date: string
+  tags: string[]
+  notes: string
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateSubscriptionInput {
+  name: string
+  amount: number
+  currency: string
+  cycle: string
+  start_date: string
+  tags: string[]
+  notes: string
+}
+
+export async function createSubscription(input: CreateSubscriptionInput): Promise<Subscription> {
+  const res = await getDb().query<Subscription>(
+    `INSERT INTO subscriptions (name, amount, currency, cycle, start_date, tags, notes)
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+    [input.name, input.amount, input.currency, input.cycle, input.start_date, input.tags, input.notes]
+  )
+  return res.rows[0]
+}
+
+export async function listSubscriptions(query?: string, tag?: string): Promise<Subscription[]> {
+  const d = getDb()
+  const conditions: string[] = []
+  const values: unknown[] = []
+  let i = 1
+  if (query) { conditions.push(`name ILIKE $${i}`); values.push(`%${query}%`); i++ }
+  if (tag)   { conditions.push(`$${i} = ANY(tags)`); values.push(tag); i++ }
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
+  const res = await d.query<Subscription>(
+    `SELECT * FROM subscriptions ${where} ORDER BY name ASC`,
+    values
+  )
+  return res.rows
+}
+
+export async function getSubscription(id: string): Promise<Subscription> {
+  const res = await getDb().query<Subscription>(`SELECT * FROM subscriptions WHERE id = $1`, [id])
+  if (!res.rows[0]) throw new Error(`Subscription ${id} not found`)
+  return res.rows[0]
+}
+
+export async function updateSubscription(
+  id: string,
+  fields: Partial<Omit<CreateSubscriptionInput, 'start_date'> & { start_date: string }>
+): Promise<Subscription> {
+  if (!Object.keys(fields).length) throw new Error('No fields to update')
+  const sets: string[] = []
+  const values: unknown[] = []
+  let i = 1
+  const updatable = ['name', 'amount', 'currency', 'cycle', 'start_date', 'tags', 'notes'] as const
+  for (const key of updatable) {
+    if (fields[key] !== undefined) { sets.push(`${key} = $${i++}`); values.push(fields[key]) }
+  }
+  sets.push(`updated_at = now()`)
+  values.push(id)
+  const res = await getDb().query<Subscription>(
+    `UPDATE subscriptions SET ${sets.join(', ')} WHERE id = $${i} RETURNING *`,
+    values
+  )
+  if (!res.rows[0]) throw new Error(`Subscription ${id} not found`)
+  return res.rows[0]
+}
+
+export async function deleteSubscription(id: string): Promise<void> {
+  await getDb().query(`DELETE FROM subscriptions WHERE id = $1`, [id])
 }

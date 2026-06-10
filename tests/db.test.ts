@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import {
   initDb,
-  createNote, listNotes, getNote, updateNote, deleteNote,
-  createSecretRow, listSecretMeta, getSecretRow, updateSecretRow, deleteSecretRow,
-  exportAllRows, importRows
+  createNote, listNotes, getNote, updateNote, deleteNote, listNoteTags,
+  createSecretRow, listSecretMeta, getSecretRow, updateSecretRow, deleteSecretRow, listSecretTags,
+  exportAllRows, importRows,
+  createSubscription, listSubscriptions, getSubscription, updateSubscription, deleteSubscription
 } from '../src/offscreen/db'
 
 describe('db - notes', () => {
@@ -45,6 +46,51 @@ describe('db - notes', () => {
     const results = await listNotes('shopping')
     expect(results.length).toBe(1)
     expect(results[0].title).toBe('Shopping list')
+  })
+
+  it('createNote stores tags', async () => {
+    const note = await createNote('Tagged note', 'content', ['work', 'urgent'])
+    expect(note.tags).toEqual(['work', 'urgent'])
+  })
+
+  it('listNotes filters by tag', async () => {
+    await createNote('Note A', '', ['work'])
+    await createNote('Note B', '', ['personal'])
+    await createNote('Note C', '', ['work', 'personal'])
+    const workNotes = await listNotes(undefined, 'work')
+    expect(workNotes.length).toBe(2)
+    expect(workNotes.every(n => n.tags.includes('work'))).toBe(true)
+  })
+
+  it('listNotes filters by both query and tag', async () => {
+    await createNote('Alpha work', '', ['work'])
+    await createNote('Alpha personal', '', ['personal'])
+    await createNote('Beta work', '', ['work'])
+    const results = await listNotes('alpha', 'work')
+    expect(results.length).toBe(1)
+    expect(results[0].title).toBe('Alpha work')
+  })
+
+  it('updateNote updates tags', async () => {
+    const note = await createNote('Note', 'content', ['old'])
+    const updated = await updateNote(note.id, { tags: ['new', 'updated'] })
+    expect(updated.tags).toEqual(['new', 'updated'])
+  })
+
+  it('listNoteTags returns distinct tags across all notes', async () => {
+    await createNote('A', '', ['alpha', 'beta'])
+    await createNote('B', '', ['beta', 'gamma'])
+    const tags = await listNoteTags()
+    expect(tags).toContain('alpha')
+    expect(tags).toContain('beta')
+    expect(tags).toContain('gamma')
+    expect(tags.filter(t => t === 'beta').length).toBe(1)
+  })
+
+  it('listNoteTags returns empty when no tags exist', async () => {
+    await createNote('No tags', 'content')
+    const tags = await listNoteTags()
+    expect(tags).toEqual([])
   })
 })
 
@@ -89,6 +135,42 @@ describe('db - secrets', () => {
     expect(results.length).toBe(1)
     expect(results[0].label).toBe('GITHUB_TOKEN')
   })
+
+  it('createSecretRow stores tags', async () => {
+    const s = await createSecretRow('API_KEY', 'cipher', 'iv', ['infra', 'prod'])
+    expect(s.tags).toEqual(['infra', 'prod'])
+  })
+
+  it('listSecretMeta filters by tag', async () => {
+    await createSecretRow('INFRA_KEY', 'c1', 'v1', ['infra'])
+    await createSecretRow('APP_KEY', 'c2', 'v2', ['app'])
+    await createSecretRow('SHARED_KEY', 'c3', 'v3', ['infra', 'app'])
+    const infraSecrets = await listSecretMeta(undefined, 'infra')
+    expect(infraSecrets.length).toBe(2)
+    expect(infraSecrets.every(s => s.tags.includes('infra'))).toBe(true)
+  })
+
+  it('updateSecretRow updates tags', async () => {
+    const s = await createSecretRow('KEY', 'c', 'v', ['old'])
+    const updated = await updateSecretRow(s.id, { tags: ['new', 'tag'] })
+    expect(updated.tags).toEqual(['new', 'tag'])
+  })
+
+  it('listSecretTags returns distinct tags across all secrets', async () => {
+    await createSecretRow('K1', 'c', 'v', ['alpha', 'beta'])
+    await createSecretRow('K2', 'c', 'v', ['beta', 'gamma'])
+    const tags = await listSecretTags()
+    expect(tags).toContain('alpha')
+    expect(tags).toContain('beta')
+    expect(tags).toContain('gamma')
+    expect(tags.filter(t => t === 'beta').length).toBe(1)
+  })
+
+  it('listSecretTags returns empty when no tags exist', async () => {
+    await createSecretRow('KEY', 'c', 'v')
+    const tags = await listSecretTags()
+    expect(tags).toEqual([])
+  })
 })
 
 describe('db - exportAllRows / importRows', () => {
@@ -106,11 +188,20 @@ describe('db - exportAllRows / importRows', () => {
 
   it('importRows inserts new notes and secrets', async () => {
     const result = await importRows(
-      [{ id: 'n1', title: 'Imported', content: 'body', created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' }],
-      [{ id: 's1', label: 'KEY', ciphertext: 'c', iv: 'v', created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' }]
+      [{ id: 'n1', title: 'Imported', content: 'body', tags: [], created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' }],
+      [{ id: 's1', label: 'KEY', ciphertext: 'c', iv: 'v', tags: [], created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' }]
     )
     expect(result.notesUpdated).toBe(1)
     expect(result.secretsAdded).toBe(1)
+  })
+
+  it('importRows preserves tags on insert', async () => {
+    await importRows(
+      [{ id: 'n2', title: 'Tagged import', content: '', tags: ['work', 'sync'], created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' }],
+      []
+    )
+    const note = await getNote('n2')
+    expect(note.tags).toEqual(['work', 'sync'])
   })
 
   it('importRows skips older records (last-write-wins)', async () => {
@@ -122,5 +213,50 @@ describe('db - exportAllRows / importRows', () => {
     await importRows([olderNote], [])
     const note = await getNote(existing.id)
     expect(note.title).toBe('Existing')
+  })
+})
+
+describe('db - subscriptions', () => {
+  beforeEach(async () => {
+    await initDb()
+  })
+
+  it('createSubscription returns a subscription with id', async () => {
+    const s = await createSubscription({
+      name: 'Netflix', amount: 15.99, currency: 'USD',
+      cycle: 'monthly', start_date: '2024-01-01', tags: [], notes: ''
+    })
+    expect(s.id).toBeDefined()
+    expect(s.name).toBe('Netflix')
+    expect(Number(s.amount)).toBe(15.99)
+    expect(s.cycle).toBe('monthly')
+  })
+
+  it('listSubscriptions returns created subscriptions', async () => {
+    await createSubscription({ name: 'Spotify', amount: 9.99, currency: 'USD', cycle: 'monthly', start_date: '2024-01-01', tags: [], notes: '' })
+    await createSubscription({ name: 'AWS', amount: 50, currency: 'USD', cycle: 'monthly', start_date: '2024-01-01', tags: [], notes: '' })
+    const list = await listSubscriptions()
+    expect(list.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('listSubscriptions filters by tag', async () => {
+    await createSubscription({ name: 'Netflix', amount: 15.99, currency: 'USD', cycle: 'monthly', start_date: '2024-01-01', tags: ['entertainment'], notes: '' })
+    await createSubscription({ name: 'AWS', amount: 50, currency: 'USD', cycle: 'monthly', start_date: '2024-01-01', tags: ['infra'], notes: '' })
+    const result = await listSubscriptions(undefined, 'entertainment')
+    expect(result.length).toBe(1)
+    expect(result[0].name).toBe('Netflix')
+  })
+
+  it('updateSubscription changes fields', async () => {
+    const s = await createSubscription({ name: 'Old', amount: 5, currency: 'USD', cycle: 'monthly', start_date: '2024-01-01', tags: [], notes: '' })
+    const updated = await updateSubscription(s.id, { name: 'New', amount: 10 })
+    expect(updated.name).toBe('New')
+    expect(Number(updated.amount)).toBe(10)
+  })
+
+  it('deleteSubscription removes the subscription', async () => {
+    const s = await createSubscription({ name: 'ToDelete', amount: 1, currency: 'USD', cycle: 'monthly', start_date: '2024-01-01', tags: [], notes: '' })
+    await deleteSubscription(s.id)
+    await expect(getSubscription(s.id)).rejects.toThrow('not found')
   })
 })
