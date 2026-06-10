@@ -2,6 +2,7 @@
   "manifest_version": 3,
   "name": "My SPACE",
   "version": "0.1.0",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA8KFSxqemeM6ek3yzeDJxEN/jmO3oyl/8lnBr/ealsVBxFuNQsQrhsDfiS6+0JoOzAkN8RJSJUIq5rLkGbpZaLdyYI9QoR8i4x6wIFubZrkU/ZC4G5cRmJj/QTqRJFVOxPtLlAZT2gjVRfS3cUIQTSEAsZYaQZsJm6yd9/gwws5IvfHxKrFUpRMHf2hW9NErF8+z5b59LimrIylBQID7nnNJuYdee34j0HK3rKPxaCEMNWRMTBZj9b1Xk3v3E+DBopFAeLJodQn7ODMpoB9D/Ejp3Bey4r1OC+sgFhwPWz30ZZzgrO2c5+ZdCb2mPaUNcfXwX3rLa5CGBC/OCS8FSKwIDAQAB",
   "description": "Free vault for your space",
   "permissions": [
     "storage",
