@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { generatePassword } from '../../lib/generatePassword'
 
 interface StrengthInfo {
@@ -15,7 +15,28 @@ function calcStrength(charsetSize: number, length: number): StrengthInfo {
   return            { label: 'Very Strong', color: '#818cf8', bits }
 }
 
-const CHARSET_SIZES = { upper: 26, lower: 26, digits: 10, symbols: 26 }
+const CHARSET_SIZES = { upper: 26, lower: 26, digits: 10, symbols: 28 }
+
+interface ToggleButtonProps {
+  label: string
+  value: boolean
+  onToggle: () => void
+  accentColor: string
+}
+
+function ToggleButton({ label, value, onToggle, accentColor }: ToggleButtonProps) {
+  return (
+    <button
+      onClick={onToggle}
+      className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all"
+      style={value
+        ? { background: `${accentColor}22`, border: `1px solid ${accentColor}55`, color: accentColor }
+        : { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.3)' }}
+    >
+      {label}
+    </button>
+  )
+}
 
 export function GeneratorView() {
   const [length, setLength]   = useState(20)
@@ -30,10 +51,21 @@ export function GeneratorView() {
 
   const anyEnabled = upper || lower || digits || symbols
 
-  const regenerate = useCallback(() => {
+  useEffect(() => {
     if (!anyEnabled) return
-    setPassword(generatePassword({ length, upper, lower, digits, symbols }))
+    try {
+      setPassword(generatePassword({ length, upper, lower, digits, symbols }))
+    } catch {
+      // length < enabled sets count — don't update
+    }
   }, [length, upper, lower, digits, symbols, anyEnabled])
+
+  function regenerate() {
+    if (!anyEnabled) return
+    try {
+      setPassword(generatePassword({ length, upper, lower, digits, symbols }))
+    } catch {}
+  }
 
   async function copy() {
     try {
@@ -49,23 +81,6 @@ export function GeneratorView() {
     + (symbols ? CHARSET_SIZES.symbols : 0)
 
   const strength = anyEnabled ? calcStrength(charsetSize, length) : null
-
-  const toggle = (
-    label: string,
-    value: boolean,
-    set: (v: boolean) => void,
-    accentColor: string
-  ) => (
-    <button
-      onClick={() => { set(!value); }}
-      className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all"
-      style={value
-        ? { background: `${accentColor}22`, border: `1px solid ${accentColor}55`, color: accentColor }
-        : { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.3)' }}
-    >
-      {label}
-    </button>
-  )
 
   return (
     <div className="flex flex-col p-4 gap-4 overflow-y-auto" style={{ height: '100%' }}>
@@ -134,10 +149,10 @@ export function GeneratorView() {
         <div className="flex flex-col gap-2">
           <span className="text-xs font-bold tracking-widest uppercase" style={{ color: 'rgba(255,255,255,0.3)' }}>Include</span>
           <div className="flex gap-1.5">
-            {toggle('ABC', upper,   setUpper,   '#f472b6')}
-            {toggle('abc', lower,   setLower,   '#60a5fa')}
-            {toggle('123', digits,  setDigits,  '#6ee7b7')}
-            {toggle('!@#', symbols, setSymbols, '#fb923c')}
+            <ToggleButton label="ABC" value={upper}   onToggle={() => setUpper(v => !v)}   accentColor="#f472b6" />
+            <ToggleButton label="abc" value={lower}   onToggle={() => setLower(v => !v)}   accentColor="#60a5fa" />
+            <ToggleButton label="123" value={digits}  onToggle={() => setDigits(v => !v)}  accentColor="#6ee7b7" />
+            <ToggleButton label="!@#" value={symbols} onToggle={() => setSymbols(v => !v)} accentColor="#fb923c" />
           </div>
           {!anyEnabled && (
             <p className="text-xs" style={{ color: 'rgba(239,68,68,0.7)' }}>Select at least one character set</p>
