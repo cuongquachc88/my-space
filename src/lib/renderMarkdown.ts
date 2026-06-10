@@ -3,12 +3,11 @@ export function renderMarkdown(md: string): string {
 
   // Code blocks (must come before inline code)
   html = html.replace(/```[\w]*\n?([\s\S]*?)```/g, (_, code) =>
-    `<pre><code>${escapeHtml(code.trim())}</code></pre>`)
+    `<pre><code>${escapeHtml(code.trim()).replace(/\n/g, '\x00')}</code></pre>`)
 
   // Strip scripts and on* attributes (XSS protection)
   html = html.replace(/<script[\s\S]*?<\/script>/gi, '')
-  html = html.replace(/\son\w+="[^"]*"/gi, '')
-  html = html.replace(/\son\w+='[^']*'/gi, '')
+  html = html.replace(/\son\w+(?:="[^"]*"|='[^']*'|=[^\s>]*)?/gi, '')
 
   // Block elements — process line-by-line
   const lines = html.split('\n')
@@ -16,13 +15,13 @@ export function renderMarkdown(md: string): string {
   let inUl = false
   let inOl = false
 
+  function closeList() {
+    if (inUl) { out.push('</ul>'); inUl = false }
+    if (inOl) { out.push('</ol>'); inOl = false }
+  }
+
   for (const raw of lines) {
     const line = raw
-
-    function closeList() {
-      if (inUl) { out.push('</ul>'); inUl = false }
-      if (inOl) { out.push('</ol>'); inOl = false }
-    }
 
     // Headings
     if (/^### /.test(line)) { closeList(); out.push(`<h3>${inlineMarkdown(line.slice(4))}</h3>`); continue }
@@ -66,7 +65,7 @@ export function renderMarkdown(md: string): string {
   if (inUl) out.push('</ul>')
   if (inOl) out.push('</ol>')
 
-  return out.join('\n')
+  return out.join('\n').replace(/\x00/g, '\n')
 }
 
 function inlineMarkdown(text: string): string {

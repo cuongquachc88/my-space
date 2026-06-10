@@ -80,4 +80,29 @@ describe('renderMarkdown', () => {
     const html = renderMarkdown('Hello world')
     expect(html).toContain('<p>Hello world</p>')
   })
+
+  it('renders multi-line code block without spurious p tags', () => {
+    const html = renderMarkdown('```\nline1\nline2\n```')
+    expect(html).toContain('<pre><code>')
+    expect(html).toContain('line1')
+    expect(html).toContain('line2')
+    expect(html).not.toContain('<p>line2</p>')
+  })
+
+  it('strips unquoted on* attributes', () => {
+    const html = renderMarkdown('<div onclick=evil()>hi</div>')
+    expect(html).not.toContain('onclick')
+  })
+
+  it('replaces data: links with #', () => {
+    const html = renderMarkdown('[x](data:text/html,<h1>hi</h1>)')
+    expect(html).not.toContain('data:')
+    expect(html).toContain('href="#"')
+  })
+
+  it('escapes html in code blocks', () => {
+    const html = renderMarkdown('```\n<script>alert(1)</script>\n```')
+    expect(html).toContain('&lt;script&gt;')
+    expect(html).not.toContain('<script>')
+  })
 })
