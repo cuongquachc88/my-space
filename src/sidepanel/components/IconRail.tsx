@@ -43,7 +43,7 @@ export function IconRail({ active, onChange }: Props) {
         width: '48px',
         background: 'rgba(255,255,255,0.03)',
         borderColor: 'rgba(255,255,255,0.07)',
-        minHeight: '100vh',
+        minHeight: '100%',
       }}
     >
       {items.map(({ view, Icon, accent }) => btn(view, Icon, accent))}
