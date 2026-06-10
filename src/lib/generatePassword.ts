@@ -18,6 +18,12 @@ export function generatePassword(opts: GenerateOptions): string {
   if (opts.digits)  sets.push(DIGITS)
   if (opts.symbols) sets.push(SYMBOLS)
   if (sets.length === 0) throw new Error('No character set selected')
+  if (!Number.isInteger(opts.length) || opts.length < 1) {
+    throw new Error('length must be a positive integer')
+  }
+  if (opts.length < sets.length) {
+    throw new Error(`length (${opts.length}) must be at least the number of enabled character sets (${sets.length})`)
+  }
 
   const alphabet = sets.join('')
   const guaranteed = sets.map(set => randomChar(set))
