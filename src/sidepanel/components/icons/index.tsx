@@ -76,3 +76,17 @@ export function GeneratorIcon({ active, accentColor = '#a78bfa', size = 20 }: Ic
     </svg>
   )
 }
+
+export function SubscriptionsIcon({ active, accentColor = '#34d399', size = 20 }: IconProps) {
+  const stroke = active ? accentColor : baseStroke
+  const fill = active ? `${accentColor}33` : 'rgba(255,255,255,0.06)'
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <rect x="2" y="4" width="16" height="12" rx="2.5" fill={fill} stroke={stroke} strokeWidth="1.4" />
+      <line x1="2" y1="8" x2="18" y2="8" stroke={stroke} strokeWidth="1.2" />
+      <circle cx="6"  cy="12" r="1.2" fill={stroke} />
+      <circle cx="10" cy="12" r="1.2" fill={stroke} />
+      <circle cx="14" cy="12" r="1.2" fill={stroke} />
+    </svg>
+  )
+}
