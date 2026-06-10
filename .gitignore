@@ -1,5 +1,32 @@
+# Dependencies
 node_modules/
+
+# Build output
 dist/
-.env
-.superpowers/
+
+# Packed extensions
 *.zip
+*.crx
+
+# Environment
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Logs
+*.log
+npm-debug.log*
+
+# Cache
+.superpowers/
