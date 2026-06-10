@@ -1,10 +1,10 @@
-import { PGlite } from '@electric-sql/pglite'
+import { PGlite, IdbFs, MemoryFS } from '@electric-sql/pglite'
 import type { Note } from '../shared/messages'
 
 let db: PGlite | null = null
 
-export async function initDb(): Promise<void> {
-  db = new PGlite()
+export async function initDb(fs?: IdbFs | MemoryFS): Promise<void> {
+  db = new PGlite({ fs: fs ?? new IdbFs('my-space-db') })
   await db.exec(`
     CREATE TABLE IF NOT EXISTS notes (
       id          TEXT PRIMARY KEY DEFAULT gen_random_uuid(),

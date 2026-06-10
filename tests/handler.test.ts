@@ -1,11 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest'
+import { MemoryFS } from '@electric-sql/pglite'
 import { initDb } from '../src/offscreen/db'
 import { lockVault } from '../src/offscreen/crypto'
 import { dispatch } from '../src/offscreen/handler'
 
 describe('handler', () => {
   beforeEach(async () => {
-    await initDb()
+    await initDb(new MemoryFS())
     lockVault()
   })
 

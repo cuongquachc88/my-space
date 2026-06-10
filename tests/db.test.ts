@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
+import { MemoryFS } from '@electric-sql/pglite'
 import {
   initDb,
   createNote, listNotes, getNote, updateNote, deleteNote, listNoteTags,
@@ -9,7 +10,7 @@ import {
 
 describe('db - notes', () => {
   beforeEach(async () => {
-    await initDb()
+    await initDb(new MemoryFS())
   })
 
   it('createNote returns a note with id', async () => {
@@ -96,7 +97,7 @@ describe('db - notes', () => {
 
 describe('db - secrets', () => {
   beforeEach(async () => {
-    await initDb()
+    await initDb(new MemoryFS())
   })
 
   it('createSecretRow and listSecretMeta', async () => {
@@ -175,7 +176,7 @@ describe('db - secrets', () => {
 
 describe('db - exportAllRows / importRows', () => {
   beforeEach(async () => {
-    await initDb()
+    await initDb(new MemoryFS())
   })
 
   it('exportAllRows returns notes and secrets', async () => {
@@ -218,7 +219,7 @@ describe('db - exportAllRows / importRows', () => {
 
 describe('db - subscriptions', () => {
   beforeEach(async () => {
-    await initDb()
+    await initDb(new MemoryFS())
   })
 
   it('createSubscription returns a subscription with id', async () => {
