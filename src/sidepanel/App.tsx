@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { IconRail, type View } from './components/IconRail'
 import { NotesView } from './views/NotesView'
 import { KeyvaultView } from './views/KeyvaultView'
@@ -130,6 +130,54 @@ function LockScreen({ onUnlocked }: { onUnlocked: () => void }) {
   )
 }
 
+// ── Idle auto-lock ─────────────────────────────────────────────────────────
+function useIdleLock(locked: boolean, onLock: () => void) {
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const cleanupRef = useRef<(() => void) | null>(null)
+
+  useEffect(() => {
+    if (locked) {
+      cleanupRef.current?.()
+      cleanupRef.current = null
+      return
+    }
+
+    let idleMs = 15 * 60 * 1000
+    let active = true
+
+    chrome.storage.local.get('autoLockMs').then(res => {
+      if (!active) return
+      if (typeof res.autoLockMs === 'number') idleMs = res.autoLockMs
+      if (idleMs === 0) return
+
+      function schedule() {
+        if (timerRef.current !== null) clearTimeout(timerRef.current)
+        timerRef.current = setTimeout(async () => {
+          await chrome.runtime.sendMessage({ type: 'VAULT_LOCK' })
+          onLock()
+        }, idleMs)
+      }
+
+      schedule()
+      document.addEventListener('mousemove', schedule)
+      document.addEventListener('keydown', schedule)
+
+      cleanupRef.current = () => {
+        active = false
+        document.removeEventListener('mousemove', schedule)
+        document.removeEventListener('keydown', schedule)
+        if (timerRef.current !== null) { clearTimeout(timerRef.current); timerRef.current = null }
+      }
+    })
+
+    return () => {
+      active = false
+      cleanupRef.current?.()
+      cleanupRef.current = null
+    }
+  }, [locked, onLock])
+}
+
 // ── Root ───────────────────────────────────────────────────────────────────
 export default function App() {
   const [view, setView] = useState<View>('notes')
@@ -157,6 +205,8 @@ export default function App() {
     const id = setInterval(checkVault, 5000)
     return () => clearInterval(id)
   }, [checkVault])
+
+  useIdleLock(vaultLocked, () => setVaultLocked(true))
 
   if (hasPassword === null) {
     return <div style={{ width: '100%', height: '100%', background: '#0d1117' }} />
