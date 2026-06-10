@@ -6,10 +6,10 @@ export interface ImportedSecret {
 
 export function parseImport(filename: string, content: string): ImportedSecret[] {
   if (filename.endsWith('.json')) return parseBitwarden(content)
-  return parseCsv(filename, content)
+  return parseCsv(content)
 }
 
-function parseCsv(filename: string, content: string): ImportedSecret[] {
+function parseCsv(content: string): ImportedSecret[] {
   const rows = splitCsvRows(content)
   if (rows.length < 2) return []
   const headers = rows[0].map(h => h.trim().toLowerCase())
