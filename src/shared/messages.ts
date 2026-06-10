@@ -76,7 +76,7 @@ export interface Subscription {
 }
 
 // --- Subscription messages ---
-export type SubsListMsg   = Msg<'SUBS_LIST',   { query?: string; tag?: string } | undefined>
+export type SubsListMsg   = Msg<'SUBS_LIST'> | Msg<'SUBS_LIST', { query?: string; tag?: string }>
 export type SubsGetMsg    = Msg<'SUBS_GET',    { id: string }>
 export type SubsCreateMsg = Msg<'SUBS_CREATE', {
   name: string; amount: number; currency: string;
