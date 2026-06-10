@@ -1,5 +1,6 @@
 {
   "name": "my-space",
+  "productName": "My SPACE",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -9,6 +10,7 @@
   "scripts": {
     "dev": "vite build --watch",
     "build": "vite build",
+    "pack": "vite build && cd dist && zip -r ../my-space-$(node -p \"require('../package.json').version\").zip . && echo '✓ packed'",
     "test": "vitest run"
   },
   "keywords": [],
