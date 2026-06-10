@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import type { Note } from '../../shared/messages'
 import { NoteCard } from '../components/NoteCard'
 import { TagInput } from '../components/TagInput'
+import { renderMarkdown } from '../../lib/renderMarkdown'
 
 interface Props {
   sendMsg: (type: string, payload?: unknown) => Promise<{ ok: boolean; data?: unknown; error?: string }>
@@ -17,6 +18,7 @@ export function NotesView({ sendMsg }: Props) {
   const [editContent, setEditContent] = useState('')
   const [editTags, setEditTags] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
+  const [previewMode, setPreviewMode] = useState(false)
 
   const load = useCallback(async (q = '', tag?: string | null) => {
     const payload: Record<string, string> = {}
@@ -43,6 +45,7 @@ export function NotesView({ sendMsg }: Props) {
     setEditTitle(note.title)
     setEditContent(note.content)
     setEditTags(note.tags ?? [])
+    setPreviewMode(false)
   }
 
   async function save(overrideTags?: string[]) {
@@ -163,20 +166,40 @@ export function NotesView({ sendMsg }: Props) {
       {/* Editor pane */}
       {selected ? (
         <div className="flex flex-col flex-1 p-3 gap-2 overflow-hidden">
-          <input className="bg-transparent text-sm font-semibold outline-none"
-            style={{ color: 'rgba(255,255,255,0.87)' }}
-            value={editTitle} onChange={e => setEditTitle(e.target.value)}
-            onBlur={() => save()} placeholder="Title" />
+          {/* Title row + preview toggle */}
+          <div className="flex items-center gap-2">
+            <input className="bg-transparent text-sm font-semibold outline-none flex-1"
+              style={{ color: 'rgba(255,255,255,0.87)' }}
+              value={editTitle} onChange={e => setEditTitle(e.target.value)}
+              onBlur={() => save()} placeholder="Title" />
+            <button
+              onClick={() => setPreviewMode(p => !p)}
+              className="text-xs px-2 py-1 rounded-md shrink-0"
+              style={previewMode
+                ? { background: 'rgba(129,140,248,0.15)', border: '1px solid rgba(129,140,248,0.3)', color: '#818cf8' }
+                : { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.4)' }}
+            >
+              {previewMode ? 'Edit' : 'Preview'}
+            </button>
+          </div>
 
           <div className="rounded-lg px-2 py-1" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
             <TagInput tags={editTags} accent="#818cf8"
               onChange={tags => { setEditTags(tags); save(tags) }} />
           </div>
 
-          <textarea className="flex-1 bg-transparent text-xs outline-none resize-none leading-relaxed"
-            style={{ color: 'rgba(255,255,255,0.55)' }}
-            value={editContent} onChange={e => setEditContent(e.target.value)}
-            onBlur={() => save()} placeholder="Start writing..." />
+          {previewMode ? (
+            <div
+              className="flex-1 overflow-y-auto text-xs leading-relaxed prose-dark"
+              style={{ color: 'rgba(255,255,255,0.7)' }}
+              dangerouslySetInnerHTML={{ __html: renderMarkdown(editContent || '_Nothing to preview_') }}
+            />
+          ) : (
+            <textarea className="flex-1 bg-transparent text-xs outline-none resize-none leading-relaxed"
+              style={{ color: 'rgba(255,255,255,0.55)' }}
+              value={editContent} onChange={e => setEditContent(e.target.value)}
+              onBlur={() => save()} placeholder="Start writing... (supports Markdown)" />
+          )}
 
           <div className="flex justify-between items-center">
             <span className="text-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>
