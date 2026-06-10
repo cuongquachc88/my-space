@@ -29,7 +29,7 @@
     "128": "public/icon128.png"
   },
   "action": {
-    "default_title": "Open KeyVault",
+    "default_title": "Open My SPACE",
     "default_icon": {
       "16": "public/icon16.png",
       "48": "public/icon48.png",
