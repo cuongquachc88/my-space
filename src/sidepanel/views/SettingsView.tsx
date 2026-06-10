@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 
 interface Props {
   sendMsg: (type: string, payload?: unknown) => Promise<{ ok: boolean; data?: unknown; error?: string }>
+  onLock: () => void
 }
 
 const TIMEOUTS = [
@@ -11,7 +12,7 @@ const TIMEOUTS = [
   { label: '∞',   ms: 0 },
 ]
 
-export function SettingsView({ sendMsg }: Props) {
+export function SettingsView({ sendMsg, onLock }: Props) {
   const [currentPw, setCurrentPw] = useState('')
   const [newPw, setNewPw] = useState('')
   const [confirmPw, setConfirmPw] = useState('')
@@ -71,9 +72,21 @@ export function SettingsView({ sendMsg }: Props) {
     }
   }
 
+  async function lockNow() {
+    await sendMsg('VAULT_LOCK')
+    onLock()
+  }
+
   return (
-    <div className="flex flex-col p-4 gap-4 overflow-y-auto">
-      <p className="text-sm font-bold" style={{ color: 'rgba(255,255,255,0.8)' }}>Settings</p>
+    <div className="flex flex-col p-4 gap-4 overflow-y-auto" style={{ height: '100%' }}>
+      <div className="flex justify-between items-center">
+        <p className="text-sm font-bold" style={{ color: 'rgba(255,255,255,0.8)' }}>Settings</p>
+        <button onClick={lockNow}
+          className="text-xs px-3 py-1 rounded-lg"
+          style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.4)' }}>
+          Lock vault
+        </button>
+      </div>
 
       <div className="glass-card p-4 flex flex-col gap-3">
         <p className="text-xs font-bold tracking-widest uppercase" style={{ color: 'rgba(255,255,255,0.3)' }}>
