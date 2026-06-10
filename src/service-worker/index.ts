@@ -42,14 +42,14 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
 
   if (msg.type === 'SYNC_STATUS') {
-    chrome.storage.local.get(['driveRefreshToken', 'syncedAt']).then(res => {
-      sendResponse({ ok: true, data: { connected: !!res.driveRefreshToken, lastSync: res.syncedAt ?? null } })
+    chrome.storage.local.get(['driveConnected', 'syncedAt']).then(res => {
+      sendResponse({ ok: true, data: { connected: !!res.driveConnected, lastSync: res.syncedAt ?? null } })
     })
     return true
   }
 
   if (msg.type === 'SYNC_CONNECT') {
-    handleConnect(msg.payload as { clientId: string; clientSecret: string })
+    handleConnect(msg.payload as { clientId: string })
       .then(sendResponse).catch(e => sendResponse({ ok: false, error: String(e) }))
     return true
   }
@@ -70,15 +70,14 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 const SCOPES = 'https://www.googleapis.com/auth/drive.appdata'
 const REDIRECT_URI = `https://${chrome.runtime.id}.chromiumapp.org/`
 
-async function handleConnect({ clientId, clientSecret }: { clientId: string; clientSecret: string }): Promise<{ ok: boolean; error?: string }> {
+async function handleConnect({ clientId }: { clientId: string }): Promise<{ ok: boolean; error?: string }> {
   try {
-    // Step 1: launch OAuth consent screen
+    // Implicit flow: response_type=token — returns access token directly, no client secret needed
     const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth')
     authUrl.searchParams.set('client_id', clientId)
     authUrl.searchParams.set('redirect_uri', REDIRECT_URI)
-    authUrl.searchParams.set('response_type', 'code')
+    authUrl.searchParams.set('response_type', 'token')
     authUrl.searchParams.set('scope', SCOPES)
-    authUrl.searchParams.set('access_type', 'offline')
     authUrl.searchParams.set('prompt', 'consent')
 
     const redirectUrl: string = await new Promise((resolve, reject) => {
@@ -88,27 +87,13 @@ async function handleConnect({ clientId, clientSecret }: { clientId: string; cli
       })
     })
 
-    // Step 2: extract code from redirect URL
-    const code = new URL(redirectUrl).searchParams.get('code')
-    if (!code) throw new Error('No authorization code received')
+    // Token is in the URL fragment (#access_token=...)
+    const fragment = new URLSearchParams(new URL(redirectUrl).hash.slice(1))
+    const accessToken = fragment.get('access_token')
+    if (!accessToken) throw new Error('No access token in response')
 
-    // Step 3: exchange code for tokens
-    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ code, client_id: clientId, client_secret: clientSecret, redirect_uri: REDIRECT_URI, grant_type: 'authorization_code' }),
-    })
-    if (!tokenRes.ok) throw new Error(`Token exchange failed: ${tokenRes.status}`)
-    const tokens = await tokenRes.json() as { refresh_token?: string; access_token?: string }
-    if (!tokens.refresh_token) throw new Error('No refresh token returned — ensure prompt=consent')
-
-    await chrome.storage.local.set({
-      driveClientId: clientId,
-      driveClientSecret: clientSecret,
-      driveRefreshToken: tokens.refresh_token,
-    })
-    // Cache access token for this session
-    if (tokens.access_token) await chrome.storage.session.set({ driveAccessToken: tokens.access_token })
+    await chrome.storage.local.set({ driveClientId: clientId, driveConnected: true })
+    await chrome.storage.session.set({ driveAccessToken: accessToken })
 
     return { ok: true }
   } catch (e) {
@@ -121,26 +106,30 @@ async function getAccessToken(): Promise<string> {
   const session = await chrome.storage.session.get('driveAccessToken')
   if (session.driveAccessToken) return session.driveAccessToken as string
 
-  // Refresh using stored refresh token
-  const local = await chrome.storage.local.get(['driveClientId', 'driveClientSecret', 'driveRefreshToken'])
-  if (!local.driveRefreshToken) throw new Error('Not connected to Google Drive — set up sync first')
+  // Re-authenticate silently (non-interactive) with stored client ID
+  const local = await chrome.storage.local.get(['driveClientId', 'driveConnected'])
+  if (!local.driveConnected) throw new Error('Not connected to Google Drive — set up sync first')
 
-  const res = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      client_id: local.driveClientId as string,
-      client_secret: local.driveClientSecret as string,
-      refresh_token: local.driveRefreshToken as string,
-      grant_type: 'refresh_token',
-    }),
+  const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth')
+  authUrl.searchParams.set('client_id', local.driveClientId as string)
+  authUrl.searchParams.set('redirect_uri', REDIRECT_URI)
+  authUrl.searchParams.set('response_type', 'token')
+  authUrl.searchParams.set('scope', SCOPES)
+  authUrl.searchParams.set('prompt', 'none')
+
+  const redirectUrl: string = await new Promise((resolve, reject) => {
+    chrome.identity.launchWebAuthFlow({ url: authUrl.toString(), interactive: false }, url => {
+      if (chrome.runtime.lastError || !url) reject(new Error(chrome.runtime.lastError?.message ?? 'Silent auth failed'))
+      else resolve(url)
+    })
   })
-  if (!res.ok) throw new Error(`Token refresh failed: ${res.status}`)
-  const data = await res.json() as { access_token?: string }
-  if (!data.access_token) throw new Error('Token refresh returned no access token')
 
-  await chrome.storage.session.set({ driveAccessToken: data.access_token })
-  return data.access_token
+  const fragment = new URLSearchParams(new URL(redirectUrl).hash.slice(1))
+  const accessToken = fragment.get('access_token')
+  if (!accessToken) throw new Error('Silent token refresh failed — please reconnect')
+
+  await chrome.storage.session.set({ driveAccessToken: accessToken })
+  return accessToken
 }
 
 async function driveRequest(url: string, options: RequestInit): Promise<Response> {
@@ -149,11 +138,12 @@ async function driveRequest(url: string, options: RequestInit): Promise<Response
   headers.set('Authorization', `Bearer ${token}`)
   const res = await fetch(url, { ...options, headers })
   if (res.status === 401) {
-    // Access token expired — clear cache and retry once with fresh token
+    // Token expired — clear cache and get a fresh one, then retry once
     await chrome.storage.session.remove('driveAccessToken')
     const fresh = await getAccessToken()
-    headers.set('Authorization', `Bearer ${fresh}`)
-    const retry = await fetch(url, { ...options, headers })
+    const retryHeaders = new Headers(options.headers)
+    retryHeaders.set('Authorization', `Bearer ${fresh}`)
+    const retry = await fetch(url, { ...options, headers: retryHeaders })
     if (!retry.ok) throw new Error(`Drive API error: ${retry.status}`)
     return retry
   }

@@ -6,7 +6,6 @@ interface Props {
 
 export function SyncView({ sendMsg }: Props) {
   const [clientId, setClientId] = useState('')
-  const [clientSecret, setClientSecret] = useState('')
   const [connected, setConnected] = useState(false)
   const [lastSync, setLastSync] = useState<string | null>(null)
   const [loading, setLoading] = useState<'connect' | 'push' | 'pull' | null>(null)
@@ -15,20 +14,18 @@ export function SyncView({ sendMsg }: Props) {
   const [showSetup, setShowSetup] = useState(false)
 
   useEffect(() => {
-    chrome.storage.local.get(['driveClientId', 'driveClientSecret', 'driveRefreshToken', 'syncedAt']).then(res => {
+    chrome.storage.local.get(['driveClientId', 'driveConnected', 'syncedAt']).then(res => {
       if (typeof res.driveClientId === 'string') setClientId(res.driveClientId)
-      if (typeof res.driveClientSecret === 'string') setClientSecret(res.driveClientSecret)
-      setConnected(!!res.driveRefreshToken)
+      setConnected(!!res.driveConnected)
       setLastSync(typeof res.syncedAt === 'string' ? res.syncedAt : null)
     })
   }, [])
 
   async function connect() {
-    if (!clientId || !clientSecret) { setError('Enter Client ID and Client Secret first'); return }
+    if (!clientId) { setError('Enter your OAuth Client ID first'); return }
     setLoading('connect'); setError(null)
     try {
-      await chrome.storage.local.set({ driveClientId: clientId, driveClientSecret: clientSecret })
-      const res = await sendMsg('SYNC_CONNECT', { clientId, clientSecret })
+      const res = await sendMsg('SYNC_CONNECT', { clientId })
       if (res.ok) {
         setConnected(true)
         setShowSetup(false)
@@ -41,7 +38,8 @@ export function SyncView({ sendMsg }: Props) {
   }
 
   async function disconnect() {
-    await chrome.storage.local.remove(['driveRefreshToken', 'driveFileId'])
+    await chrome.storage.local.remove(['driveConnected', 'driveFileId'])
+    await chrome.storage.session.remove('driveAccessToken')
     setConnected(false)
     setResult(null)
   }
@@ -129,18 +127,18 @@ export function SyncView({ sendMsg }: Props) {
       {showSetup && (
         <div className="glass-card p-4 flex flex-col gap-3">
           <p className="text-xs font-bold tracking-widest uppercase" style={{ color: 'rgba(255,255,255,0.3)' }}>
-            Google OAuth Credentials
+            Google OAuth Setup
           </p>
 
-          {/* Instructions */}
           <div className="rounded-lg p-3 flex flex-col gap-2" style={{ background: 'rgba(96,165,250,0.07)', border: '1px solid rgba(96,165,250,0.15)' }}>
-            <p className="text-xs font-semibold" style={{ color: 'rgba(147,197,253,0.9)' }}>How to get credentials:</p>
+            <p className="text-xs font-semibold" style={{ color: 'rgba(147,197,253,0.9)' }}>How to get your Client ID:</p>
             <ol className="flex flex-col gap-1" style={{ color: 'rgba(255,255,255,0.45)', fontSize: '11px', paddingLeft: '14px', listStyle: 'decimal' }}>
               <li>Go to <span style={{ color: 'rgba(147,197,253,0.8)' }}>console.cloud.google.com</span></li>
               <li>Create a project → Enable <b style={{ color: 'rgba(255,255,255,0.6)' }}>Google Drive API</b></li>
               <li>APIs &amp; Services → Credentials → <b style={{ color: 'rgba(255,255,255,0.6)' }}>Create OAuth 2.0 Client ID</b></li>
-              <li>Application type: <b style={{ color: 'rgba(255,255,255,0.6)' }}>Desktop app</b></li>
-              <li>Copy <b style={{ color: 'rgba(255,255,255,0.6)' }}>Client ID</b> and <b style={{ color: 'rgba(255,255,255,0.6)' }}>Client Secret</b> below</li>
+              <li>Application type: <b style={{ color: 'rgba(255,255,255,0.6)' }}>Chrome Extension</b></li>
+              <li>Add your extension ID under <b style={{ color: 'rgba(255,255,255,0.6)' }}>Item ID</b></li>
+              <li>Copy the <b style={{ color: 'rgba(255,255,255,0.6)' }}>Client ID</b> below — no secret needed</li>
             </ol>
           </div>
 
@@ -150,13 +148,6 @@ export function SyncView({ sendMsg }: Props) {
             placeholder="Client ID (…apps.googleusercontent.com)"
             value={clientId}
             onChange={e => setClientId(e.target.value)}
-          />
-          <input
-            className="rounded-lg px-3 py-2 text-xs outline-none font-mono"
-            style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
-            placeholder="Client Secret"
-            value={clientSecret}
-            onChange={e => setClientSecret(e.target.value)}
           />
           <button onClick={connect} disabled={loading === 'connect'}
             className="py-2 rounded-lg text-xs font-semibold disabled:opacity-50"
