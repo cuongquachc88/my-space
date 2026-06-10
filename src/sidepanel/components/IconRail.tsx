@@ -1,7 +1,7 @@
 import type React from 'react'
-import { NotesIcon, KeyvaultIcon, SyncIcon, SettingsIcon } from './icons'
+import { NotesIcon, KeyvaultIcon, SyncIcon, SettingsIcon, GeneratorIcon } from './icons'
 
-export type View = 'notes' | 'keyvault' | 'sync' | 'settings'
+export type View = 'notes' | 'keyvault' | 'generator' | 'sync' | 'settings'
 
 interface Props {
   active: View
@@ -11,8 +11,9 @@ interface Props {
 type IconComponent = (props: { active?: boolean; accentColor?: string; size?: number }) => React.ReactElement | null
 
 const items: Array<{ view: View; Icon: IconComponent; accent: string }> = [
-  { view: 'notes',    Icon: NotesIcon,    accent: '#818cf8' },
-  { view: 'keyvault', Icon: KeyvaultIcon, accent: '#f59e0b' },
+  { view: 'notes',     Icon: NotesIcon,     accent: '#818cf8' },
+  { view: 'keyvault',  Icon: KeyvaultIcon,  accent: '#f59e0b' },
+  { view: 'generator', Icon: GeneratorIcon, accent: '#a78bfa' },
 ]
 
 const bottomItems: Array<{ view: View; Icon: IconComponent; accent: string }> = [
