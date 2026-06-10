@@ -11,6 +11,7 @@ export interface Note {
   id: string
   title: string
   content: string
+  tags: string[]
   created_at: string
   updated_at: string
 }
@@ -19,6 +20,7 @@ export interface Note {
 export interface SecretMeta {
   id: string
   label: string
+  tags: string[]
   updated_at: string
 }
 
@@ -32,8 +34,8 @@ export interface SecretValue {
 // --- Note messages ---
 export type NotesListMsg    = Msg<'NOTES_LIST'>
 export type NotesGetMsg     = Msg<'NOTES_GET',    { id: string }>
-export type NotesCreateMsg  = Msg<'NOTES_CREATE', { title: string; content: string }>
-export type NotesUpdateMsg  = Msg<'NOTES_UPDATE', { id: string; title?: string; content?: string }>
+export type NotesCreateMsg  = Msg<'NOTES_CREATE', { title: string; content: string; tags?: string[] }>
+export type NotesUpdateMsg  = Msg<'NOTES_UPDATE', { id: string; title?: string; content?: string; tags?: string[] }>
 export type NotesDeleteMsg  = Msg<'NOTES_DELETE', { id: string }>
 
 // --- Vault messages ---
@@ -44,8 +46,8 @@ export type VaultStatusMsg  = Msg<'VAULT_STATUS'>
 // --- Secret messages ---
 export type SecretsListMsg   = Msg<'SECRETS_LIST'>
 export type SecretsGetMsg    = Msg<'SECRETS_GET',    { id: string }>
-export type SecretsCreateMsg = Msg<'SECRETS_CREATE', { label: string; value: string }>
-export type SecretsUpdateMsg = Msg<'SECRETS_UPDATE', { id: string; label?: string; value?: string }>
+export type SecretsCreateMsg = Msg<'SECRETS_CREATE', { label: string; value: string; tags?: string[] }>
+export type SecretsUpdateMsg = Msg<'SECRETS_UPDATE', { id: string; label?: string; value?: string; tags?: string[] }>
 export type SecretsDeleteMsg = Msg<'SECRETS_DELETE', { id: string }>
 
 // --- Sync messages ---

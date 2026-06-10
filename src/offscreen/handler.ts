@@ -11,24 +11,23 @@ export async function dispatch(msg: AnyMsg & { payload?: Record<string, unknown>
   try {
     switch (msg.type) {
       case 'NOTES_LIST': {
-        const q = (msg as { payload?: { query?: string } }).payload?.query
-        return { ok: true, data: await db.listNotes(q) }
+        const p = (msg as { payload?: { query?: string; tag?: string } }).payload
+        return { ok: true, data: await db.listNotes(p?.query, p?.tag) }
       }
       case 'NOTES_GET': {
         const { id } = (msg as { payload: { id: string } }).payload
         return { ok: true, data: await db.getNote(id) }
       }
       case 'NOTES_CREATE': {
-        const { title, content } = (msg as { payload: { title: string; content: string } }).payload
-        return { ok: true, data: await db.createNote(title, content) }
+        const { title, content, tags } = (msg as { payload: { title: string; content: string; tags?: string[] } }).payload
+        return { ok: true, data: await db.createNote(title, content, tags) }
       }
       case 'NOTES_UPDATE': {
-        const { id, title, content } = (msg as { payload: { id: string; title?: string; content?: string } }).payload
-        return { ok: true, data: await db.updateNote(id, { title, content }) }
+        const { id, title, content, tags } = (msg as { payload: { id: string; title?: string; content?: string; tags?: string[] } }).payload
+        return { ok: true, data: await db.updateNote(id, { title, content, tags }) }
       }
       case 'NOTES_DELETE': {
         const { id } = (msg as { payload: { id: string } }).payload
-        // getNote throws "not found" → caught below; deleteNote silently no-ops on missing rows
         await db.getNote(id)
         await db.deleteNote(id)
         return { ok: true }
@@ -36,8 +35,7 @@ export async function dispatch(msg: AnyMsg & { payload?: Record<string, unknown>
 
       case 'VAULT_UNLOCK': {
         const { password, salt } = (msg as { payload: { password: string; salt: number[] } }).payload
-        const saltBytes = new Uint8Array(salt)
-        await initVault(password, saltBytes, LOCK_TIMEOUT_MS)
+        await initVault(password, new Uint8Array(salt), LOCK_TIMEOUT_MS)
         return { ok: true }
       }
       case 'VAULT_LOCK': {
@@ -49,8 +47,8 @@ export async function dispatch(msg: AnyMsg & { payload?: Record<string, unknown>
       }
 
       case 'SECRETS_LIST': {
-        const q = (msg as { payload?: { query?: string } }).payload?.query
-        return { ok: true, data: await db.listSecretMeta(q) }
+        const p = (msg as { payload?: { query?: string; tag?: string } }).payload
+        return { ok: true, data: await db.listSecretMeta(p?.query, p?.tag) }
       }
       case 'SECRETS_GET': {
         const { id } = (msg as { payload: { id: string } }).payload
@@ -60,15 +58,16 @@ export async function dispatch(msg: AnyMsg & { payload?: Record<string, unknown>
         return { ok: true, data: { id: row.id, label: row.label, value } }
       }
       case 'SECRETS_CREATE': {
-        const { label, value } = (msg as { payload: { label: string; value: string } }).payload
+        const { label, value, tags } = (msg as { payload: { label: string; value: string; tags?: string[] } }).payload
         const { ciphertext, iv } = await encrypt(getKey(), value)
         resetLockTimer(LOCK_TIMEOUT_MS)
-        return { ok: true, data: await db.createSecretRow(label, ciphertext, iv) }
+        return { ok: true, data: await db.createSecretRow(label, ciphertext, iv, tags) }
       }
       case 'SECRETS_UPDATE': {
-        const { id, label, value } = (msg as { payload: { id: string; label?: string; value?: string } }).payload
-        const fields: { label?: string; ciphertext?: string; iv?: string } = {}
+        const { id, label, value, tags } = (msg as { payload: { id: string; label?: string; value?: string; tags?: string[] } }).payload
+        const fields: { label?: string; ciphertext?: string; iv?: string; tags?: string[] } = {}
         if (label !== undefined) fields.label = label
+        if (tags  !== undefined) fields.tags  = tags
         if (value !== undefined) {
           const enc = await encrypt(getKey(), value)
           fields.ciphertext = enc.ciphertext
@@ -89,24 +88,21 @@ export async function dispatch(msg: AnyMsg & { payload?: Record<string, unknown>
       }
       case 'DB_IMPORT': {
         const { notes, secrets } = (msg as unknown as { payload: { notes: Note[]; secrets: db.SecretRow[] } }).payload
-        const summary = await db.importRows(notes, secrets)
-        return { ok: true, data: summary }
+        return { ok: true, data: await db.importRows(notes, secrets) }
       }
 
       case 'SYNC_ENCRYPT': {
         const { plaintext } = (msg as { payload: { plaintext: string } }).payload
-        const result = await encrypt(getKey(), plaintext)
-        return { ok: true, data: result }
+        return { ok: true, data: await encrypt(getKey(), plaintext) }
       }
       case 'SYNC_DECRYPT': {
         const { ciphertext, iv } = (msg as { payload: { ciphertext: string; iv: string } }).payload
-        const plaintext = await decrypt(getKey(), ciphertext, iv)
-        return { ok: true, data: { plaintext } }
+        return { ok: true, data: { plaintext: await decrypt(getKey(), ciphertext, iv) } }
       }
       case 'SYNC_PUSH':
       case 'SYNC_PULL':
       case 'SYNC_STATUS':
-        return { ok: false, error: `Sync message type not handled in offscreen: ${msg.type}` }
+        return { ok: false, error: `${msg.type} not handled in offscreen` }
 
       default:
         return { ok: false, error: `Unknown message type: ${(msg as { type: string }).type}` }
