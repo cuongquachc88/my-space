@@ -1,14 +1,17 @@
 {
   "manifest_version": 3,
-  "name": "KeyVault",
+  "name": "My SPACE",
   "version": "0.1.0",
-  "description": "Notes and encrypted secrets in your browser sidebar",
+  "description": "Free vault for your space",
   "permissions": [
     "storage",
     "offscreen",
     "identity",
     "sidePanel"
   ],
+  "externally_connectable": {
+    "matches": ["https://*.chromiumapp.org/*"]
+  },
   "host_permissions": [
     "https://www.googleapis.com/*"
   ],
@@ -19,11 +22,20 @@
   "side_panel": {
     "default_path": "src/sidepanel/index.html"
   },
-  "action": {
-    "default_title": "Open KeyVault"
+  "icons": {
+    "16": "public/icon16.png",
+    "48": "public/icon48.png",
+    "128": "public/icon128.png"
   },
-  "oauth2": {
-    "client_id": "YOUR_GOOGLE_CLIENT_ID",
-    "scopes": ["https://www.googleapis.com/auth/drive.appdata"]
+  "action": {
+    "default_title": "Open KeyVault",
+    "default_icon": {
+      "16": "public/icon16.png",
+      "48": "public/icon48.png",
+      "128": "public/icon128.png"
+    }
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
   }
 }

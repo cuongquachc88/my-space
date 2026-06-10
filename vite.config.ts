@@ -10,6 +10,13 @@ export default defineConfig({
     tailwindcss(),
     crx({ manifest }),
   ],
+  define: {
+    // Replace the entire `process` global for browser/extension builds.
+    // Emscripten-compiled PGlite references process dynamically, so replacing
+    // individual properties (process.exitCode) is not enough.
+    // Tests use environment: 'node' so they have the real process object.
+    'process': JSON.stringify({ exitCode: 0, env: {}, version: '', versions: {} }),
+  },
   build: {
     rollupOptions: {
       input: {
