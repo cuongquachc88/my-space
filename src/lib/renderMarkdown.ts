@@ -69,6 +69,7 @@ export function renderMarkdown(md: string): string {
 }
 
 function inlineMarkdown(text: string): string {
+  text = text.replace(/<[^>]+>/g, '')
   return text
     .replace(/`([^`]+)`/g,          '<code>$1</code>')
     .replace(/\*\*([^*]+)\*\*/g,    '<strong>$1</strong>')

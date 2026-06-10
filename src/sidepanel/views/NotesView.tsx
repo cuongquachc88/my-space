@@ -73,6 +73,7 @@ export function NotesView({ sendMsg }: Props) {
   async function deleteNote(id: string) {
     await sendMsg('NOTES_DELETE', { id })
     setSelected(null)
+    setPreviewMode(false)
     await load(query, activeTag)
     await loadTags()
   }

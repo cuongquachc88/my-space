@@ -105,4 +105,10 @@ describe('renderMarkdown', () => {
     expect(html).toContain('&lt;script&gt;')
     expect(html).not.toContain('<script>')
   })
+
+  it('strips raw img tags from inline content', () => {
+    const html = renderMarkdown('Hello <img src=x onerror=alert(1)> world')
+    expect(html).not.toContain('<img')
+    expect(html).not.toContain('onerror')
+  })
 })
