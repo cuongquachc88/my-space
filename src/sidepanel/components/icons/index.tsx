@@ -61,3 +61,18 @@ export function SettingsIcon({ active, accentColor = '#3b82f6', size = 20 }: Ico
     </svg>
   )
 }
+
+export function GeneratorIcon({ active, accentColor = '#a78bfa', size = 20 }: IconProps) {
+  const stroke = active ? accentColor : baseStroke
+  const fill = active ? `${accentColor}33` : 'rgba(255,255,255,0.06)'
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <rect x="3" y="3" width="14" height="14" rx="3" fill={fill} stroke={stroke} strokeWidth="1.4" />
+      <circle cx="7"  cy="7"  r="1.2" fill={stroke} />
+      <circle cx="13" cy="7"  r="1.2" fill={stroke} />
+      <circle cx="7"  cy="13" r="1.2" fill={stroke} />
+      <circle cx="13" cy="13" r="1.2" fill={stroke} />
+      <circle cx="10" cy="10" r="1.2" fill={stroke} />
+    </svg>
+  )
+}
