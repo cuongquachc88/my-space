@@ -5,20 +5,22 @@ import { KeyvaultView } from './views/KeyvaultView'
 import { SyncView } from './views/SyncView'
 import { SettingsView } from './views/SettingsView'
 import { GeneratorView } from './views/GeneratorView'
+import { SubscriptionsView } from './views/SubscriptionsView'
 
 export async function sendMsg(type: string, payload?: unknown): Promise<{ ok: boolean; data?: unknown; error?: string }> {
   return chrome.runtime.sendMessage({ type, payload })
 }
 
 const glows: Record<View, string> = {
-  notes:    'radial-gradient(ellipse 120px 80px at 60px -20px, rgba(99,102,241,0.2) 0%, transparent 70%)',
-  keyvault: 'radial-gradient(ellipse 120px 80px at 60px -20px, rgba(245,158,11,0.18) 0%, transparent 70%)',
-  generator: 'radial-gradient(ellipse 120px 80px at 60px -20px, rgba(167,139,250,0.18) 0%, transparent 70%)',
-  sync:     'radial-gradient(ellipse 120px 80px at 60px -20px, rgba(59,130,246,0.18) 0%, transparent 70%)',
-  settings: 'radial-gradient(ellipse 120px 80px at 60px -20px, rgba(59,130,246,0.18) 0%, transparent 70%)',
+  notes:         'radial-gradient(ellipse 120px 80px at 60px -20px, rgba(99,102,241,0.2) 0%, transparent 70%)',
+  keyvault:      'radial-gradient(ellipse 120px 80px at 60px -20px, rgba(245,158,11,0.18) 0%, transparent 70%)',
+  generator:     'radial-gradient(ellipse 120px 80px at 60px -20px, rgba(167,139,250,0.18) 0%, transparent 70%)',
+  subscriptions: 'radial-gradient(ellipse 120px 80px at 60px -20px, rgba(52,211,153,0.15) 0%, transparent 70%)',
+  sync:          'radial-gradient(ellipse 120px 80px at 60px -20px, rgba(59,130,246,0.18) 0%, transparent 70%)',
+  settings:      'radial-gradient(ellipse 120px 80px at 60px -20px, rgba(59,130,246,0.18) 0%, transparent 70%)',
 }
 
-const GATED_VIEWS: View[] = ['notes', 'keyvault', 'sync', 'settings']
+const GATED_VIEWS: View[] = ['notes', 'keyvault', 'subscriptions', 'sync', 'settings']
 
 // ── First-time setup screen ────────────────────────────────────────────────
 function SetupScreen({ onDone }: { onDone: () => void }) {
@@ -237,6 +239,7 @@ export default function App() {
             {view === 'notes'    && <NotesView sendMsg={sendMsg} />}
             {view === 'keyvault' && <KeyvaultView sendMsg={sendMsg} onLock={() => setVaultLocked(true)} />}
             {view === 'generator' && <GeneratorView />}
+            {view === 'subscriptions' && <SubscriptionsView sendMsg={sendMsg} />}
             {view === 'sync'     && <SyncView sendMsg={sendMsg} />}
             {view === 'settings' && <SettingsView sendMsg={sendMsg} onLock={() => setVaultLocked(true)} />}
           </>
