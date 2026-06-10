@@ -61,9 +61,37 @@ export type SyncDecryptMsg = Msg<'SYNC_DECRYPT', { ciphertext: string; iv: strin
 export type DbImportMsg = Msg<'DB_IMPORT', { notes: Note[]; secrets: Array<{ id: string; label: string; ciphertext: string; iv: string; updated_at: string }> }>
 export type DbExportMsg = Msg<'DB_EXPORT'>
 
+// --- Subscription shape ---
+export interface Subscription {
+  id: string
+  name: string
+  amount: string
+  currency: string
+  cycle: string
+  start_date: string
+  tags: string[]
+  notes: string
+  created_at: string
+  updated_at: string
+}
+
+// --- Subscription messages ---
+export type SubsListMsg   = Msg<'SUBS_LIST',   { query?: string; tag?: string } | undefined>
+export type SubsGetMsg    = Msg<'SUBS_GET',    { id: string }>
+export type SubsCreateMsg = Msg<'SUBS_CREATE', {
+  name: string; amount: number; currency: string;
+  cycle: string; start_date: string; tags: string[]; notes: string
+}>
+export type SubsUpdateMsg = Msg<'SUBS_UPDATE', {
+  id: string; name?: string; amount?: number; currency?: string;
+  cycle?: string; start_date?: string; tags?: string[]; notes?: string
+}>
+export type SubsDeleteMsg = Msg<'SUBS_DELETE', { id: string }>
+
 export type AnyMsg =
   | NotesListMsg | NotesGetMsg | NotesCreateMsg | NotesUpdateMsg | NotesDeleteMsg
   | VaultUnlockMsg | VaultLockMsg | VaultStatusMsg
   | SecretsListMsg | SecretsGetMsg | SecretsCreateMsg | SecretsUpdateMsg | SecretsDeleteMsg
   | SyncPushMsg | SyncPullMsg | SyncStatusMsg | SyncEncryptMsg | SyncDecryptMsg
   | DbImportMsg | DbExportMsg
+  | SubsListMsg | SubsGetMsg | SubsCreateMsg | SubsUpdateMsg | SubsDeleteMsg

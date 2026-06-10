@@ -104,6 +104,28 @@ export async function dispatch(msg: AnyMsg & { payload?: Record<string, unknown>
       case 'SYNC_STATUS':
         return { ok: false, error: `${msg.type} not handled in offscreen` }
 
+      case 'SUBS_LIST': {
+        const p = (msg as { payload?: { query?: string; tag?: string } }).payload
+        return { ok: true, data: await db.listSubscriptions(p?.query, p?.tag) }
+      }
+      case 'SUBS_GET': {
+        const { id } = (msg as { payload: { id: string } }).payload
+        return { ok: true, data: await db.getSubscription(id) }
+      }
+      case 'SUBS_CREATE': {
+        const p = (msg as { payload: { name: string; amount: number; currency: string; cycle: string; start_date: string; tags: string[]; notes: string } }).payload
+        return { ok: true, data: await db.createSubscription(p) }
+      }
+      case 'SUBS_UPDATE': {
+        const { id, ...fields } = (msg as { payload: { id: string; name?: string; amount?: number; currency?: string; cycle?: string; start_date?: string; tags?: string[]; notes?: string } }).payload
+        return { ok: true, data: await db.updateSubscription(id, fields) }
+      }
+      case 'SUBS_DELETE': {
+        const { id } = (msg as { payload: { id: string } }).payload
+        await db.deleteSubscription(id)
+        return { ok: true }
+      }
+
       default:
         return { ok: false, error: `Unknown message type: ${(msg as { type: string }).type}` }
     }
