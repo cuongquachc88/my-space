@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "My SPACE",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Free vault for your space",
   "permissions": [
     "storage",
@@ -10,7 +10,9 @@
     "sidePanel"
   ],
   "externally_connectable": {
-    "matches": ["https://*.chromiumapp.org/*"]
+    "matches": [
+      "https://*.chromiumapp.org/*"
+    ]
   },
   "host_permissions": [
     "https://www.googleapis.com/*"
