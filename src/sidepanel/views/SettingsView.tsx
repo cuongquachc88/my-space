@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { parseImport, type ImportedSecret } from '../../lib/parseImport'
 
 interface Props {
   sendMsg: (type: string, payload?: unknown) => Promise<{ ok: boolean; data?: unknown; error?: string }>
@@ -20,6 +21,11 @@ export function SettingsView({ sendMsg, onLock }: Props) {
   const [timeout, setTimeout_] = useState(15 * 60 * 1000)
   const [changingPw, setChangingPw] = useState(false)
 
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [importPreview, setImportPreview] = useState<ImportedSecret[] | null>(null)
+  const [importMsg, setImportMsg] = useState('')
+  const [importing, setImporting] = useState(false)
+
   useEffect(() => {
     chrome.storage.local.get('autoLockMs').then(res => {
       if (typeof res.autoLockMs === 'number') setTimeout_(res.autoLockMs)
@@ -39,28 +45,23 @@ export function SettingsView({ sendMsg, onLock }: Props) {
       const saltRes = await chrome.storage.local.get('vaultSalt')
       if (!saltRes.vaultSalt) { setPwMsg('Vault not initialised'); return }
 
-      // 1. Unlock with current password (old key)
       const unlockRes = await sendMsg('VAULT_UNLOCK', { password: currentPw, salt: saltRes.vaultSalt })
       if (!unlockRes.ok) { setPwMsg('Current password is incorrect'); return }
 
-      // 2. Export raw rows to get list of secret IDs
       const exportRes = await sendMsg('DB_EXPORT')
       if (!exportRes.ok) { setPwMsg('Export failed'); return }
       const data = exportRes.data as { secrets: Array<{ id: string }> }
 
-      // 3. Fetch plaintext for ALL secrets NOW (while old key is active)
       const plaintexts: Array<{ id: string; value: string }> = []
       for (const s of data.secrets) {
         const decRes = await sendMsg('SECRETS_GET', { id: s.id })
         if (decRes.ok) plaintexts.push({ id: s.id, value: (decRes.data as { value: string }).value })
       }
 
-      // 4. Switch to new key
       const newSalt = Array.from(crypto.getRandomValues(new Uint8Array(16)))
       await chrome.storage.local.set({ vaultSalt: newSalt })
       await sendMsg('VAULT_UNLOCK', { password: newPw, salt: newSalt })
 
-      // 5. Re-encrypt all secrets with new key
       for (const { id, value } of plaintexts) {
         await sendMsg('SECRETS_UPDATE', { id, value })
       }
@@ -75,6 +76,43 @@ export function SettingsView({ sendMsg, onLock }: Props) {
   async function lockNow() {
     await sendMsg('VAULT_LOCK')
     onLock()
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImportMsg('')
+    const reader = new FileReader()
+    reader.onload = ev => {
+      const content = ev.target?.result as string
+      try {
+        const parsed = parseImport(file.name, content)
+        setImportPreview(parsed)
+        if (parsed.length === 0) setImportMsg('No importable secrets found in file')
+      } catch {
+        setImportMsg('Could not parse file')
+        setImportPreview(null)
+      }
+    }
+    reader.readAsText(file)
+    e.target.value = ''
+  }
+
+  async function runImport() {
+    if (!importPreview?.length) return
+    setImporting(true)
+    setImportMsg('')
+    let ok = 0
+    let fail = 0
+    for (const s of importPreview) {
+      const res = await sendMsg('SECRETS_CREATE', { label: s.label, value: s.value, tags: s.tags })
+      if (res.ok) { ok++ } else { fail++ }
+    }
+    setImportPreview(null)
+    setImportMsg(fail === 0
+      ? `Imported ${ok} secret${ok !== 1 ? 's' : ''} successfully`
+      : `Imported ${ok}, failed ${fail}`)
+    setImporting(false)
   }
 
   return (
@@ -137,6 +175,55 @@ export function SettingsView({ sendMsg, onLock }: Props) {
             </button>
           ))}
         </div>
+      </div>
+
+      <div className="glass-card p-4 flex flex-col gap-3">
+        <p className="text-xs font-bold tracking-widest uppercase" style={{ color: 'rgba(255,255,255,0.3)' }}>
+          Import Secrets
+        </p>
+        <p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>
+          Supports: Generic CSV (label, value, tags), 1Password CSV export, Bitwarden JSON export.
+        </p>
+
+        <input ref={fileInputRef} type="file" accept=".csv,.json"
+          className="hidden" onChange={handleFileChange} />
+
+        <button onClick={() => fileInputRef.current?.click()}
+          className="py-2 rounded-lg text-xs font-semibold"
+          style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)' }}>
+          Choose File (.csv or .json)
+        </button>
+
+        {importPreview && importPreview.length > 0 && (
+          <>
+            <p className="text-xs" style={{ color: 'rgba(110,231,183,0.8)' }}>
+              {importPreview.length} secret{importPreview.length !== 1 ? 's' : ''} ready to import
+            </p>
+            <div className="flex flex-col gap-1 max-h-24 overflow-y-auto">
+              {importPreview.slice(0, 5).map((s, i) => (
+                <p key={i} className="text-xs font-mono" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  {s.label}{s.tags.length ? ` [${s.tags.join(', ')}]` : ''}
+                </p>
+              ))}
+              {importPreview.length > 5 && (
+                <p className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                  +{importPreview.length - 5} more…
+                </p>
+              )}
+            </div>
+            <button onClick={runImport} disabled={importing}
+              className="py-2 rounded-lg text-xs font-semibold disabled:opacity-50"
+              style={{ background: 'rgba(110,231,183,0.12)', border: '1px solid rgba(110,231,183,0.25)', color: 'rgba(110,231,183,0.9)' }}>
+              {importing ? 'Importing...' : `Import ${importPreview.length} Secret${importPreview.length !== 1 ? 's' : ''}`}
+            </button>
+          </>
+        )}
+
+        {importMsg && (
+          <p className="text-xs" style={{ color: importMsg.includes('success') || importMsg.startsWith('Imported') ? 'rgba(110,231,183,0.8)' : 'rgba(239,68,68,0.8)' }}>
+            {importMsg}
+          </p>
+        )}
       </div>
     </div>
   )
