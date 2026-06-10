@@ -28,6 +28,13 @@ describe('parseImport - generic CSV', () => {
     expect(result).toHaveLength(1)
     expect(result[0].label).toBe('ok')
   })
+
+  it('handles quoted label containing comma', () => {
+    const csv = 'label,value\n"AWS, Production",secret'
+    const result = parseImport('data.csv', csv)
+    expect(result).toHaveLength(1)
+    expect(result[0].label).toBe('AWS, Production')
+  })
 })
 
 describe('parseImport - 1Password CSV', () => {
@@ -49,6 +56,12 @@ describe('parseImport - 1Password CSV', () => {
     const result = parseImport('1password.csv', csv)
     expect(result).toHaveLength(1)
     expect(result[0].label).toBe('Good')
+  })
+
+  it('handles missing Category column gracefully', () => {
+    const csv = 'Title,Username,Password\nGitHub,user,pw'
+    const result = parseImport('1password.csv', csv)
+    expect(result[0].tags).toEqual([])
   })
 })
 
@@ -94,5 +107,13 @@ describe('parseImport - Bitwarden JSON', () => {
     })
     const result = parseImport('bitwarden.json', json)
     expect(result[0].tags).toEqual(['work'])
+  })
+
+  it('returns empty array for malformed JSON', () => {
+    expect(parseImport('bitwarden.json', 'not json')).toEqual([])
+  })
+
+  it('returns empty array for null JSON', () => {
+    expect(parseImport('bitwarden.json', 'null')).toEqual([])
   })
 })

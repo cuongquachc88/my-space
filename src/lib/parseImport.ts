@@ -38,7 +38,7 @@ function parseGenericCsv(rows: string[][]): ImportedSecret[] {
     const label = (cols[0] ?? '').trim()
     const value = (cols[1] ?? '').trim()
     if (!label || !value) return []
-    const tagCol = (cols[2] ?? '').replace(/^"|"$/g, '').trim()
+    const tagCol = (cols[2] ?? '').trim()
     const tags = tagCol ? tagCol.split(',').map(t => t.trim()).filter(Boolean) : []
     return [{ label, value, tags }]
   })
@@ -74,7 +74,7 @@ function parseCsvLine(line: string): string[] {
 
 interface BitwardenExport {
   folders?: Array<{ id: string; name: string }>
-  items: Array<{
+  items?: Array<{
     name: string
     type: number
     login?: { password?: string } | null
@@ -85,6 +85,7 @@ interface BitwardenExport {
 function parseBitwarden(content: string): ImportedSecret[] {
   let parsed: BitwardenExport
   try { parsed = JSON.parse(content) } catch { return [] }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return []
 
   const folderMap: Record<string, string> = {}
   for (const f of parsed.folders ?? []) {
