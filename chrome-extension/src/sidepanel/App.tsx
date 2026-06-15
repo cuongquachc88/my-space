@@ -243,7 +243,7 @@ export default function App() {
             {view === 'keyvault' && <KeyvaultView sendMsg={sendMsg} onLock={() => setVaultLocked(true)} />}
             {view === 'generator' && <GeneratorView />}
             {view === 'subscriptions' && <SubscriptionsView sendMsg={sendMsg} onGoReports={() => setView('reports')} />}
-            {view === 'reports'  && <ReportsView sendMsg={sendMsg} />}
+            {view === 'reports'  && <ReportsView sendMsg={sendMsg} onBack={() => setView('subscriptions')} />}
             {view === 'sync'     && <SyncView sendMsg={sendMsg} />}
             {view === 'settings' && <SettingsView sendMsg={sendMsg} onLock={() => setVaultLocked(true)} />}
           </>

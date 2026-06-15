@@ -4,6 +4,7 @@ import { toUSD, convertFromUSD } from '../../lib/currency'
 
 interface Props {
   sendMsg: (type: string, payload?: unknown) => Promise<{ ok: boolean; data?: unknown; error?: string }>
+  onBack?: () => void
 }
 
 const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
@@ -311,7 +312,7 @@ function SubRow({ row, year, month, displayCurrency, sendMsg, onRefresh }: SubRo
   )
 }
 
-export function ReportsView({ sendMsg }: Props) {
+export function ReportsView({ sendMsg, onBack }: Props) {
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
@@ -370,6 +371,17 @@ export function ReportsView({ sendMsg }: Props) {
 
   return (
     <div className="flex flex-col p-3 gap-3 overflow-y-auto" style={{ height: '100%' }}>
+      {/* Back button */}
+      {onBack && (
+        <div className="flex items-center gap-2">
+          <button onClick={onBack}
+            className="flex items-center gap-1.5 text-xs font-semibold"
+            style={{ color: '#f472b6', background: 'rgba(244,114,182,0.08)', border: '1px solid rgba(244,114,182,0.18)', borderRadius: 8, padding: '4px 10px' }}>
+            ← Back
+          </button>
+          <span className="text-sm font-bold" style={{ color: 'rgba(255,255,255,0.8)' }}>Reports & Bills</span>
+        </div>
+      )}
       {/* Month navigator */}
       <div className="flex items-center justify-between">
         <button onClick={prevMonth}
