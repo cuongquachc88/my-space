@@ -15,6 +15,7 @@ val AccentVault   = Color(0xFFFBBF24)  // amber-400
 val AccentSync    = Color(0xFF60A5FA)  // blue-400
 val AccentGen     = Color(0xFFC4B5FD)  // violet-300
 val AccentSubs    = Color(0xFF34D399)  // emerald-400
+val AccentReport  = Color(0xFFF472B6)  // pink-400
 val TextPrimary   = Color(0xF0FFFFFF)
 val TextSecondary = Color(0xAAFFFFFF)
 val TextMuted     = Color(0x66FFFFFF)

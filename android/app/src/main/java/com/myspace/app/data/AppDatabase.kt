@@ -41,6 +41,44 @@ data class SubscriptionEntity(
     val updatedAt: Long,
 )
 
+@Entity(
+    tableName = "bills",
+    primaryKeys = ["subId", "year", "month"],
+)
+data class BillEntity(
+    val subId: String,
+    val year: Int,
+    val month: Int,
+    val amount: Double,
+    val currency: String,
+    val notes: String = "",
+    val updatedAt: Long,
+)
+
+@Dao
+interface BillDao {
+    @Query("SELECT * FROM bills WHERE subId = :subId ORDER BY year DESC, month DESC")
+    suspend fun getForSub(subId: String): List<BillEntity>
+
+    @Query("SELECT * FROM bills WHERE year = :year AND month = :month ORDER BY subId ASC")
+    suspend fun getForMonth(year: Int, month: Int): List<BillEntity>
+
+    @Query("SELECT * FROM bills ORDER BY year DESC, month DESC")
+    suspend fun getAll(): List<BillEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(bill: BillEntity)
+
+    @Query("DELETE FROM bills WHERE subId = :subId AND year = :year AND month = :month")
+    suspend fun delete(subId: String, year: Int, month: Int)
+
+    @Query("DELETE FROM bills WHERE subId = :subId")
+    suspend fun deleteForSub(subId: String)
+
+    @Query("DELETE FROM bills")
+    suspend fun deleteAll()
+}
+
 @Dao
 interface NoteDao {
     @Query("SELECT * FROM notes ORDER BY updatedAt DESC")
@@ -104,14 +142,15 @@ interface SubscriptionDao {
 }
 
 @Database(
-    entities = [NoteEntity::class, SecretEntity::class, SubscriptionEntity::class],
-    version = 5,
+    entities = [NoteEntity::class, SecretEntity::class, SubscriptionEntity::class, BillEntity::class],
+    version = 6,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun noteDao(): NoteDao
     abstract fun secretDao(): SecretDao
     abstract fun subscriptionDao(): SubscriptionDao
+    abstract fun billDao(): BillDao
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
@@ -148,9 +187,22 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_5_6 = object : androidx.room.migration.Migration(5, 6) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS bills (
+                        subId TEXT NOT NULL, year INTEGER NOT NULL, month INTEGER NOT NULL,
+                        amount REAL NOT NULL, currency TEXT NOT NULL,
+                        notes TEXT NOT NULL DEFAULT '', updatedAt INTEGER NOT NULL,
+                        PRIMARY KEY (subId, year, month)
+                    )
+                """.trimIndent())
+            }
+        }
+
         fun get(context: Context): AppDatabase = INSTANCE ?: synchronized(this) {
             INSTANCE ?: Room.databaseBuilder(context, AppDatabase::class.java, "myspace.db")
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                 .build()
                 .also { INSTANCE = it }
         }

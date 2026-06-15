@@ -33,6 +33,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.myspace.app.data.AppDatabase
 import com.myspace.app.data.SubscriptionEntity
+import com.myspace.app.ui.theme.AccentReport
 import com.myspace.app.ui.theme.AccentSubs
 import com.myspace.app.ui.theme.BgCard
 import com.myspace.app.ui.theme.BgCardBorder
@@ -49,6 +50,13 @@ private val CURRENCIES = listOf("USD", "EUR", "GBP", "VND", "JPY", "SGD")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SubscriptionsScreen(db: AppDatabase) {
+    var showReports by remember { mutableStateOf(false) }
+
+    if (showReports) {
+        ReportsScreen(db = db, onBack = { showReports = false })
+        return
+    }
+
     val scope   = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -149,6 +157,28 @@ fun SubscriptionsScreen(db: AppDatabase) {
                         },
                         onDelete = { scope.launch { db.subscriptionDao().delete(sub.id); reload() } },
                     )
+                }
+
+                item {
+                    Spacer(Modifier.height(4.dp))
+                    Button(
+                        onClick = { showReports = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = AccentReport.copy(alpha = 0.10f),
+                            contentColor   = AccentReport,
+                        ),
+                        contentPadding = PaddingValues(vertical = 14.dp),
+                    ) {
+                        Icon(Icons.Default.BarChart, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "Reports & Bills  ~${"%.2f".format(totalDisplay)} $displayCurrency/mo",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
                 }
             }
         }
