@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import type { Subscription } from '../../shared/messages'
 import { TagInput } from '../components/TagInput'
 import { nextBillingDate, type BillingCycle } from '../../lib/nextBilling'
+import { monthlyEquivalentUSD, convertFromUSD } from '../../lib/currency'
 
 interface Props {
   sendMsg: (type: string, payload?: unknown) => Promise<{ ok: boolean; data?: unknown; error?: string }>
@@ -14,34 +15,13 @@ const CYCLE_LABELS: Record<string, string> = {
   monthly: '/mo', yearly: '/yr', weekly: '/wk', 'one-time': 'once'
 }
 
-// Approximate rates vs USD — good enough for a spending summary
-const TO_USD: Record<string, number> = {
-  USD: 1, EUR: 1.08, GBP: 1.27, VND: 0.000039, JPY: 0.0067, SGD: 0.74,
-}
-const FROM_USD: Record<string, number> = Object.fromEntries(
-  Object.entries(TO_USD).map(([k, v]) => [k, 1 / v])
-)
-
-function toUSD(amount: number, currency: string): number {
-  return amount * (TO_USD[currency] ?? 1)
-}
-
-function monthlyEquivalentUSD(amount: number, currency: string, cycle: string): number {
-  const usd = toUSD(amount, currency)
-  if (cycle === 'monthly')  return usd
-  if (cycle === 'yearly')   return usd / 12
-  if (cycle === 'weekly')   return usd * 4.33
-  return 0
-}
-
 function formatCurrency(amount: string | number, currency: string): string {
   const num = typeof amount === 'string' ? parseFloat(amount) : amount
   return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 2 }).format(num)
 }
 
 function formatDisplay(usdAmount: number, displayCurrency: string): string {
-  const converted = usdAmount * (FROM_USD[displayCurrency] ?? 1)
-  return formatCurrency(converted, displayCurrency)
+  return formatCurrency(convertFromUSD(usdAmount, displayCurrency), displayCurrency)
 }
 
 function daysUntil(dateStr: string): number {
