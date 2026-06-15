@@ -1,12 +1,18 @@
-# Dependencies
-node_modules/
+# Keys / secrets
+keys/
 
-# Build output
-dist/
+# Chrome extension
+chrome-extension/node_modules/
+chrome-extension/dist/
+chrome-extension/*.zip
 
-# Packed extensions
-*.zip
-*.crx
+# Android build
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+*.apk
+*.aab
 
 # Environment
 .env
@@ -19,18 +25,13 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
+*.iml
 
 # Logs
 *.log
 npm-debug.log*
 
-# Cache
+# Dev tools
+.playwright-mcp/
+.claude/
 .superpowers/
-docs/superpowers/
-
-# Keys / secrets
-keys/
