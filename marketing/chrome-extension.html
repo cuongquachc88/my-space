@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>My SPACE — Chrome Web Store Listing</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; line-height: 1.6; color: #1a1a1a; }
+    h1 { font-size: 2em; margin-bottom: 4px; }
+    .tagline { font-size: 1.1em; color: #555; margin-bottom: 32px; }
+    h2 { font-size: 1.1em; font-weight: 700; margin: 28px 0 8px; text-transform: uppercase; letter-spacing: .05em; color: #333; }
+    ul { padding-left: 20px; }
+    li { margin-bottom: 6px; }
+    .section { border-left: 3px solid #6366f1; padding-left: 16px; margin: 24px 0; }
+    code { background: #f4f4f4; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+    .label { display: inline-block; background: #6366f1; color: white; font-size: 11px; padding: 2px 8px; border-radius: 20px; margin-right: 6px; font-weight: 600; }
+    .label.amber { background: #f59e0b; }
+    .label.blue { background: #3b82f6; }
+    .label.green { background: #34d399; color: #052e16; }
+    .label.purple { background: #a78bfa; }
+    table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+    td, th { text-align: left; padding: 8px 12px; border-bottom: 1px solid #eee; font-size: 0.95em; }
+    th { background: #f8f8f8; font-weight: 600; }
+  </style>
+</head>
+<body>
+
+<h1>My SPACE</h1>
+<p class="tagline">Your private vault — right in the Chrome side panel. Notes, secrets, passwords, subscriptions. Encrypted. Offline. Yours.</p>
+
+<!-- ═══════════════════════════════════════════
+     CHROME WEB STORE — SHORT DESCRIPTION (max 132 chars)
+     ═══════════════════════════════════════════ -->
+<h2>Short Description</h2>
+<div class="section">
+  <p>Private vault in your side panel. Encrypted notes, secrets, passwords &amp; subscriptions. No servers. No signup. Your data stays on your device.</p>
+  <small style="color:#999">Character count: ~132</small>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     CHROME WEB STORE — DETAILED DESCRIPTION
+     ═══════════════════════════════════════════ -->
+<h2>Detailed Description</h2>
+<div class="section">
+<pre style="white-space:pre-wrap; font-family:inherit; font-size:0.95em">
+MY SPACE — Your private side panel vault
+
+Keep everything important within arm's reach — without ever leaving your current tab. My SPACE opens as a Chrome side panel, giving you a persistent, distraction-free space for your most sensitive data.
+
+🔐 SECRET VAULT
+Store passwords, API keys, tokens, and any sensitive text. Every secret is encrypted with AES-GCM 256-bit before being written to disk. Unlock with your master password and the vault auto-locks after 15 minutes of inactivity.
+
+📝 NOTES
+Write and search Markdown notes with tag filtering. Keep meeting notes, ideas, code snippets — all local, all private.
+
+🔑 PASSWORD GENERATOR
+Generate strong passwords up to 64 characters. Toggle uppercase, digits, and symbols. Copy with one click.
+
+💳 SUBSCRIPTION TRACKER
+Track every recurring charge — monthly, yearly, weekly, or one-time. See your total monthly spend converted to your preferred currency (USD, EUR, GBP, VND, JPY, SGD).
+
+☁️ GOOGLE DRIVE SYNC (OPTIONAL)
+Encrypted backup to Google Drive's private appData folder — invisible in your Drive UI, readable only by this app. Your data is encrypted locally before upload. Google cannot read it.
+
+📥 IMPORT
+Migrate from 1Password (CSV) or Bitwarden (CSV) in seconds.
+
+─────────────────────
+PRIVACY FIRST
+─────────────────────
+✓ No account required
+✓ No servers — everything runs in your browser
+✓ No analytics, no telemetry, no third-party SDKs
+✓ AES-GCM 256-bit encryption at rest
+✓ Open source
+
+Your data never leaves your device — unless you explicitly choose to sync to your own Google Drive.
+</pre>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     BRANDING & ASSETS
+     ═══════════════════════════════════════════ -->
+<h2>Branding</h2>
+<table>
+  <tr><th>Asset</th><th>File</th><th>Usage</th></tr>
+  <tr><td>Icon 128×128</td><td><code>assets/icon128.png</code></td><td>Chrome Web Store listing, extension tile</td></tr>
+  <tr><td>Icon 48×48</td><td><code>assets/icon48.png</code></td><td>chrome://extensions page</td></tr>
+  <tr><td>Icon 16×16</td><td><code>assets/icon16.png</code></td><td>Favicon, toolbar</td></tr>
+</table>
+
+<h2>Color Palette</h2>
+<table>
+  <tr><th>Name</th><th>Hex</th><th>Usage</th></tr>
+  <tr><td>Background</td><td><code>#0D1117</code></td><td>App background</td></tr>
+  <tr><td>Surface</td><td><code>#161B22</code></td><td>Cards, panels</td></tr>
+  <tr><td><span class="label">Notes</span></td><td><code>#6366F1</code></td><td>Notes accent — indigo</td></tr>
+  <tr><td><span class="label amber">Vault</span></td><td><code>#F59E0B</code></td><td>Secret vault accent — amber</td></tr>
+  <tr><td><span class="label blue">Sync</span></td><td><code>#3B82F6</code></td><td>Sync accent — blue</td></tr>
+  <tr><td><span class="label purple">Generator</span></td><td><code>#A78BFA</code></td><td>Generator accent — purple</td></tr>
+  <tr><td><span class="label green">Subs</span></td><td><code>#34D399</code></td><td>Subscriptions accent — green</td></tr>
+</table>
+
+<h2>Category & Tags (Chrome Web Store)</h2>
+<div class="section">
+  <p><strong>Category:</strong> Productivity</p>
+  <p><strong>Language:</strong> English</p>
+  <p><strong>Tags / Keywords:</strong> password manager, notes, secret vault, encryption, privacy, offline, side panel, subscription tracker, password generator, AES, Google Drive sync, 1Password import, Bitwarden import</p>
+</div>
+
+<h2>Permissions Justification</h2>
+<table>
+  <tr><th>Permission</th><th>Why it's needed</th></tr>
+  <tr><td><code>storage</code></td><td>Persist sync settings (Drive file ID, connected state) in chrome.storage.local</td></tr>
+  <tr><td><code>offscreen</code></td><td>Run PGlite (PostgreSQL WASM) and Web Crypto in a background offscreen document</td></tr>
+  <tr><td><code>identity</code></td><td>OAuth2 token for Google Drive sync via chrome.identity.getAuthToken</td></tr>
+  <tr><td><code>sidePanel</code></td><td>Open the app in Chrome's side panel on toolbar click</td></tr>
+</table>
+
+<h2>Support Links</h2>
+<div class="section">
+  <ul>
+    <li><strong>Homepage:</strong> https://cuongquachc88.github.io/my-space/</li>
+    <li><strong>Privacy Policy:</strong> https://cuongquachc88.github.io/my-space/privacy-policy.md</li>
+    <li><strong>Terms of Service:</strong> https://cuongquachc88.github.io/my-space/terms-of-service.md</li>
+    <li><strong>Source Code:</strong> https://github.com/cuongquachc88/my-space</li>
+  </ul>
+</div>
+
+</body>
+</html>
