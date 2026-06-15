@@ -31,3 +31,6 @@ npm-debug.log*
 # Cache
 .superpowers/
 docs/superpowers/
+
+# Keys / secrets
+keys/

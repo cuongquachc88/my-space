@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My SPACE — Private. Encrypted. Yours.</title>
+  <meta name="description" content="A private, offline-first Chrome extension. Notes, secrets, passwords, and subscriptions — all encrypted on your device." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1117;
+      --surface: rgba(255,255,255,0.04);
+      --border: rgba(255,255,255,0.07);
+      --border-hover: rgba(255,255,255,0.14);
+      --text: rgba(255,255,255,0.88);
+      --muted: rgba(255,255,255,0.38);
+      --faint: rgba(255,255,255,0.10);
+      --notes: #6366f1;
+      --vault: #f59e0b;
+      --sync: #3b82f6;
+      --gen: #a78bfa;
+      --subs: #34d399;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Noise */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 0; opacity: 0.5;
+    }
+
+    /* Grid */
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.016) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.016) 1px, transparent 1px);
+      background-size: 80px 80px;
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ── Particles canvas ── */
+    #particles { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+
+    /* ── Nav ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 48px; height: 64px;
+      background: rgba(13,17,23,0.75);
+      backdrop-filter: blur(24px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 17px;
+      letter-spacing: -0.02em; color: var(--text); text-decoration: none;
+      display: flex; align-items: center; gap: 10px;
+    }
+
+    .nav-logo-icon {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, #6366f1, #a78bfa);
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    }
+
+    .nav-links { display: flex; gap: 32px; list-style: none; }
+    .nav-links a { font-size: 13px; color: var(--muted); text-decoration: none; letter-spacing: 0.02em; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--text); }
+
+    /* ── Hero ── */
+    .hero {
+      position: relative; min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 120px 24px 80px; text-align: center; overflow: hidden; z-index: 1;
+    }
+
+    .hero-glow { position: absolute; border-radius: 50%; filter: blur(130px); pointer-events: none; }
+    .hero-glow-1 {
+      width: 700px; height: 450px; top: -120px; left: 50%; transform: translateX(-50%);
+      background: radial-gradient(ellipse, rgba(99,102,241,0.2) 0%, transparent 70%);
+      animation: glow1 9s ease-in-out infinite;
+    }
+    .hero-glow-2 {
+      width: 420px; height: 320px; bottom: 0; left: 8%;
+      background: radial-gradient(ellipse, rgba(245,158,11,0.11) 0%, transparent 70%);
+      animation: glow2 11s ease-in-out infinite;
+    }
+    .hero-glow-3 {
+      width: 320px; height: 320px; bottom: 80px; right: 4%;
+      background: radial-gradient(ellipse, rgba(59,130,246,0.11) 0%, transparent 70%);
+      animation: glow2 13s ease-in-out infinite reverse;
+    }
+
+    @keyframes glow1 {
+      0%,100% { opacity:1; transform:translateX(-50%) scale(1); }
+      50%      { opacity:0.65; transform:translateX(-50%) scale(1.18); }
+    }
+    @keyframes glow2 {
+      0%,100% { opacity:1; transform:scale(1); }
+      50%      { opacity:0.55; transform:scale(1.22); }
+    }
+
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 14px; border-radius: 100px;
+      border: 1px solid rgba(99,102,241,0.3); background: rgba(99,102,241,0.08);
+      font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.1em;
+      color: rgba(167,139,250,0.9); text-transform: uppercase;
+      margin-bottom: 32px; animation: fadeUp 0.8s ease both;
+    }
+
+    .badge-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--gen); box-shadow: 0 0 8px var(--gen);
+      animation: blink 2s ease-in-out infinite;
+    }
+
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.25} }
+
+    .hero-title {
+      font-family: 'Syne', sans-serif; font-weight: 800;
+      font-size: clamp(52px,8vw,96px); letter-spacing: -0.04em; line-height: 0.95;
+      margin-bottom: 28px; animation: fadeUp 0.8s 0.1s ease both;
+    }
+    .hero-title-line1 { display: block; color: var(--text); }
+    .hero-title-line2 {
+      display: block;
+      background: linear-gradient(135deg, #6366f1 0%, #a78bfa 45%, #3b82f6 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+
+    .hero-sub {
+      max-width: 520px; font-size: 17px; font-weight: 300; color: var(--muted);
+      line-height: 1.7; margin-bottom: 48px; animation: fadeUp 0.8s 0.2s ease both;
+    }
+
+    .hero-cta-group {
+      display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: center;
+      animation: fadeUp 0.8s 0.3s ease both;
+    }
+
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 14px 28px; border-radius: 12px;
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      color: white; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
+      text-decoration: none; border: none; cursor: pointer; transition: all 0.25s;
+      box-shadow: 0 0 0 1px rgba(99,102,241,0.4), 0 8px 28px rgba(99,102,241,0.28);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 0 1px rgba(99,102,241,0.55), 0 14px 36px rgba(99,102,241,0.38); }
+
+    .btn-ghost {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 14px 24px; border-radius: 12px; background: var(--surface);
+      color: var(--muted); font-size: 14px; text-decoration: none;
+      border: 1px solid var(--border); transition: all 0.2s;
+    }
+    .btn-ghost:hover { color: var(--text); border-color: var(--border-hover); background: rgba(255,255,255,0.07); }
+
+    /* ── Mockup ── */
+    .hero-mockup { position: relative; margin-top: 72px; animation: fadeUp 0.8s 0.45s ease both; }
+
+    .mockup-frame {
+      width: 340px; border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.09);
+      background: rgba(10,14,20,0.95); backdrop-filter: blur(40px); overflow: hidden;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.04), 0 36px 90px rgba(0,0,0,0.7), 0 0 140px rgba(99,102,241,0.09);
+    }
+
+    .mockup-topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; border-bottom: 1px solid var(--border);
+    }
+    .mockup-dots { display: flex; gap: 6px; }
+    .mockup-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .mockup-dot:nth-child(1){background:#ff5f57}
+    .mockup-dot:nth-child(2){background:#febc2e}
+    .mockup-dot:nth-child(3){background:#28c840}
+    .mockup-title { font-family:'DM Mono',monospace; font-size:11px; color:var(--muted); }
+
+    .mockup-body { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+
+    .mockup-card {
+      border-radius: 10px; padding: 12px 14px;
+      border: 1px solid var(--border); background: rgba(255,255,255,0.025);
+    }
+    .mockup-card-label {
+      font-size: 10px; font-family:'DM Mono',monospace;
+      letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px;
+    }
+    .mockup-line { height: 8px; border-radius: 4px; background: var(--faint); }
+
+    /* ── Sync progress animation ── */
+    .sync-card { position: relative; overflow: hidden; }
+
+    .sync-row {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;
+    }
+    .sync-status-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: #22c55e; box-shadow: 0 0 8px #22c55e;
+      animation: blink 2.5s ease-in-out infinite;
+    }
+    .sync-label { font-size:11px; color:rgba(255,255,255,0.4); font-family:'DM Mono',monospace; }
+    .sync-action { font-size:10px; color:rgba(59,130,246,0.7); font-family:'DM Mono',monospace; }
+
+    .progress-track {
+      width: 100%; height: 4px; border-radius: 2px;
+      background: rgba(255,255,255,0.06); overflow: hidden; margin-bottom: 6px;
+    }
+    .progress-bar {
+      height: 100%; border-radius: 2px;
+      background: linear-gradient(90deg, #3b82f6, #6366f1, #a78bfa);
+      background-size: 200% 100%;
+      animation: progress-fill 3s ease-in-out infinite, shimmer 2s linear infinite;
+      transform-origin: left;
+    }
+    @keyframes progress-fill {
+      0%   { width: 0%; }
+      20%  { width: 35%; }
+      50%  { width: 68%; }
+      75%  { width: 88%; }
+      90%  { width: 96%; }
+      100% { width: 100%; }
+    }
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .progress-labels {
+      display: flex; justify-content: space-between;
+    }
+    .progress-step {
+      font-size: 9px; font-family: 'DM Mono', monospace;
+      color: rgba(255,255,255,0.2); transition: color 0.3s;
+    }
+    .progress-step.active { color: rgba(147,197,253,0.8); }
+
+    /* Drive icon orbit */
+    .drive-orbit {
+      position: absolute; right: 12px; bottom: 12px;
+      width: 32px; height: 32px;
+    }
+    .drive-orbit svg { animation: orbit-spin 4s linear infinite; }
+    @keyframes orbit-spin {
+      0%,100% { transform: scale(1); filter: drop-shadow(0 0 4px rgba(59,130,246,0.6)); }
+      50%      { transform: scale(1.1); filter: drop-shadow(0 0 8px rgba(99,102,241,0.8)); }
+    }
+
+    /* ── Sections ── */
+    section { position: relative; z-index: 1; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+    .section-label {
+      font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 16px;
+    }
+    .section-title {
+      font-family: 'Syne', sans-serif; font-weight: 700;
+      font-size: clamp(32px,4vw,48px); letter-spacing: -0.03em;
+      line-height: 1.1; color: var(--text); margin-bottom: 16px;
+    }
+    .section-sub { font-size: 16px; font-weight: 300; color: var(--muted); max-width: 480px; line-height: 1.7; }
+
+    /* ── Features ── */
+    .features { padding: 120px 0; }
+    .features-header { margin-bottom: 64px; }
+
+    .features-grid {
+      display: grid; grid-template-columns: repeat(3,1fr);
+      gap: 1px; background: var(--border);
+      border: 1px solid var(--border); border-radius: 20px; overflow: hidden;
+    }
+
+    .feature-card {
+      background: var(--bg); padding: 36px 32px;
+      transition: background 0.3s; position: relative; overflow: hidden;
+      opacity: 0; transform: translateY(16px);
+      transition: opacity 0.5s ease, transform 0.5s ease, background 0.3s;
+    }
+    .feature-card.visible { opacity: 1; transform: translateY(0); }
+
+    .feature-card::before {
+      content: ''; position: absolute; inset: 0; opacity: 0; transition: opacity 0.35s;
+    }
+    .feature-card:hover { background: rgba(255,255,255,0.028); }
+    .feature-card:hover::before { opacity: 1; }
+
+    .feature-card.notes::before  { background: radial-gradient(circle at 0 0, rgba(99,102,241,0.1), transparent 65%); }
+    .feature-card.vault::before  { background: radial-gradient(circle at 0 0, rgba(245,158,11,0.1), transparent 65%); }
+    .feature-card.gen::before    { background: radial-gradient(circle at 0 0, rgba(167,139,250,0.1), transparent 65%); }
+    .feature-card.subs::before   { background: radial-gradient(circle at 0 0, rgba(52,211,153,0.1), transparent 65%); }
+    .feature-card.sync::before   { background: radial-gradient(circle at 0 0, rgba(59,130,246,0.1), transparent 65%); }
+    .feature-card.import::before { background: radial-gradient(circle at 0 0, rgba(251,191,36,0.07), transparent 65%); }
+
+    .feature-icon {
+      width: 44px; height: 44px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 20px; font-size: 20px;
+    }
+    .feature-name {
+      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 17px;
+      letter-spacing: -0.02em; color: var(--text); margin-bottom: 10px;
+    }
+    .feature-desc { font-size: 14px; font-weight: 300; color: var(--muted); line-height: 1.65; }
+    .feature-tag {
+      display: inline-block; margin-top: 16px; padding: 3px 10px;
+      border-radius: 100px; font-family: 'DM Mono', monospace;
+      font-size: 10px; letter-spacing: 0.06em;
+    }
+
+    /* ── Privacy ── */
+    .privacy { padding: 120px 0; border-top: 1px solid var(--border); }
+    .privacy-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; }
+    .privacy-pillars { display: flex; flex-direction: column; gap: 20px; }
+
+    .pillar {
+      display: flex; gap: 16px; align-items: flex-start;
+      padding: 20px; border-radius: 14px;
+      border: 1px solid var(--border); background: var(--surface);
+      transition: border-color 0.2s, background 0.2s, transform 0.2s;
+    }
+    .pillar:hover { border-color: var(--border-hover); background: rgba(255,255,255,0.06); transform: translateX(4px); }
+
+    .pillar-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; flex-shrink: 0; background: rgba(255,255,255,0.05);
+    }
+    .pillar-title { font-family:'Syne',sans-serif; font-weight:600; font-size:14px; color:var(--text); margin-bottom:4px; }
+    .pillar-desc { font-size:13px; font-weight:300; color:var(--muted); line-height:1.6; }
+
+    /* ── Crypto callout ── */
+    .crypto-callout {
+      border-radius: 20px; border: 1px solid rgba(99,102,241,0.22);
+      background: rgba(99,102,241,0.05); padding: 40px;
+      position: relative; overflow: hidden;
+    }
+    .crypto-callout::before {
+      content: ''; position: absolute; top:-70px; right:-70px;
+      width: 220px; height: 220px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(99,102,241,0.18), transparent 70%);
+      animation: glow2 6s ease-in-out infinite;
+    }
+
+    .crypto-label {
+      font-family:'DM Mono',monospace; font-size:10px; letter-spacing:0.1em;
+      text-transform:uppercase; color:rgba(167,139,250,0.7); margin-bottom:12px;
+    }
+    .crypto-algo {
+      font-family:'DM Mono',monospace; font-size:28px; font-weight:500;
+      color:var(--text); margin-bottom:8px; letter-spacing:-0.02em;
+    }
+    .crypto-desc { font-size:13px; font-weight:300; color:var(--muted); line-height:1.6; margin-bottom:24px; }
+
+    .crypto-specs { display:flex; flex-direction:column; gap:8px; }
+    .crypto-spec {
+      display:flex; justify-content:space-between; align-items:center;
+      padding:10px 14px; border-radius:8px;
+      background:rgba(255,255,255,0.035); border:1px solid rgba(255,255,255,0.055);
+      transition: background 0.2s;
+    }
+    .crypto-spec:hover { background: rgba(255,255,255,0.06); }
+    .spec-key { font-family:'DM Mono',monospace; font-size:11px; color:var(--muted); }
+    .spec-val { font-family:'DM Mono',monospace; font-size:11px; color:rgba(167,139,250,0.85); }
+
+    /* ── Sync demo section ── */
+    .sync-demo { padding: 100px 0; border-top: 1px solid var(--border); }
+    .sync-demo-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; }
+
+    .sync-visual {
+      position: relative; display: flex; align-items: center; justify-content: center;
+      height: 280px;
+    }
+
+    .sync-device {
+      width: 100px; height: 140px; border-radius: 14px;
+      border: 1px solid var(--border); background: rgba(255,255,255,0.04);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 8px; position: relative; z-index: 2;
+    }
+    .sync-device-icon { font-size: 28px; }
+    .sync-device-label { font-family:'DM Mono',monospace; font-size:9px; color:var(--muted); letter-spacing:0.05em; }
+
+    .sync-line {
+      position: absolute; top: 50%; left: 50%; height: 2px;
+      background: linear-gradient(90deg, rgba(59,130,246,0.6), rgba(99,102,241,0.6));
+      transform-origin: left center;
+      animation: line-pulse 3s ease-in-out infinite;
+    }
+    .sync-line.left  { width: 120px; transform: translateX(-100%) translateY(-1px); }
+    .sync-line.right { width: 120px; transform: translateY(-1px); }
+
+    @keyframes line-pulse {
+      0%,100% { opacity:0.4; }
+      50%      { opacity:1; }
+    }
+
+    .sync-cloud {
+      width: 80px; height: 80px; border-radius: 50%;
+      border: 1px solid rgba(59,130,246,0.3);
+      background: rgba(59,130,246,0.07);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 32px; position: relative; z-index: 2;
+      animation: cloud-pulse 3s ease-in-out infinite;
+    }
+    @keyframes cloud-pulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(59,130,246,0.2), 0 0 20px rgba(59,130,246,0.1); }
+      50%      { box-shadow: 0 0 0 12px rgba(59,130,246,0), 0 0 40px rgba(59,130,246,0.2); }
+    }
+
+    /* Packet dots traveling along lines */
+    .packet {
+      position: absolute; top: 50%; width: 8px; height: 8px;
+      border-radius: 50%; margin-top: -4px;
+      background: rgba(99,102,241,0.9);
+      box-shadow: 0 0 8px rgba(99,102,241,0.8);
+    }
+    .packet-1 { animation: packet-right 3s ease-in-out infinite; }
+    .packet-2 { animation: packet-left 3s ease-in-out infinite 1.5s; }
+    @keyframes packet-right {
+      0%   { left:calc(50% - 120px); opacity:0; }
+      10%  { opacity:1; }
+      90%  { opacity:1; }
+      100% { left:calc(50% + 120px); opacity:0; }
+    }
+    @keyframes packet-left {
+      0%   { left:calc(50% + 120px); opacity:0; background:rgba(59,130,246,0.9); box-shadow:0 0 8px rgba(59,130,246,0.8); }
+      10%  { opacity:1; }
+      90%  { opacity:1; }
+      100% { left:calc(50% - 120px); opacity:0; }
+    }
+
+    /* Big progress bar in sync demo */
+    .big-progress-wrap { margin-top: 28px; }
+    .big-progress-label {
+      display: flex; justify-content: space-between; margin-bottom: 8px;
+    }
+    .big-progress-title { font-family:'DM Mono',monospace; font-size:11px; color:var(--muted); }
+    .big-progress-pct {
+      font-family:'DM Mono',monospace; font-size:11px;
+      color:rgba(147,197,253,0.8);
+      animation: count-up 3s ease-in-out infinite;
+    }
+    @keyframes count-up {
+      0%  { content:'0%'; }
+      100%{ content:'100%'; }
+    }
+
+    .big-track {
+      width:100%; height:6px; border-radius:3px;
+      background:rgba(255,255,255,0.06); overflow:hidden;
+    }
+    .big-bar {
+      height:100%; border-radius:3px;
+      background: linear-gradient(90deg,#3b82f6,#6366f1,#a78bfa);
+      background-size:200% 100%;
+      animation: progress-fill 3s ease-in-out infinite, shimmer 1.8s linear infinite;
+    }
+
+    .big-steps {
+      display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;
+    }
+    .big-step {
+      display: flex; align-items: center; gap: 5px;
+      font-family:'DM Mono',monospace; font-size:10px; color:rgba(255,255,255,0.25);
+      padding: 4px 10px; border-radius: 100px;
+      border: 1px solid rgba(255,255,255,0.06);
+      transition: all 0.4s;
+    }
+    .big-step.done {
+      color: rgba(110,231,183,0.8);
+      border-color: rgba(52,211,153,0.25);
+      background: rgba(52,211,153,0.06);
+    }
+    .big-step.active {
+      color: rgba(147,197,253,0.9);
+      border-color: rgba(59,130,246,0.3);
+      background: rgba(59,130,246,0.07);
+    }
+    .step-check { font-size: 9px; }
+
+    /* ── Open source ── */
+    .open-source { padding: 80px 0; border-top: 1px solid var(--border); }
+    .open-source-inner { display:flex; align-items:center; justify-content:space-between; gap:40px; flex-wrap:wrap; }
+
+    .github-card {
+      display:flex; align-items:center; gap:16px;
+      padding:20px 28px; border-radius:14px;
+      border:1px solid var(--border); background:var(--surface);
+      text-decoration:none; color:var(--text); transition:all 0.2s;
+    }
+    .github-card:hover { border-color:var(--border-hover); background:rgba(255,255,255,0.06); transform:translateY(-2px); }
+    .github-icon { width:40px; height:40px; flex-shrink:0; }
+    .github-card-label { font-size:12px; color:var(--muted); margin-bottom:2px; }
+    .github-card-name { font-family:'DM Mono',monospace; font-size:14px; font-weight:500; }
+
+    /* ── Footer ── */
+    footer { border-top:1px solid var(--border); padding:40px 0; position:relative; z-index:1; }
+    .footer-inner { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:20px; }
+    .footer-logo { font-family:'Syne',sans-serif; font-weight:800; font-size:15px; color:var(--muted); letter-spacing:-0.02em; }
+    .footer-links { display:flex; gap:24px; list-style:none; }
+    .footer-links a { font-size:13px; color:var(--muted); text-decoration:none; transition:color 0.2s; }
+    .footer-links a:hover { color:var(--text); }
+    .footer-copy { font-size:12px; color:rgba(255,255,255,0.18); font-family:'DM Mono',monospace; }
+
+    /* ── Animations ── */
+    @keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+
+    .reveal { opacity:0; transform:translateY(20px); transition:opacity 0.7s ease,transform 0.7s ease; }
+    .reveal.visible { opacity:1; transform:translateY(0); }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar{width:5px}
+    ::-webkit-scrollbar-track{background:var(--bg)}
+    ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px}
+
+    /* ── Responsive ── */
+    @media(max-width:900px){
+      nav{padding:0 24px}
+      .nav-links{display:none}
+      .features-grid{grid-template-columns:1fr 1fr}
+      .privacy-inner,.sync-demo-inner{grid-template-columns:1fr;gap:48px}
+      .open-source-inner{flex-direction:column}
+    }
+    @media(max-width:600px){
+      .features-grid{grid-template-columns:1fr}
+      .feature-card{padding:28px 24px}
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="particles"></canvas>
+
+<!-- Nav -->
+<nav>
+  <a href="#" class="nav-logo">
+    <div class="nav-logo-icon">
+      <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+        <path d="M10 1.5L3 4.5v5c0 4 3.1 7.5 7 8.5 3.9-1 7-4.5 7-8.5v-5L10 1.5z"
+          fill="rgba(255,255,255,0.2)" stroke="white" stroke-width="1.4" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    My SPACE
+  </a>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#sync-demo">Sync</a></li>
+    <li><a href="#privacy">Privacy</a></li>
+    <li><a href="#open-source">Open Source</a></li>
+  </ul>
+  <a href="https://github.com/cuongquachc88/my-space" class="btn-ghost" style="padding:8px 18px;font-size:13px">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+    GitHub
+  </a>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-glow hero-glow-1"></div>
+  <div class="hero-glow hero-glow-2"></div>
+  <div class="hero-glow hero-glow-3"></div>
+
+  <div class="hero-badge">
+    <div class="badge-dot"></div>
+    Chrome Extension · Side Panel
+  </div>
+
+  <h1 class="hero-title">
+    <span class="hero-title-line1">Your digital</span>
+    <span class="hero-title-line2">safe space.</span>
+  </h1>
+
+  <p class="hero-sub">
+    Notes, secrets, passwords, and subscriptions — all encrypted on your device.
+    No servers. No tracking. No compromise.
+  </p>
+
+  <div class="hero-cta-group">
+    <a href="https://github.com/cuongquachc88/my-space" class="btn-primary">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+      View on GitHub
+    </a>
+    <a href="#features" class="btn-ghost">
+      See features
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+    </a>
+  </div>
+
+  <!-- Mockup with live sync animation -->
+  <div class="hero-mockup">
+    <div class="mockup-frame">
+      <div class="mockup-topbar">
+        <div class="mockup-dots">
+          <div class="mockup-dot"></div>
+          <div class="mockup-dot"></div>
+          <div class="mockup-dot"></div>
+        </div>
+        <span class="mockup-title">My SPACE — Side Panel</span>
+        <div style="width:44px"></div>
+      </div>
+      <div class="mockup-body">
+        <!-- Notes -->
+        <div class="mockup-card">
+          <div class="mockup-card-label" style="color:rgba(99,102,241,0.7);">📝 Notes</div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div class="mockup-line" style="width:72%"></div>
+            <div class="mockup-line" style="width:91%"></div>
+            <div class="mockup-line" style="width:58%"></div>
+          </div>
+        </div>
+        <!-- Vault -->
+        <div class="mockup-card">
+          <div class="mockup-card-label" style="color:rgba(245,158,11,0.7);">🔑 Secret Vault</div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="width:6px;height:6px;border-radius:50%;background:#f59e0b;flex-shrink:0"></div>
+              <div class="mockup-line" style="width:62%"></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="width:6px;height:6px;border-radius:50%;background:#f59e0b;opacity:0.4;flex-shrink:0"></div>
+              <div class="mockup-line" style="width:44%"></div>
+            </div>
+          </div>
+        </div>
+        <!-- Sync with progress bar -->
+        <div class="mockup-card sync-card">
+          <div class="mockup-card-label" style="color:rgba(59,130,246,0.7);">☁️ Google Drive Sync</div>
+          <div class="sync-row">
+            <div style="display:flex;align-items:center;gap:7px">
+              <div class="sync-status-dot"></div>
+              <span class="sync-label">Connected</span>
+            </div>
+            <span class="sync-action">↑ Pushing…</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-bar"></div>
+          </div>
+          <div class="progress-labels">
+            <span class="progress-step active" id="ps1">Encrypt</span>
+            <span class="progress-step" id="ps2">Upload</span>
+            <span class="progress-step" id="ps3">Done ✓</span>
+          </div>
+          <div class="drive-orbit">
+            <svg width="32" height="32" viewBox="0 0 87.3 78" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6.1 66.3l14.7-25.5 14.7 25.5z" fill="#0066DA" opacity="0.7"/>
+              <path d="M43.6 0L28.9 25.5h29.4z" fill="#00AC47" opacity="0.7"/>
+              <path d="M72.6 40.8L57.9 15.3 43.6 40.8h29z" fill="#EA4335" opacity="0.7"/>
+              <path d="M6.1 66.3h59l-14.5-25.5H20.8z" fill="#00832D" opacity="0.5"/>
+              <path d="M43.6 0L28.9 25.5H6.1L20.8 0z" fill="#2684FC" opacity="0.7"/>
+              <path d="M72.6 40.8H43.6L58.3 15.3l14.3 25.5z" fill="#FFBA00" opacity="0.7"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="position:absolute;bottom:-44px;left:50%;transform:translateX(-50%);width:220px;height:64px;background:radial-gradient(ellipse,rgba(99,102,241,0.32),transparent 70%);filter:blur(22px);pointer-events:none"></div>
+  </div>
+</section>
+
+<!-- Features -->
+<section class="features" id="features">
+  <div class="container">
+    <div class="features-header reveal">
+      <p class="section-label">Everything you need</p>
+      <h2 class="section-title">Six tools.<br/>One side panel.</h2>
+      <p class="section-sub">Always accessible, never in your way.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card notes">
+        <div class="feature-icon" style="background:rgba(99,102,241,0.12)">📝</div>
+        <div class="feature-name">Notes</div>
+        <p class="feature-desc">Write in Markdown with live preview. Tag, search, and keep your thoughts organised without leaving the browser.</p>
+        <span class="feature-tag" style="background:rgba(99,102,241,0.1);color:rgba(129,140,248,0.85);border:1px solid rgba(99,102,241,0.2)">Markdown preview</span>
+      </div>
+      <div class="feature-card vault">
+        <div class="feature-icon" style="background:rgba(245,158,11,0.12)">🔑</div>
+        <div class="feature-name">Secret Vault</div>
+        <p class="feature-desc">Store passwords, API keys, and tokens. Each secret encrypted with AES-GCM using your master passphrase — never stored in plaintext.</p>
+        <span class="feature-tag" style="background:rgba(245,158,11,0.1);color:rgba(251,191,36,0.85);border:1px solid rgba(245,158,11,0.2)">AES-GCM · PBKDF2</span>
+      </div>
+      <div class="feature-card gen">
+        <div class="feature-icon" style="background:rgba(167,139,250,0.12)">⚡</div>
+        <div class="feature-name">Password Generator</div>
+        <p class="feature-desc">Generate cryptographically strong passwords. Configure length, character sets, and copy instantly.</p>
+        <span class="feature-tag" style="background:rgba(167,139,250,0.1);color:rgba(196,181,253,0.85);border:1px solid rgba(167,139,250,0.2)">Crypto-random</span>
+      </div>
+      <div class="feature-card subs">
+        <div class="feature-icon" style="background:rgba(52,211,153,0.12)">💳</div>
+        <div class="feature-name">Subscriptions</div>
+        <p class="feature-desc">Track billing cycles, spot renewal dates, and see total monthly spend — all in one place.</p>
+        <span class="feature-tag" style="background:rgba(52,211,153,0.1);color:rgba(110,231,183,0.85);border:1px solid rgba(52,211,153,0.2)">Renewal alerts</span>
+      </div>
+      <div class="feature-card sync">
+        <div class="feature-icon" style="background:rgba(59,130,246,0.12)">☁️</div>
+        <div class="feature-name">Google Drive Sync</div>
+        <p class="feature-desc">Encrypted backup to Drive's private appData folder. Data is encrypted locally before it ever leaves your device.</p>
+        <span class="feature-tag" style="background:rgba(59,130,246,0.1);color:rgba(147,197,253,0.85);border:1px solid rgba(59,130,246,0.2)">End-to-end encrypted</span>
+      </div>
+      <div class="feature-card import">
+        <div class="feature-icon" style="background:rgba(251,191,36,0.1)">📥</div>
+        <div class="feature-name">Import</div>
+        <p class="feature-desc">Migrate from 1Password or Bitwarden in seconds. Supports CSV and JSON exports — never locked in.</p>
+        <span class="feature-tag" style="background:rgba(251,191,36,0.08);color:rgba(253,224,71,0.75);border:1px solid rgba(251,191,36,0.15)">1Password · Bitwarden</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Sync demo -->
+<section class="sync-demo" id="sync-demo">
+  <div class="container">
+    <div class="sync-demo-inner">
+      <div class="reveal">
+        <p class="section-label">Google Drive Sync</p>
+        <h2 class="section-title">One tap.<br/>Encrypted.<br/>Everywhere.</h2>
+        <p class="section-sub" style="margin-bottom:32px">Connect to Google Drive and your encrypted vault travels with you — across devices, without ever being readable by anyone but you.</p>
+
+        <div class="big-progress-wrap">
+          <div class="big-progress-label">
+            <span class="big-progress-title">Syncing vault…</span>
+            <span class="big-progress-pct" id="pct">0%</span>
+          </div>
+          <div class="big-track">
+            <div class="big-bar" id="bigBar"></div>
+          </div>
+          <div class="big-steps">
+            <div class="big-step" id="step1"><span class="step-check">○</span> Export DB</div>
+            <div class="big-step" id="step2"><span class="step-check">○</span> Encrypt</div>
+            <div class="big-step" id="step3"><span class="step-check">○</span> Upload</div>
+            <div class="big-step" id="step4"><span class="step-check">○</span> Done</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="reveal" style="transition-delay:0.15s">
+        <div class="sync-visual">
+          <div class="sync-device" style="position:absolute;left:0">
+            <div class="sync-device-icon">💻</div>
+            <div class="sync-device-label">Your device</div>
+          </div>
+          <div class="sync-line left"></div>
+          <div class="sync-cloud">☁️</div>
+          <div class="sync-line right"></div>
+          <div class="sync-device" style="position:absolute;right:0">
+            <div class="sync-device-icon">📱</div>
+            <div class="sync-device-label">Another device</div>
+          </div>
+          <div class="packet packet-1"></div>
+          <div class="packet packet-2"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Privacy -->
+<section class="privacy" id="privacy">
+  <div class="container">
+    <div class="privacy-inner">
+      <div class="reveal">
+        <p class="section-label">Built for privacy</p>
+        <h2 class="section-title">Your data.<br/>Your device.<br/>Full stop.</h2>
+        <p class="section-sub" style="margin-bottom:36px">No accounts. No servers. No analytics. My SPACE never phones home.</p>
+        <div class="privacy-pillars">
+          <div class="pillar">
+            <div class="pillar-icon">🔒</div>
+            <div>
+              <div class="pillar-title">Local-first storage</div>
+              <p class="pillar-desc">All data is stored in Chrome's built-in storage APIs on your device. Nothing leaves unless you choose to sync.</p>
+            </div>
+          </div>
+          <div class="pillar">
+            <div class="pillar-icon">🚫</div>
+            <div>
+              <div class="pillar-title">Zero telemetry</div>
+              <p class="pillar-desc">No analytics, no crash reporting, no advertising SDKs. The extension has no network access except Drive sync.</p>
+            </div>
+          </div>
+          <div class="pillar">
+            <div class="pillar-icon">🧠</div>
+            <div>
+              <div class="pillar-title">In-memory vault key</div>
+              <p class="pillar-desc">Your master password never touches disk. The derived key lives only in memory and is wiped on lock.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="reveal" style="transition-delay:0.15s">
+        <div class="crypto-callout">
+          <div class="crypto-label">Encryption spec</div>
+          <div class="crypto-algo">AES-GCM</div>
+          <p class="crypto-desc">Industry-standard authenticated encryption. Every secret is individually encrypted using a key derived from your master passphrase via PBKDF2.</p>
+          <div class="crypto-specs">
+            <div class="crypto-spec"><span class="spec-key">Algorithm</span><span class="spec-val">AES-GCM 256-bit</span></div>
+            <div class="crypto-spec"><span class="spec-key">Key derivation</span><span class="spec-val">PBKDF2 · SHA-256</span></div>
+            <div class="crypto-spec"><span class="spec-key">IV</span><span class="spec-val">Random per secret</span></div>
+            <div class="crypto-spec"><span class="spec-key">API</span><span class="spec-val">Web Crypto (native)</span></div>
+            <div class="crypto-spec"><span class="spec-key">Key storage</span><span class="spec-val">Memory only</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Open Source -->
+<section class="open-source" id="open-source">
+  <div class="container">
+    <div class="open-source-inner">
+      <div class="reveal">
+        <p class="section-label">Open source</p>
+        <h2 class="section-title" style="font-size:clamp(28px,3.5vw,40px)">Read every line.<br/>Trust by verification.</h2>
+        <p class="section-sub">My SPACE is fully open source. Audit the code, build it yourself, or contribute.</p>
+      </div>
+      <div class="reveal" style="transition-delay:0.1s">
+        <a href="https://github.com/cuongquachc88/my-space" class="github-card">
+          <svg class="github-icon" viewBox="0 0 24 24" fill="rgba(255,255,255,0.7)">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
+          <div>
+            <div class="github-card-label">View source on</div>
+            <div class="github-card-name">cuongquachc88 / my-space</div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"><path d="M7 17L17 7M7 7h10v10"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-logo">My SPACE</div>
+      <ul class="footer-links">
+        <li><a href="privacy-policy.md">Privacy Policy</a></li>
+        <li><a href="terms-of-service.md">Terms of Service</a></li>
+        <li><a href="https://github.com/cuongquachc88/my-space">GitHub</a></li>
+      </ul>
+      <div class="footer-copy">© 2026 cuongquachc88</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // ── Particles ──
+  const canvas = document.getElementById('particles')
+  const ctx = canvas.getContext('2d')
+  let W, H, pts = []
+
+  function resize() {
+    W = canvas.width = window.innerWidth
+    H = canvas.height = window.innerHeight
+  }
+  resize()
+  window.addEventListener('resize', resize)
+
+  const COLORS = ['rgba(99,102,241,', 'rgba(59,130,246,', 'rgba(167,139,250,', 'rgba(52,211,153,']
+  for (let i = 0; i < 55; i++) {
+    pts.push({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      r: Math.random() * 1.4 + 0.4,
+      c: COLORS[Math.floor(Math.random() * COLORS.length)],
+      o: Math.random() * 0.4 + 0.1,
+    })
+  }
+
+  function drawParticles() {
+    ctx.clearRect(0, 0, W, H)
+    pts.forEach(p => {
+      p.x += p.vx; p.y += p.vy
+      if (p.x < 0) p.x = W; if (p.x > W) p.x = 0
+      if (p.y < 0) p.y = H; if (p.y > H) p.y = 0
+      ctx.beginPath()
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
+      ctx.fillStyle = p.c + p.o + ')'
+      ctx.fill()
+    })
+    // Draw connecting lines
+    for (let i = 0; i < pts.length; i++) {
+      for (let j = i + 1; j < pts.length; j++) {
+        const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y
+        const dist = Math.sqrt(dx*dx + dy*dy)
+        if (dist < 120) {
+          ctx.beginPath()
+          ctx.moveTo(pts[i].x, pts[i].y)
+          ctx.lineTo(pts[j].x, pts[j].y)
+          ctx.strokeStyle = `rgba(99,102,241,${0.06 * (1 - dist/120)})`
+          ctx.lineWidth = 0.5
+          ctx.stroke()
+        }
+      }
+    }
+    requestAnimationFrame(drawParticles)
+  }
+  drawParticles()
+
+  // ── Scroll reveal ──
+  const reveals = document.querySelectorAll('.reveal')
+  const revealObs = new IntersectionObserver(entries => {
+    entries.forEach((e, i) => {
+      if (e.isIntersecting) {
+        setTimeout(() => e.target.classList.add('visible'), i * 60)
+        revealObs.unobserve(e.target)
+      }
+    })
+  }, { threshold: 0.1 })
+  reveals.forEach(el => revealObs.observe(el))
+
+  // ── Feature cards stagger ──
+  const cards = document.querySelectorAll('.feature-card')
+  const cardObs = new IntersectionObserver(entries => {
+    if (entries.some(e => e.isIntersecting)) {
+      cards.forEach((c, i) => setTimeout(() => c.classList.add('visible'), i * 80))
+      cardObs.disconnect()
+    }
+  }, { threshold: 0.1 })
+  cardObs.observe(document.querySelector('.features-grid'))
+
+  // ── Progress step labels ──
+  const steps = [
+    { el: document.getElementById('ps1'), at: 0 },
+    { el: document.getElementById('ps2'), at: 33 },
+    { el: document.getElementById('ps3'), at: 90 },
+  ]
+
+  // ── Big progress bar counter & steps ──
+  const pctEl = document.getElementById('pct')
+  const stepEls = [
+    document.getElementById('step1'),
+    document.getElementById('step2'),
+    document.getElementById('step3'),
+    document.getElementById('step4'),
+  ]
+  const stepTimes = [0, 800, 1800, 2700]
+  const stepLabels = ['Export DB', 'Encrypt', 'Upload', 'Done ✓']
+
+  function runProgress() {
+    let start = null
+    const dur = 3000
+
+    stepEls.forEach(el => {
+      el.classList.remove('done', 'active')
+      el.querySelector('.step-check').textContent = '○'
+    })
+
+    function frame(ts) {
+      if (!start) start = ts
+      const elapsed = ts - start
+      const pct = Math.min(100, Math.round((elapsed / dur) * 100))
+      pctEl.textContent = pct + '%'
+
+      stepTimes.forEach((t, i) => {
+        const el = stepEls[i]
+        if (elapsed >= t && elapsed < (stepTimes[i+1] ?? dur + 200)) {
+          el.classList.add('active'); el.classList.remove('done')
+          el.querySelector('.step-check').textContent = '→'
+        } else if (elapsed >= (stepTimes[i+1] ?? dur + 200)) {
+          el.classList.remove('active'); el.classList.add('done')
+          el.querySelector('.step-check').textContent = '✓'
+        }
+      })
+
+      if (elapsed < dur) requestAnimationFrame(frame)
+      else setTimeout(runProgress, 1200)
+    }
+    requestAnimationFrame(frame)
+  }
+  runProgress()
+</script>
+</body>
+</html>

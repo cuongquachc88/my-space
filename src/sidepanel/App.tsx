@@ -8,7 +8,8 @@ import { GeneratorView } from './views/GeneratorView'
 import { SubscriptionsView } from './views/SubscriptionsView'
 
 export async function sendMsg(type: string, payload?: unknown): Promise<{ ok: boolean; data?: unknown; error?: string }> {
-  return chrome.runtime.sendMessage({ type, payload })
+  const res = await chrome.runtime.sendMessage({ type, payload })
+  return res ?? { ok: false, error: 'No response from service worker' }
 }
 
 const glows: Record<View, string> = {

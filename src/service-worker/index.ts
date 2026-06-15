@@ -32,6 +32,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     'NOTES_LIST','NOTES_GET','NOTES_CREATE','NOTES_UPDATE','NOTES_DELETE',
     'VAULT_UNLOCK','VAULT_LOCK','VAULT_STATUS',
     'SECRETS_LIST','SECRETS_GET','SECRETS_CREATE','SECRETS_UPDATE','SECRETS_DELETE',
+    'SUBS_LIST','SUBS_GET','SUBS_CREATE','SUBS_UPDATE','SUBS_DELETE',
     'DB_EXPORT','DB_IMPORT',
   ]
   if (offscreenTypes.includes(msg.type)) {
@@ -49,7 +50,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
 
   if (msg.type === 'SYNC_CONNECT') {
-    handleConnect(msg.payload as { clientId: string; clientSecret?: string })
+    handleConnect()
       .then(sendResponse).catch(e => sendResponse({ ok: false, error: String(e) }))
     return true
   }
@@ -67,59 +68,25 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
 // --- OAuth helpers ---
 
-const SCOPES = 'https://www.googleapis.com/auth/drive.appdata'
-const REDIRECT_URI = `https://${chrome.runtime.id}.chromiumapp.org/`
+const SCOPES = ['https://www.googleapis.com/auth/drive.appdata']
 
-async function handleConnect({ clientId, clientSecret }: { clientId: string; clientSecret?: string }): Promise<{ ok: boolean; error?: string }> {
-  try {
-    const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth')
-    authUrl.searchParams.set('client_id', clientId)
-    authUrl.searchParams.set('redirect_uri', REDIRECT_URI)
-    authUrl.searchParams.set('scope', SCOPES)
-    authUrl.searchParams.set('prompt', 'consent')
-
-    if (clientSecret) {
-      // Authorization code flow (Desktop app client) — returns refresh token
-      authUrl.searchParams.set('response_type', 'code')
-      authUrl.searchParams.set('access_type', 'offline')
-    } else {
-      // Implicit flow (Chrome Extension client) — returns access token directly
-      authUrl.searchParams.set('response_type', 'token')
-    }
-
-    const redirectUrl: string = await new Promise((resolve, reject) => {
-      chrome.identity.launchWebAuthFlow({ url: authUrl.toString(), interactive: true }, url => {
-        if (chrome.runtime.lastError || !url) reject(new Error(chrome.runtime.lastError?.message ?? 'Auth cancelled'))
-        else resolve(url)
-      })
+function getAuthToken(interactive: boolean): Promise<string> {
+  return new Promise((resolve, reject) => {
+    chrome.identity.getAuthToken({ interactive, scopes: SCOPES }, result => {
+      const token = typeof result === 'string' ? result : (result as { token?: string })?.token
+      if (chrome.runtime.lastError || !token) {
+        reject(new Error(chrome.runtime.lastError?.message ?? 'Auth failed'))
+      } else {
+        resolve(token)
+      }
     })
+  })
+}
 
-    if (clientSecret) {
-      // Code flow: exchange code for tokens
-      const code = new URL(redirectUrl).searchParams.get('code')
-      if (!code) throw new Error('No authorization code received')
-
-      const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ code, client_id: clientId, client_secret: clientSecret, redirect_uri: REDIRECT_URI, grant_type: 'authorization_code' }),
-      })
-      if (!tokenRes.ok) throw new Error(`Token exchange failed: ${tokenRes.status}`)
-      const tokens = await tokenRes.json() as { refresh_token?: string; access_token?: string }
-      if (!tokens.refresh_token) throw new Error('No refresh token — try revoking access at myaccount.google.com and reconnecting')
-
-      await chrome.storage.local.set({ driveClientId: clientId, driveClientSecret: clientSecret, driveRefreshToken: tokens.refresh_token, driveConnected: true })
-      if (tokens.access_token) await chrome.storage.session.set({ driveAccessToken: tokens.access_token })
-    } else {
-      // Implicit flow: token is in URL fragment
-      const fragment = new URLSearchParams(new URL(redirectUrl).hash.slice(1))
-      const accessToken = fragment.get('access_token')
-      if (!accessToken) throw new Error('No access token in response')
-
-      await chrome.storage.local.set({ driveClientId: clientId, driveConnected: true })
-      await chrome.storage.session.set({ driveAccessToken: accessToken })
-    }
-
+async function handleConnect(): Promise<{ ok: boolean; error?: string }> {
+  try {
+    await getAuthToken(true)
+    await chrome.storage.local.set({ driveConnected: true })
     return { ok: true }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) }
@@ -127,51 +94,9 @@ async function handleConnect({ clientId, clientSecret }: { clientId: string; cli
 }
 
 async function getAccessToken(): Promise<string> {
-  const session = await chrome.storage.session.get('driveAccessToken')
-  if (session.driveAccessToken) return session.driveAccessToken as string
-
-  const local = await chrome.storage.local.get(['driveClientId', 'driveClientSecret', 'driveRefreshToken', 'driveConnected'])
-  if (!local.driveConnected) throw new Error('Not connected to Google Drive — set up sync first')
-
-  if (local.driveRefreshToken) {
-    // Code flow: use refresh token
-    const res = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: local.driveClientId as string,
-        client_secret: local.driveClientSecret as string,
-        refresh_token: local.driveRefreshToken as string,
-        grant_type: 'refresh_token',
-      }),
-    })
-    if (!res.ok) throw new Error(`Token refresh failed: ${res.status}`)
-    const data = await res.json() as { access_token?: string }
-    if (!data.access_token) throw new Error('Token refresh returned no access token')
-    await chrome.storage.session.set({ driveAccessToken: data.access_token })
-    return data.access_token
-  }
-
-  // Implicit flow: silent re-auth
-  const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth')
-  authUrl.searchParams.set('client_id', local.driveClientId as string)
-  authUrl.searchParams.set('redirect_uri', REDIRECT_URI)
-  authUrl.searchParams.set('response_type', 'token')
-  authUrl.searchParams.set('scope', SCOPES)
-  authUrl.searchParams.set('prompt', 'none')
-
-  const redirectUrl: string = await new Promise((resolve, reject) => {
-    chrome.identity.launchWebAuthFlow({ url: authUrl.toString(), interactive: false }, url => {
-      if (chrome.runtime.lastError || !url) reject(new Error(chrome.runtime.lastError?.message ?? 'Silent auth failed — please reconnect'))
-      else resolve(url)
-    })
-  })
-
-  const fragment = new URLSearchParams(new URL(redirectUrl).hash.slice(1))
-  const accessToken = fragment.get('access_token')
-  if (!accessToken) throw new Error('Silent token refresh failed — please reconnect')
-  await chrome.storage.session.set({ driveAccessToken: accessToken })
-  return accessToken
+  const { driveConnected } = await chrome.storage.local.get('driveConnected')
+  if (!driveConnected) throw new Error('Not connected to Google Drive — connect first')
+  return getAuthToken(false)
 }
 
 async function driveRequest(url: string, options: RequestInit): Promise<Response> {
@@ -193,46 +118,71 @@ async function driveRequest(url: string, options: RequestInit): Promise<Response
   return res
 }
 
+// Search appDataFolder for existing backup file ID
+async function findFileId(): Promise<string | null> {
+  const local = await chrome.storage.local.get('driveFileId')
+  if (local.driveFileId) return local.driveFileId as string
+
+  const res = await driveRequest(
+    `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name+%3D+%27keyvault-backup.json%27&fields=files(id)`,
+    { headers: {} }
+  )
+  const { files } = await res.json() as { files: { id: string }[] }
+  if (files.length > 0) {
+    await chrome.storage.local.set({ driveFileId: files[0].id })
+    return files[0].id
+  }
+  return null
+}
+
+// Write content to Drive using multipart upload (create or update in one request)
+async function writeFileToDrive(fileId: string | null, body: string): Promise<string> {
+  const boundary = 'my_space_boundary'
+  const metadata = JSON.stringify({ name: 'keyvault-backup.json', parents: fileId ? undefined : ['appDataFolder'] })
+  const multipart = [
+    `--${boundary}`,
+    'Content-Type: application/json; charset=UTF-8',
+    '',
+    metadata,
+    `--${boundary}`,
+    'Content-Type: application/json',
+    '',
+    body,
+    `--${boundary}--`,
+  ].join('\r\n')
+
+  const url = fileId
+    ? `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`
+    : `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart`
+
+  const res = await driveRequest(url, {
+    method: fileId ? 'PATCH' : 'POST',
+    headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
+    body: multipart,
+  })
+  const data = await res.json() as { id: string }
+  if (!data.id) throw new Error('Drive upload returned no file id')
+  await chrome.storage.local.set({ driveFileId: data.id })
+  return data.id
+}
+
 async function handlePush(): Promise<{ ok: boolean; data?: { syncedAt: string }; error?: string }> {
   try {
-    const exportReply = await sendToOffscreen({ type: 'DB_EXPORT' }) as { ok: boolean; data: unknown }
-    if (!exportReply.ok) throw new Error('DB export failed')
-
     const keyReply = await sendToOffscreen({ type: 'VAULT_STATUS' }) as { ok: boolean; data: { locked: boolean } }
     if (keyReply.data.locked) throw new Error('Vault is locked — unlock before syncing')
+
+    const exportReply = await sendToOffscreen({ type: 'DB_EXPORT' }) as { ok: boolean; data: unknown }
+    if (!exportReply.ok) throw new Error('DB export failed')
 
     const plaintext = JSON.stringify(exportReply.data)
     const encReply = await sendToOffscreen({ type: 'SYNC_ENCRYPT', payload: { plaintext } }) as { ok: boolean; data: { ciphertext: string; iv: string } }
     if (!encReply.ok) throw new Error('Encryption failed')
 
-    const body = JSON.stringify({ ciphertext: encReply.data.ciphertext, iv: encReply.data.iv })
-    const local = await chrome.storage.local.get('driveFileId')
-    let fileId: string = local.driveFileId as string
-
-    if (fileId) {
-      await driveRequest(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body,
-      })
-    } else {
-      const metaRes = await driveRequest('https://www.googleapis.com/drive/v3/files', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'keyvault-backup.json', parents: ['appDataFolder'] }),
-      })
-      const meta = await metaRes.json() as { id?: string }
-      if (!meta.id) throw new Error('Drive file creation returned no id')
-      fileId = meta.id
-      await driveRequest(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body,
-      })
-    }
+    const fileId = await findFileId()
+    await writeFileToDrive(fileId, JSON.stringify({ ciphertext: encReply.data.ciphertext, iv: encReply.data.iv }))
 
     const syncedAt = new Date().toISOString()
-    await chrome.storage.local.set({ syncedAt, driveFileId: fileId })
+    await chrome.storage.local.set({ syncedAt })
     return { ok: true, data: { syncedAt } }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) }
@@ -241,19 +191,22 @@ async function handlePush(): Promise<{ ok: boolean; data?: { syncedAt: string };
 
 async function handlePull(): Promise<{ ok: boolean; data?: { syncedAt: string; notesUpdated: number; secretsAdded: number }; error?: string }> {
   try {
-    const local = await chrome.storage.local.get('driveFileId')
-    if (!local.driveFileId) throw new Error('No Drive file found — push first')
-
-    const res = await driveRequest(`https://www.googleapis.com/drive/v3/files/${local.driveFileId}?alt=media`, {
+    const fileId = await findFileId()
+    if (!fileId) throw new Error('No backup found on Drive — push first')
+    const res = await driveRequest(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
       headers: {},
     })
-    const { ciphertext, iv } = await res.json()
 
+    // Empty file means nothing pushed yet
+    const text = await res.text()
+    if (!text.trim()) throw new Error('No data on Drive — push first')
+
+    const { ciphertext, iv } = JSON.parse(text)
     const decReply = await sendToOffscreen({ type: 'SYNC_DECRYPT', payload: { ciphertext, iv } }) as { ok: boolean; data: { plaintext: string } }
     if (!decReply.ok) throw new Error('Decryption failed — wrong key or corrupted file')
 
-    const { notes, secrets } = JSON.parse(decReply.data.plaintext)
-    const importReply = await sendToOffscreen({ type: 'DB_IMPORT', payload: { notes, secrets } }) as { ok: boolean; data: { notesUpdated: number; secretsAdded: number } }
+    const { notes, secrets, subscriptions } = JSON.parse(decReply.data.plaintext)
+    const importReply = await sendToOffscreen({ type: 'DB_IMPORT', payload: { notes, secrets, subscriptions } }) as { ok: boolean; data: { notesUpdated: number; secretsAdded: number; subsUpdated: number } }
     if (!importReply.ok) throw new Error('DB import failed')
 
     const syncedAt = new Date().toISOString()

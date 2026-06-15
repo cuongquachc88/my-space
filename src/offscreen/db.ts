@@ -170,18 +170,21 @@ export async function listSecretTags(): Promise<string[]> {
   return res.rows.map(r => r.tag)
 }
 
-export async function exportAllRows(): Promise<{ notes: Note[]; secrets: SecretRow[] }> {
+export async function exportAllRows(): Promise<{ notes: Note[]; secrets: SecretRow[]; subscriptions: Subscription[] }> {
   const notes = await listNotes()
-  const res = await getDb().query<SecretRow>(`SELECT * FROM secrets`)
-  return { notes, secrets: res.rows }
+  const secrets = await getDb().query<SecretRow>(`SELECT * FROM secrets`)
+  const subs = await getDb().query<Subscription>(`SELECT * FROM subscriptions`)
+  return { notes, secrets: secrets.rows, subscriptions: subs.rows }
 }
 
 export async function importRows(
   notes: Note[],
-  secrets: SecretRow[]
-): Promise<{ notesUpdated: number; secretsAdded: number }> {
+  secrets: SecretRow[],
+  subscriptions: Subscription[] = []
+): Promise<{ notesUpdated: number; secretsAdded: number; subsUpdated: number }> {
   let notesUpdated = 0
   let secretsAdded = 0
+  let subsUpdated = 0
   const d = getDb()
   for (const n of notes) {
     const existing = await d.query<Note>(`SELECT updated_at FROM notes WHERE id = $1`, [n.id])
@@ -215,7 +218,24 @@ export async function importRows(
       secretsAdded++
     }
   }
-  return { notesUpdated, secretsAdded }
+  for (const sub of subscriptions) {
+    const existing = await d.query<Subscription>(`SELECT updated_at FROM subscriptions WHERE id = $1`, [sub.id])
+    if (!existing.rows[0]) {
+      await d.query(
+        `INSERT INTO subscriptions (id, name, amount, currency, cycle, start_date, tags, notes, created_at, updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+        [sub.id, sub.name, sub.amount, sub.currency, sub.cycle, sub.start_date, sub.tags ?? [], sub.notes, sub.created_at, sub.updated_at]
+      )
+      subsUpdated++
+    } else if (new Date(sub.updated_at) > new Date(existing.rows[0].updated_at)) {
+      await d.query(
+        `UPDATE subscriptions SET name=$1, amount=$2, currency=$3, cycle=$4, start_date=$5, tags=$6, notes=$7, updated_at=$8 WHERE id=$9`,
+        [sub.name, sub.amount, sub.currency, sub.cycle, sub.start_date, sub.tags ?? [], sub.notes, sub.updated_at, sub.id]
+      )
+      subsUpdated++
+    }
+  }
+  return { notesUpdated, secretsAdded, subsUpdated }
 }
 
 // --- Subscriptions ---
