@@ -8,7 +8,8 @@ data class NoteEntity(
     @PrimaryKey val id: String,
     val title: String,
     val content: String,
-    val tags: String,       // JSON array string
+    val tags: String,
+    val imageUris: String = "",
     val createdAt: Long,
     val updatedAt: Long,
 )
@@ -34,6 +35,8 @@ data class SubscriptionEntity(
     val startDate: String,  // ISO date yyyy-MM-dd
     val tags: String,
     val notes: String,
+    val logoUri: String = "",
+    val active: Boolean = true,
     val createdAt: Long,
     val updatedAt: Long,
 )
@@ -84,7 +87,7 @@ data class SecretMeta(val id: String, val label: String, val tags: String, val c
 
 @Dao
 interface SubscriptionDao {
-    @Query("SELECT * FROM subscriptions ORDER BY updatedAt DESC")
+    @Query("SELECT * FROM subscriptions ORDER BY name ASC")
     suspend fun getAll(): List<SubscriptionEntity>
 
     @Query("SELECT * FROM subscriptions WHERE id = :id")
@@ -102,7 +105,7 @@ interface SubscriptionDao {
 
 @Database(
     entities = [NoteEntity::class, SecretEntity::class, SubscriptionEntity::class],
-    version = 1,
+    version = 5,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -113,8 +116,41 @@ abstract class AppDatabase : RoomDatabase() {
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
 
+        private val MIGRATION_1_2 = object : androidx.room.migration.Migration(1, 2) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE subscriptions ADD COLUMN logoUri TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
+        private val MIGRATION_2_3 = object : androidx.room.migration.Migration(2, 3) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE notes ADD COLUMN imageUris TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
+        private val MIGRATION_3_4 = object : androidx.room.migration.Migration(3, 4) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE subscriptions ADD COLUMN active INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS bills (
+                        subId TEXT NOT NULL, year INTEGER NOT NULL, month INTEGER NOT NULL,
+                        amount REAL NOT NULL, currency TEXT NOT NULL,
+                        notes TEXT NOT NULL DEFAULT '', updatedAt INTEGER NOT NULL,
+                        PRIMARY KEY (subId, year, month)
+                    )
+                """.trimIndent())
+            }
+        }
+
+        private val MIGRATION_4_5 = object : androidx.room.migration.Migration(4, 5) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("DROP TABLE IF EXISTS bills")
+            }
+        }
+
         fun get(context: Context): AppDatabase = INSTANCE ?: synchronized(this) {
             INSTANCE ?: Room.databaseBuilder(context, AppDatabase::class.java, "myspace.db")
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 .build()
                 .also { INSTANCE = it }
         }
