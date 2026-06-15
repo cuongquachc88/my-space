@@ -14,16 +14,34 @@ const CYCLE_LABELS: Record<string, string> = {
   monthly: '/mo', yearly: '/yr', weekly: '/wk', 'one-time': 'once'
 }
 
-function monthlyEquivalent(amount: number, cycle: string): number {
-  if (cycle === 'monthly')  return amount
-  if (cycle === 'yearly')   return amount / 12
-  if (cycle === 'weekly')   return amount * 4.33
+// Approximate rates vs USD — good enough for a spending summary
+const TO_USD: Record<string, number> = {
+  USD: 1, EUR: 1.08, GBP: 1.27, VND: 0.000039, JPY: 0.0067, SGD: 0.74,
+}
+const FROM_USD: Record<string, number> = Object.fromEntries(
+  Object.entries(TO_USD).map(([k, v]) => [k, 1 / v])
+)
+
+function toUSD(amount: number, currency: string): number {
+  return amount * (TO_USD[currency] ?? 1)
+}
+
+function monthlyEquivalentUSD(amount: number, currency: string, cycle: string): number {
+  const usd = toUSD(amount, currency)
+  if (cycle === 'monthly')  return usd
+  if (cycle === 'yearly')   return usd / 12
+  if (cycle === 'weekly')   return usd * 4.33
   return 0
 }
 
 function formatCurrency(amount: string | number, currency: string): string {
   const num = typeof amount === 'string' ? parseFloat(amount) : amount
   return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 2 }).format(num)
+}
+
+function formatDisplay(usdAmount: number, displayCurrency: string): string {
+  const converted = usdAmount * (FROM_USD[displayCurrency] ?? 1)
+  return formatCurrency(converted, displayCurrency)
 }
 
 function daysUntil(dateStr: string): number {
@@ -89,6 +107,7 @@ export function SubscriptionsView({ sendMsg }: Props) {
   const [activeTag, setActiveTag] = useState<string | null>(null)
   const [query, setQuery] = useState('')
 
+  const [displayCurrency, setDisplayCurrency] = useState('USD')
   const [newName, setNewName]         = useState('')
   const [newAmount, setNewAmount]     = useState('')
   const [newCurrency, setNewCurrency] = useState('USD')
@@ -137,7 +156,7 @@ export function SubscriptionsView({ sendMsg }: Props) {
     load(query, next)
   }
 
-  const monthlySpend = subs.reduce((sum, s) => sum + monthlyEquivalent(parseFloat(s.amount), s.cycle), 0)
+  const monthlySpendUSD = subs.reduce((sum, s) => sum + monthlyEquivalentUSD(parseFloat(s.amount), s.currency, s.cycle), 0)
 
   const grouped: Record<string, Subscription[]> = {}
   const untagged: Subscription[] = []
@@ -157,10 +176,21 @@ export function SubscriptionsView({ sendMsg }: Props) {
     <div className="flex flex-col p-3 gap-3 overflow-y-auto" style={{ height: '100%' }}>
       <div className="rounded-[10px] px-3 py-2 flex justify-between items-center"
         style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)' }}>
-        <span className="text-xs" style={{ color: 'rgba(52,211,153,0.7)' }}>Recurring / month</span>
-        <span className="text-xs font-mono font-bold" style={{ color: '#34d399' }}>
-          ~${monthlySpend.toFixed(2)}
-        </span>
+        <div className="flex flex-col gap-0.5">
+          <span className="text-xs" style={{ color: 'rgba(52,211,153,0.7)' }}>Recurring / month</span>
+          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.2)' }}>approx. rates</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <select
+            className="rounded-md px-1.5 py-1 text-xs outline-none"
+            style={{ background: 'rgba(52,211,153,0.12)', border: '1px solid rgba(52,211,153,0.2)', color: '#34d399', fontSize: 10 }}
+            value={displayCurrency} onChange={e => setDisplayCurrency(e.target.value)}>
+            {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <span className="text-xs font-mono font-bold" style={{ color: '#34d399' }}>
+            ~{formatDisplay(monthlySpendUSD, displayCurrency)}
+          </span>
+        </div>
       </div>
 
       <div className="flex items-center gap-2 rounded-[10px] px-3 py-2"
