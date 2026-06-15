@@ -57,4 +57,7 @@ dependencies {
     implementation(libs.gson)
     debugImplementation(libs.androidx.ui.tooling.preview)
     coreLibraryDesugaring(libs.desugar.jdk.libs)
+    implementation(libs.coil.compose)
+    implementation(libs.androidx.splashscreen)
+    testImplementation(libs.junit)
 }

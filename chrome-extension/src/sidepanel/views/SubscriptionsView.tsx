@@ -2,10 +2,11 @@ import { useEffect, useState, useCallback } from 'react'
 import type { Subscription } from '../../shared/messages'
 import { TagInput } from '../components/TagInput'
 import { nextBillingDate, type BillingCycle } from '../../lib/nextBilling'
-import { monthlyEquivalentUSD, convertFromUSD } from '../../lib/currency'
+import { monthlyEquivalentUSD } from '../../lib/currency'
 
 interface Props {
   sendMsg: (type: string, payload?: unknown) => Promise<{ ok: boolean; data?: unknown; error?: string }>
+  onGoReports: () => void
 }
 
 const CYCLES: BillingCycle[] = ['monthly', 'yearly', 'weekly', 'one-time']
@@ -20,10 +21,6 @@ function formatCurrency(amount: string | number, currency: string): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 2 }).format(num)
 }
 
-function formatDisplay(usdAmount: number, displayCurrency: string): string {
-  return formatCurrency(convertFromUSD(usdAmount, displayCurrency), displayCurrency)
-}
-
 function daysUntil(dateStr: string): number {
   const target = new Date(dateStr + 'T00:00:00')
   const now = new Date()
@@ -36,30 +33,49 @@ const today = new Date().toISOString().slice(0, 10)
 interface SubCardProps {
   sub: Subscription
   onDelete: (id: string) => void
+  onToggleActive: (id: string, active: boolean) => void
 }
 
-function SubCard({ sub, onDelete }: SubCardProps) {
+function SubCard({ sub, onDelete, onToggleActive }: SubCardProps) {
   const next = sub.cycle === 'one-time' ? sub.start_date : nextBillingDate(sub.start_date, sub.cycle as BillingCycle)
   const days = daysUntil(next)
   const urgentColor = days <= 3 ? '#f87171' : days <= 7 ? '#fb923c' : 'rgba(255,255,255,0.3)'
+  const dimAlpha = sub.active ? 1 : 0.45
 
   return (
-    <div className="glass-card p-3 flex flex-col gap-1">
+    <div className="glass-card p-3 flex flex-col gap-1" style={{ opacity: dimAlpha }}>
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.8)' }}>{sub.name}</span>
-        <button onClick={() => onDelete(sub.id)} className="text-xs px-1.5 py-0.5 rounded"
-          style={{ color: 'rgba(239,68,68,0.5)', border: '1px solid rgba(239,68,68,0.15)' }}>×</button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => onToggleActive(sub.id, !sub.active)}
+            title={sub.active ? 'Pause' : 'Resume'}
+            className="text-xs px-1.5 py-0.5 rounded"
+            style={sub.active
+              ? { color: 'rgba(52,211,153,0.5)', border: '1px solid rgba(52,211,153,0.15)' }
+              : { color: 'rgba(251,191,36,0.6)', border: '1px solid rgba(251,191,36,0.2)' }}>
+            {sub.active ? '⏸' : '▶'}
+          </button>
+          <button onClick={() => onDelete(sub.id)} className="text-xs px-1.5 py-0.5 rounded"
+            style={{ color: 'rgba(239,68,68,0.5)', border: '1px solid rgba(239,68,68,0.15)' }}>×</button>
+        </div>
       </div>
       <div className="flex items-center gap-2">
-        <span className="text-xs font-mono font-bold" style={{ color: '#34d399' }}>
+        <span className="text-xs font-mono font-bold" style={{ color: sub.active ? '#34d399' : 'rgba(52,211,153,0.4)' }}>
           {formatCurrency(sub.amount, sub.currency)}
         </span>
         <span className="text-xs px-1.5 py-0.5 rounded-full"
           style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)', color: 'rgba(52,211,153,0.7)', fontSize: '10px' }}>
           {CYCLE_LABELS[sub.cycle] ?? sub.cycle}
         </span>
+        {!sub.active && (
+          <span className="text-xs px-1.5 py-0.5 rounded-full"
+            style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.15)', color: 'rgba(251,191,36,0.5)', fontSize: '9px' }}>
+            paused
+          </span>
+        )}
       </div>
-      {sub.cycle !== 'one-time' && (
+      {sub.active && sub.cycle !== 'one-time' && (
         <span className="text-xs" style={{ color: urgentColor }}>
           Next: {next} ({days === 0 ? 'today' : days < 0 ? `${-days}d overdue` : `in ${days}d`})
         </span>
@@ -81,13 +97,12 @@ function SubCard({ sub, onDelete }: SubCardProps) {
   )
 }
 
-export function SubscriptionsView({ sendMsg }: Props) {
+export function SubscriptionsView({ sendMsg, onGoReports }: Props) {
   const [subs, setSubs] = useState<Subscription[]>([])
   const [allTags, setAllTags] = useState<string[]>([])
   const [activeTag, setActiveTag] = useState<string | null>(null)
   const [query, setQuery] = useState('')
 
-  const [displayCurrency, setDisplayCurrency] = useState('USD')
   const [newName, setNewName]         = useState('')
   const [newAmount, setNewAmount]     = useState('')
   const [newCurrency, setNewCurrency] = useState('USD')
@@ -130,13 +145,20 @@ export function SubscriptionsView({ sendMsg }: Props) {
     await load(query, activeTag)
   }
 
+  async function toggleActive(id: string, active: boolean) {
+    await sendMsg('SUBS_UPDATE', { id, active })
+    await load(query, activeTag)
+  }
+
   function selectTag(tag: string) {
     const next = activeTag === tag ? null : tag
     setActiveTag(next)
     load(query, next)
   }
 
-  const monthlySpendUSD = subs.reduce((sum, s) => sum + monthlyEquivalentUSD(parseFloat(s.amount), s.currency, s.cycle), 0)
+  const activeSubs = subs.filter(s => s.active)
+  const monthlySpendUSD = activeSubs.reduce((sum, s) => sum + monthlyEquivalentUSD(parseFloat(s.amount), s.currency, s.cycle), 0)
+  const displayStr = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(monthlySpendUSD)
 
   const grouped: Record<string, Subscription[]> = {}
   const untagged: Subscription[] = []
@@ -154,24 +176,6 @@ export function SubscriptionsView({ sendMsg }: Props) {
 
   return (
     <div className="flex flex-col p-3 gap-3 overflow-y-auto" style={{ height: '100%' }}>
-      <div className="rounded-[10px] px-3 py-2 flex justify-between items-center"
-        style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)' }}>
-        <div className="flex flex-col gap-0.5">
-          <span className="text-xs" style={{ color: 'rgba(52,211,153,0.7)' }}>Recurring / month</span>
-          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.2)' }}>approx. rates</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <select
-            className="rounded-md px-1.5 py-1 text-xs outline-none"
-            style={{ background: 'rgba(52,211,153,0.12)', border: '1px solid rgba(52,211,153,0.2)', color: '#34d399', fontSize: 10 }}
-            value={displayCurrency} onChange={e => setDisplayCurrency(e.target.value)}>
-            {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-          <span className="text-xs font-mono font-bold" style={{ color: '#34d399' }}>
-            ~{formatDisplay(monthlySpendUSD, displayCurrency)}
-          </span>
-        </div>
-      </div>
 
       <div className="flex items-center gap-2 rounded-[10px] px-3 py-2"
         style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' }}>
@@ -199,21 +203,41 @@ export function SubscriptionsView({ sendMsg }: Props) {
       )}
 
       {activeTag ? (
-        subs.map(s => <SubCard key={s.id} sub={s} onDelete={deleteSub} />)
+        subs.map(s => <SubCard key={s.id} sub={s} onDelete={deleteSub} onToggleActive={toggleActive} />)
       ) : (
         <>
           {Object.entries(grouped).map(([tag, list]) => (
             <div key={tag} className="flex flex-col gap-2">
               <span className="text-xs px-1 font-semibold" style={{ color: '#34d399', fontSize: '10px' }}>#{tag}</span>
-              {list.map(s => <SubCard key={s.id} sub={s} onDelete={deleteSub} />)}
+              {list.map(s => <SubCard key={s.id} sub={s} onDelete={deleteSub} onToggleActive={toggleActive} />)}
             </div>
           ))}
-          {untagged.map(s => <SubCard key={s.id} sub={s} onDelete={deleteSub} />)}
+          {untagged.map(s => <SubCard key={s.id} sub={s} onDelete={deleteSub} onToggleActive={toggleActive} />)}
         </>
       )}
 
       {subs.length === 0 && (
         <p className="text-xs text-center py-4" style={{ color: 'rgba(255,255,255,0.2)' }}>No subscriptions yet</p>
+      )}
+
+      {/* Reports button */}
+      {subs.length > 0 && (
+        <button onClick={onGoReports}
+          className="w-full py-2.5 rounded-[10px] flex items-center justify-center gap-2 text-xs font-semibold"
+          style={{ background: 'rgba(244,114,182,0.08)', border: '1px solid rgba(244,114,182,0.2)', color: '#f472b6' }}>
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+            <rect x="2" y="2" width="16" height="16" rx="2.5" fill="rgba(244,114,182,0.15)" stroke="#f472b6" strokeWidth="1.4" />
+            <rect x="5" y="11" width="2.5" height="5" rx="1" fill="#f472b6" />
+            <rect x="8.75" y="8" width="2.5" height="8" rx="1" fill="#f472b6" />
+            <rect x="12.5" y="5" width="2.5" height="11" rx="1" fill="#f472b6" />
+          </svg>
+          Reports &amp; Bills
+          {monthlySpendUSD > 0 && (
+            <span style={{ fontSize: 10, color: 'rgba(244,114,182,0.6)', fontWeight: 400 }}>
+              ~{displayStr}/mo
+            </span>
+          )}
+        </button>
       )}
 
       <div className="rounded-xl p-3 flex flex-col gap-2 mt-1"

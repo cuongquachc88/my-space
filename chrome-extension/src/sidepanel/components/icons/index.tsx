@@ -90,3 +90,16 @@ export function SubscriptionsIcon({ active, accentColor = '#34d399', size = 20 }
     </svg>
   )
 }
+
+export function ReportsIcon({ active, accentColor = '#f472b6', size = 20 }: IconProps) {
+  const stroke = active ? accentColor : baseStroke
+  const fill = active ? `${accentColor}33` : 'rgba(255,255,255,0.06)'
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <rect x="2" y="2" width="16" height="16" rx="2.5" fill={fill} stroke={stroke} strokeWidth="1.4" />
+      <rect x="5" y="11" width="2.5" height="5" rx="1" fill={stroke} />
+      <rect x="8.75" y="8" width="2.5" height="8" rx="1" fill={stroke} />
+      <rect x="12.5" y="5" width="2.5" height="11" rx="1" fill={stroke} />
+    </svg>
+  )
+}

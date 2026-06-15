@@ -2,7 +2,7 @@ import type { AnyMsg, Reply, Note } from '../shared/messages'
 import * as db from './db'
 import {
   initVault, lockVault, getVaultStatus, getKey,
-  encrypt, decrypt, resetLockTimer
+  encrypt, decrypt, deriveKey, resetLockTimer
 } from './crypto'
 
 const LOCK_TIMEOUT_MS = 15 * 60 * 1000
@@ -19,12 +19,12 @@ export async function dispatch(msg: AnyMsg & { payload?: Record<string, unknown>
         return { ok: true, data: await db.getNote(id) }
       }
       case 'NOTES_CREATE': {
-        const { title, content, tags } = (msg as { payload: { title: string; content: string; tags?: string[] } }).payload
-        return { ok: true, data: await db.createNote(title, content, tags) }
+        const { title, content, tags, image_data } = (msg as { payload: { title: string; content: string; tags?: string[]; image_data?: string } }).payload
+        return { ok: true, data: await db.createNote(title, content, tags, image_data) }
       }
       case 'NOTES_UPDATE': {
-        const { id, title, content, tags } = (msg as { payload: { id: string; title?: string; content?: string; tags?: string[] } }).payload
-        return { ok: true, data: await db.updateNote(id, { title, content, tags }) }
+        const { id, title, content, tags, image_data } = (msg as { payload: { id: string; title?: string; content?: string; tags?: string[]; image_data?: string } }).payload
+        return { ok: true, data: await db.updateNote(id, { title, content, tags, image_data }) }
       }
       case 'NOTES_DELETE': {
         const { id } = (msg as { payload: { id: string } }).payload
@@ -99,6 +99,12 @@ export async function dispatch(msg: AnyMsg & { payload?: Record<string, unknown>
         const { ciphertext, iv } = (msg as { payload: { ciphertext: string; iv: string } }).payload
         return { ok: true, data: { plaintext: await decrypt(getKey(), ciphertext, iv) } }
       }
+      case 'SYNC_DECRYPT_WITH_SALT': {
+        // Re-derive key using the backup's salt + provided password — never cached
+        const { ciphertext, iv, salt, password } = (msg as { payload: { ciphertext: string; iv: string; salt: number[]; password: string } }).payload
+        const tempKey = await deriveKey(password, new Uint8Array(salt))
+        return { ok: true, data: { plaintext: await decrypt(tempKey, ciphertext, iv) } }
+      }
       case 'SYNC_PUSH':
       case 'SYNC_PULL':
       case 'SYNC_STATUS':
@@ -113,17 +119,38 @@ export async function dispatch(msg: AnyMsg & { payload?: Record<string, unknown>
         return { ok: true, data: await db.getSubscription(id) }
       }
       case 'SUBS_CREATE': {
-        const p = (msg as { payload: { name: string; amount: number; currency: string; cycle: string; start_date: string; tags: string[]; notes: string } }).payload
+        const p = (msg as { payload: { name: string; amount: number; currency: string; cycle: string; start_date: string; tags: string[]; notes: string; active?: boolean } }).payload
         return { ok: true, data: await db.createSubscription(p) }
       }
       case 'SUBS_UPDATE': {
-        const { id, ...fields } = (msg as { payload: { id: string; name?: string; amount?: number; currency?: string; cycle?: string; start_date?: string; tags?: string[]; notes?: string } }).payload
+        const { id, ...fields } = (msg as { payload: { id: string; name?: string; amount?: number; currency?: string; cycle?: string; start_date?: string; tags?: string[]; notes?: string; active?: boolean } }).payload
         return { ok: true, data: await db.updateSubscription(id, fields) }
       }
       case 'SUBS_DELETE': {
         const { id } = (msg as { payload: { id: string } }).payload
         await db.deleteSubscription(id)
         return { ok: true }
+      }
+
+      case 'BILLS_LIST_MONTH': {
+        const { year, month } = (msg as { payload: { year: number; month: number } }).payload
+        return { ok: true, data: await db.listBillsForMonth(year, month) }
+      }
+      case 'BILLS_LIST_SUB': {
+        const { sub_id } = (msg as { payload: { sub_id: string } }).payload
+        return { ok: true, data: await db.listBillsForSub(sub_id) }
+      }
+      case 'BILLS_UPSERT': {
+        const { sub_id, year, month, amount, currency, notes } = (msg as { payload: { sub_id: string; year: number; month: number; amount: number; currency: string; notes?: string } }).payload
+        return { ok: true, data: await db.upsertBill(sub_id, year, month, amount, currency, notes) }
+      }
+      case 'BILLS_DELETE': {
+        const { sub_id, year, month } = (msg as { payload: { sub_id: string; year: number; month: number } }).payload
+        await db.deleteBill(sub_id, year, month)
+        return { ok: true }
+      }
+      case 'BILLS_GET_ALL': {
+        return { ok: true, data: await db.getAllBills() }
       }
 
       default:

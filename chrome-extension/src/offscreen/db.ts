@@ -1,6 +1,9 @@
 import { PGlite, IdbFs, MemoryFS } from '@electric-sql/pglite'
 import type { Note } from '../shared/messages'
 
+// image_data is a JSON array of base64 data URLs
+
+
 let db: PGlite | null = null
 
 export async function initDb(fs?: IdbFs | MemoryFS): Promise<void> {
@@ -11,6 +14,7 @@ export async function initDb(fs?: IdbFs | MemoryFS): Promise<void> {
       title       TEXT NOT NULL,
       content     TEXT NOT NULL DEFAULT '',
       tags        TEXT[] NOT NULL DEFAULT '{}',
+      image_data  TEXT NOT NULL DEFAULT '[]',
       created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
       updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
     );
@@ -32,12 +36,25 @@ export async function initDb(fs?: IdbFs | MemoryFS): Promise<void> {
       start_date   TEXT NOT NULL,
       tags         TEXT[] NOT NULL DEFAULT '{}',
       notes        TEXT NOT NULL DEFAULT '',
+      active       BOOLEAN NOT NULL DEFAULT true,
       created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
       updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
     );
-    -- Migrate: add tags column if upgrading from schema without it
-    ALTER TABLE notes    ADD COLUMN IF NOT EXISTS tags TEXT[] NOT NULL DEFAULT '{}';
-    ALTER TABLE secrets  ADD COLUMN IF NOT EXISTS tags TEXT[] NOT NULL DEFAULT '{}';
+    CREATE TABLE IF NOT EXISTS bills (
+      sub_id     TEXT NOT NULL,
+      year       INTEGER NOT NULL,
+      month      INTEGER NOT NULL,
+      amount     NUMERIC(10,2) NOT NULL,
+      currency   TEXT NOT NULL DEFAULT 'USD',
+      notes      TEXT NOT NULL DEFAULT '',
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      PRIMARY KEY (sub_id, year, month)
+    );
+    -- Migrations for older schemas
+    ALTER TABLE notes          ADD COLUMN IF NOT EXISTS tags       TEXT[] NOT NULL DEFAULT '{}';
+    ALTER TABLE secrets        ADD COLUMN IF NOT EXISTS tags       TEXT[] NOT NULL DEFAULT '{}';
+    ALTER TABLE notes          ADD COLUMN IF NOT EXISTS image_data TEXT   NOT NULL DEFAULT '[]';
+    ALTER TABLE subscriptions  ADD COLUMN IF NOT EXISTS active     BOOLEAN NOT NULL DEFAULT true;
   `)
 }
 
@@ -64,27 +81,28 @@ export async function getNote(id: string): Promise<Note> {
   return res.rows[0]
 }
 
-export async function createNote(title: string, content: string, tags: string[] = []): Promise<Note> {
+export async function createNote(title: string, content: string, tags: string[] = [], image_data = '[]'): Promise<Note> {
   const res = await getDb().query<Note>(
-    `INSERT INTO notes (title, content, tags) VALUES ($1, $2, $3) RETURNING *`,
-    [title, content, tags]
+    `INSERT INTO notes (title, content, tags, image_data) VALUES ($1, $2, $3, $4) RETURNING *`,
+    [title, content, tags, image_data]
   )
   return res.rows[0]
 }
 
 export async function updateNote(
   id: string,
-  fields: { title?: string; content?: string; tags?: string[] }
+  fields: { title?: string; content?: string; tags?: string[]; image_data?: string }
 ): Promise<Note> {
-  if (fields.title === undefined && fields.content === undefined && fields.tags === undefined) {
+  if (fields.title === undefined && fields.content === undefined && fields.tags === undefined && fields.image_data === undefined) {
     throw new Error('No fields to update')
   }
   const sets: string[] = []
   const values: unknown[] = []
   let i = 1
-  if (fields.title   !== undefined) { sets.push(`title = $${i++}`);   values.push(fields.title) }
-  if (fields.content !== undefined) { sets.push(`content = $${i++}`); values.push(fields.content) }
-  if (fields.tags    !== undefined) { sets.push(`tags = $${i++}`);    values.push(fields.tags) }
+  if (fields.title      !== undefined) { sets.push(`title = $${i++}`);      values.push(fields.title) }
+  if (fields.content    !== undefined) { sets.push(`content = $${i++}`);    values.push(fields.content) }
+  if (fields.tags       !== undefined) { sets.push(`tags = $${i++}`);       values.push(fields.tags) }
+  if (fields.image_data !== undefined) { sets.push(`image_data = $${i++}`); values.push(fields.image_data) }
   sets.push(`updated_at = now()`)
   values.push(id)
   const res = await getDb().query<Note>(
@@ -170,34 +188,37 @@ export async function listSecretTags(): Promise<string[]> {
   return res.rows.map(r => r.tag)
 }
 
-export async function exportAllRows(): Promise<{ notes: Note[]; secrets: SecretRow[]; subscriptions: Subscription[] }> {
+export async function exportAllRows(): Promise<{ notes: Note[]; secrets: SecretRow[]; subscriptions: Subscription[]; bills: Bill[] }> {
   const notes = await listNotes()
   const secrets = await getDb().query<SecretRow>(`SELECT * FROM secrets`)
   const subs = await getDb().query<Subscription>(`SELECT * FROM subscriptions`)
-  return { notes, secrets: secrets.rows, subscriptions: subs.rows }
+  const bills = await getDb().query<Bill>(`SELECT * FROM bills`)
+  return { notes, secrets: secrets.rows, subscriptions: subs.rows, bills: bills.rows }
 }
 
 export async function importRows(
   notes: Note[],
   secrets: SecretRow[],
-  subscriptions: Subscription[] = []
-): Promise<{ notesUpdated: number; secretsAdded: number; subsUpdated: number }> {
+  subscriptions: Subscription[] = [],
+  bills: Bill[] = []
+): Promise<{ notesUpdated: number; secretsAdded: number; subsUpdated: number; billsUpdated: number }> {
   let notesUpdated = 0
   let secretsAdded = 0
   let subsUpdated = 0
+  let billsUpdated = 0
   const d = getDb()
   for (const n of notes) {
     const existing = await d.query<Note>(`SELECT updated_at FROM notes WHERE id = $1`, [n.id])
     if (!existing.rows[0]) {
       await d.query(
-        `INSERT INTO notes (id, title, content, tags, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6)`,
-        [n.id, n.title, n.content, n.tags ?? [], n.created_at, n.updated_at]
+        `INSERT INTO notes (id, title, content, tags, image_data, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+        [n.id, n.title, n.content, n.tags ?? [], n.image_data ?? '[]', n.created_at, n.updated_at]
       )
       notesUpdated++
     } else if (new Date(n.updated_at) > new Date(existing.rows[0].updated_at)) {
       await d.query(
-        `UPDATE notes SET title=$1, content=$2, tags=$3, updated_at=$4 WHERE id=$5`,
-        [n.title, n.content, n.tags ?? [], n.updated_at, n.id]
+        `UPDATE notes SET title=$1, content=$2, tags=$3, image_data=$4, updated_at=$5 WHERE id=$6`,
+        [n.title, n.content, n.tags ?? [], n.image_data ?? '[]', n.updated_at, n.id]
       )
       notesUpdated++
     }
@@ -222,20 +243,31 @@ export async function importRows(
     const existing = await d.query<Subscription>(`SELECT updated_at FROM subscriptions WHERE id = $1`, [sub.id])
     if (!existing.rows[0]) {
       await d.query(
-        `INSERT INTO subscriptions (id, name, amount, currency, cycle, start_date, tags, notes, created_at, updated_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-        [sub.id, sub.name, sub.amount, sub.currency, sub.cycle, sub.start_date, sub.tags ?? [], sub.notes, sub.created_at, sub.updated_at]
+        `INSERT INTO subscriptions (id, name, amount, currency, cycle, start_date, tags, notes, active, created_at, updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+        [sub.id, sub.name, sub.amount, sub.currency, sub.cycle, sub.start_date, sub.tags ?? [], sub.notes, sub.active ?? true, sub.created_at, sub.updated_at]
       )
       subsUpdated++
     } else if (new Date(sub.updated_at) > new Date(existing.rows[0].updated_at)) {
       await d.query(
-        `UPDATE subscriptions SET name=$1, amount=$2, currency=$3, cycle=$4, start_date=$5, tags=$6, notes=$7, updated_at=$8 WHERE id=$9`,
-        [sub.name, sub.amount, sub.currency, sub.cycle, sub.start_date, sub.tags ?? [], sub.notes, sub.updated_at, sub.id]
+        `UPDATE subscriptions SET name=$1, amount=$2, currency=$3, cycle=$4, start_date=$5, tags=$6, notes=$7, active=$8, updated_at=$9 WHERE id=$10`,
+        [sub.name, sub.amount, sub.currency, sub.cycle, sub.start_date, sub.tags ?? [], sub.notes, sub.active ?? true, sub.updated_at, sub.id]
       )
       subsUpdated++
     }
   }
-  return { notesUpdated, secretsAdded, subsUpdated }
+  for (const b of bills) {
+    await d.query(
+      `INSERT INTO bills (sub_id, year, month, amount, currency, notes, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)
+       ON CONFLICT (sub_id, year, month) DO UPDATE
+         SET amount=$4, currency=$5, notes=$6, updated_at=$7
+         WHERE bills.updated_at < $7`,
+      [b.sub_id, b.year, b.month, b.amount, b.currency, b.notes ?? '', b.updated_at]
+    )
+    billsUpdated++
+  }
+  return { notesUpdated, secretsAdded, subsUpdated, billsUpdated }
 }
 
 // --- Subscriptions ---
@@ -248,6 +280,7 @@ export interface Subscription {
   start_date: string
   tags: string[]
   notes: string
+  active: boolean
   created_at: string
   updated_at: string
 }
@@ -260,13 +293,25 @@ export interface CreateSubscriptionInput {
   start_date: string
   tags: string[]
   notes: string
+  active?: boolean
+}
+
+// --- Bills ---
+export interface Bill {
+  sub_id: string
+  year: number
+  month: number    // 1-12
+  amount: string   // NUMERIC comes back as string
+  currency: string
+  notes: string
+  updated_at: string
 }
 
 export async function createSubscription(input: CreateSubscriptionInput): Promise<Subscription> {
   const res = await getDb().query<Subscription>(
-    `INSERT INTO subscriptions (name, amount, currency, cycle, start_date, tags, notes)
-     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-    [input.name, input.amount, input.currency, input.cycle, input.start_date, input.tags, input.notes]
+    `INSERT INTO subscriptions (name, amount, currency, cycle, start_date, tags, notes, active)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+    [input.name, input.amount, input.currency, input.cycle, input.start_date, input.tags, input.notes, input.active ?? true]
   )
   return res.rows[0]
 }
@@ -294,13 +339,13 @@ export async function getSubscription(id: string): Promise<Subscription> {
 
 export async function updateSubscription(
   id: string,
-  fields: Partial<Omit<CreateSubscriptionInput, 'start_date'> & { start_date: string }>
+  fields: Partial<Omit<CreateSubscriptionInput, 'start_date'> & { start_date: string; active: boolean }>
 ): Promise<Subscription> {
   if (!Object.keys(fields).length) throw new Error('No fields to update')
   const sets: string[] = []
   const values: unknown[] = []
   let i = 1
-  const updatable = ['name', 'amount', 'currency', 'cycle', 'start_date', 'tags', 'notes'] as const
+  const updatable = ['name', 'amount', 'currency', 'cycle', 'start_date', 'tags', 'notes', 'active'] as const
   for (const key of updatable) {
     if (fields[key] !== undefined) { sets.push(`${key} = $${i++}`); values.push(fields[key]) }
   }
@@ -316,4 +361,43 @@ export async function updateSubscription(
 
 export async function deleteSubscription(id: string): Promise<void> {
   await getDb().query(`DELETE FROM subscriptions WHERE id = $1`, [id])
+  await getDb().query(`DELETE FROM bills WHERE sub_id = $1`, [id])
+}
+
+// --- Bills CRUD ---
+export async function upsertBill(subId: string, year: number, month: number, amount: number, currency: string, notes = ''): Promise<Bill> {
+  const res = await getDb().query<Bill>(
+    `INSERT INTO bills (sub_id, year, month, amount, currency, notes, updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,now())
+     ON CONFLICT (sub_id, year, month) DO UPDATE
+       SET amount=$4, currency=$5, notes=$6, updated_at=now()
+     RETURNING *`,
+    [subId, year, month, amount, currency, notes]
+  )
+  return res.rows[0]
+}
+
+export async function deleteBill(subId: string, year: number, month: number): Promise<void> {
+  await getDb().query(`DELETE FROM bills WHERE sub_id=$1 AND year=$2 AND month=$3`, [subId, year, month])
+}
+
+export async function listBillsForMonth(year: number, month: number): Promise<Bill[]> {
+  const res = await getDb().query<Bill>(
+    `SELECT * FROM bills WHERE year=$1 AND month=$2 ORDER BY sub_id ASC`,
+    [year, month]
+  )
+  return res.rows
+}
+
+export async function listBillsForSub(subId: string): Promise<Bill[]> {
+  const res = await getDb().query<Bill>(
+    `SELECT * FROM bills WHERE sub_id=$1 ORDER BY year DESC, month DESC`,
+    [subId]
+  )
+  return res.rows
+}
+
+export async function getAllBills(): Promise<Bill[]> {
+  const res = await getDb().query<Bill>(`SELECT * FROM bills ORDER BY year DESC, month DESC`)
+  return res.rows
 }

@@ -1,7 +1,7 @@
 import type React from 'react'
 import { NotesIcon, KeyvaultIcon, SyncIcon, SettingsIcon, GeneratorIcon, SubscriptionsIcon } from './icons'
 
-export type View = 'notes' | 'keyvault' | 'generator' | 'subscriptions' | 'sync' | 'settings'
+export type View = 'notes' | 'keyvault' | 'generator' | 'subscriptions' | 'reports' | 'sync' | 'settings'
 
 interface Props {
   active: View
