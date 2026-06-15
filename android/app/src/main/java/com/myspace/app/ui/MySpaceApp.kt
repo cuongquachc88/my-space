@@ -15,7 +15,7 @@ import com.myspace.app.ui.screens.*
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
     object Notes   : Screen("notes",   "Notes",    Icons.Default.Note)
     object Vault   : Screen("vault",   "Vault",    Icons.Default.Lock)
-    object Generator : Screen("gen",  "Generator",Icons.Default.Password)
+    object Generator : Screen("gen",  "Generator",Icons.Default.Key)
     object Subs    : Screen("subs",    "Subs",     Icons.Default.CreditCard)
     object Sync    : Screen("sync",    "Sync",     Icons.Default.Sync)
 }

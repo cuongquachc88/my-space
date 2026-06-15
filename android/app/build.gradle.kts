@@ -24,6 +24,7 @@ android {
         }
     }
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -55,4 +56,5 @@ dependencies {
     implementation(libs.okhttp.logging)
     implementation(libs.gson)
     debugImplementation(libs.androidx.ui.tooling.preview)
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
 }
