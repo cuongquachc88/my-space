@@ -7,6 +7,8 @@ import { SettingsView } from './views/SettingsView'
 import { GeneratorView } from './views/GeneratorView'
 import { SubscriptionsView } from './views/SubscriptionsView'
 import { ReportsView } from './views/ReportsView'
+import { MapPinsView } from './views/MapPinsView'
+import { TodoView } from './views/TodoView'
 
 export async function sendMsg(type: string, payload?: unknown): Promise<{ ok: boolean; data?: unknown; error?: string }> {
   const res = await chrome.runtime.sendMessage({ type, payload })
@@ -21,9 +23,12 @@ const glows: Record<View, string> = {
   reports:       'radial-gradient(ellipse 120px 80px at 60px -20px, rgba(244,114,182,0.15) 0%, transparent 70%)',
   sync:          'radial-gradient(ellipse 120px 80px at 60px -20px, rgba(59,130,246,0.18) 0%, transparent 70%)',
   settings:      'radial-gradient(ellipse 120px 80px at 60px -20px, rgba(59,130,246,0.18) 0%, transparent 70%)',
+  mapPins:       'radial-gradient(ellipse 120px 80px at 60px -20px, rgba(251,146,60,0.18) 0%, transparent 70%)',
+  todo:          'radial-gradient(ellipse 120px 80px at 60px -20px, rgba(56,189,248,0.18) 0%, transparent 70%)',
 }
 
-const GATED_VIEWS: View[] = ['notes', 'keyvault', 'subscriptions', 'reports', 'sync', 'settings']
+const GATED_VIEWS: View[] = ['notes', 'keyvault', 'subscriptions', 'reports', 'sync', 'settings', 'mapPins']
+// 'todo' is intentionally not gated — quick access without unlock
 
 // ── First-time setup screen ────────────────────────────────────────────────
 function SetupScreen({ onDone }: { onDone: () => void }) {
@@ -246,6 +251,8 @@ export default function App() {
             {view === 'reports'  && <ReportsView sendMsg={sendMsg} onBack={() => setView('subscriptions')} />}
             {view === 'sync'     && <SyncView sendMsg={sendMsg} />}
             {view === 'settings' && <SettingsView sendMsg={sendMsg} onLock={() => setVaultLocked(true)} />}
+            {view === 'mapPins'  && <MapPinsView sendMsg={sendMsg} />}
+            {view === 'todo'     && <TodoView sendMsg={sendMsg} />}
           </>
         )}
       </div>

@@ -34,12 +34,25 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     'SECRETS_LIST','SECRETS_GET','SECRETS_CREATE','SECRETS_UPDATE','SECRETS_DELETE',
     'SUBS_LIST','SUBS_GET','SUBS_CREATE','SUBS_UPDATE','SUBS_DELETE',
     'DB_EXPORT','DB_IMPORT',
+    'STACKS_LIST','STACKS_CREATE','STACKS_UPDATE','STACKS_DELETE',
+    'PINS_LIST','PINS_CREATE','PINS_UPDATE','PINS_DELETE',
+    'TODO_LISTS_LIST','TODO_LISTS_CREATE','TODO_LISTS_UPDATE','TODO_LISTS_DELETE',
+    'TODO_TASKS_LIST','TODO_TASKS_CREATE','TODO_TASKS_UPDATE','TODO_TASKS_DELETE',
+    'BILLS_LIST_MONTH','BILLS_LIST_SUB','BILLS_UPSERT','BILLS_DELETE','BILLS_GET_ALL',
   ]
   if (offscreenTypes.includes(msg.type)) {
     sendToOffscreen(msg).then(sendResponse).catch(e =>
       sendResponse({ ok: false, error: String(e) })
     )
     return true
+  }
+
+  if (msg.type === 'MAP_PIN_CAPTURE') {
+    // Forward extracted pin from content script to the sidepanel
+    chrome.runtime.sendMessage({ type: 'MAP_PIN_FROM_PAGE', payload: msg.payload })
+      .catch(() => {/* sidepanel not open */})
+    sendResponse({ ok: true })
+    return false
   }
 
   if (msg.type === 'SYNC_STATUS') {
@@ -62,6 +75,12 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
   if (msg.type === 'SYNC_PULL') {
     handlePull().then(sendResponse).catch(e => sendResponse({ ok: false, error: String(e) }))
+    return true
+  }
+
+  if (msg.type === 'SYNC_PULL_CONFIRM') {
+    const { password } = msg.payload as { password: string }
+    handlePullConfirm(password).then(sendResponse).catch(e => sendResponse({ ok: false, error: String(e) }))
     return true
   }
 })
@@ -171,6 +190,9 @@ async function handlePush(): Promise<{ ok: boolean; data?: { syncedAt: string };
     const keyReply = await sendToOffscreen({ type: 'VAULT_STATUS' }) as { ok: boolean; data: { locked: boolean } }
     if (keyReply.data.locked) throw new Error('Vault is locked — unlock before syncing')
 
+    const { vaultSalt } = await chrome.storage.local.get('vaultSalt') as { vaultSalt: number[] }
+    if (!vaultSalt) throw new Error('Vault not initialised — set a password first')
+
     const exportReply = await sendToOffscreen({ type: 'DB_EXPORT' }) as { ok: boolean; data: unknown }
     if (!exportReply.ok) throw new Error('DB export failed')
 
@@ -179,7 +201,8 @@ async function handlePush(): Promise<{ ok: boolean; data?: { syncedAt: string };
     if (!encReply.ok) throw new Error('Encryption failed')
 
     const fileId = await findFileId()
-    await writeFileToDrive(fileId, JSON.stringify({ ciphertext: encReply.data.ciphertext, iv: encReply.data.iv }))
+    // Include salt so the backup is self-contained — decryptable on any device with the same password
+    await writeFileToDrive(fileId, JSON.stringify({ ciphertext: encReply.data.ciphertext, iv: encReply.data.iv, salt: vaultSalt }))
 
     const syncedAt = new Date().toISOString()
     await chrome.storage.local.set({ syncedAt })
@@ -189,7 +212,7 @@ async function handlePush(): Promise<{ ok: boolean; data?: { syncedAt: string };
   }
 }
 
-async function handlePull(): Promise<{ ok: boolean; data?: { syncedAt: string; notesUpdated: number; secretsAdded: number }; error?: string }> {
+async function handlePull(): Promise<{ ok: boolean; needsPassword?: boolean; data?: { syncedAt: string; notesUpdated: number; secretsAdded: number }; error?: string }> {
   try {
     const fileId = await findFileId()
     if (!fileId) throw new Error('No backup found on Drive — push first')
@@ -197,22 +220,68 @@ async function handlePull(): Promise<{ ok: boolean; data?: { syncedAt: string; n
       headers: {},
     })
 
-    // Empty file means nothing pushed yet
     const text = await res.text()
     if (!text.trim()) throw new Error('No data on Drive — push first')
 
-    const { ciphertext, iv } = JSON.parse(text)
+    const backup = JSON.parse(text) as { ciphertext: string; iv: string; salt?: number[] }
+    const { ciphertext, iv } = backup
+    const backupSalt: number[] | undefined = backup.salt
+
+    const { vaultSalt } = await chrome.storage.local.get('vaultSalt') as { vaultSalt: number[] | undefined }
+
+    // If the backup includes a salt and it differs from the local salt, we need the password
+    // to re-derive the key used during push (cross-device / cross-profile scenario)
+    const saltsDiffer = backupSalt && vaultSalt && JSON.stringify(backupSalt) !== JSON.stringify(vaultSalt)
+    const noLocalSalt = backupSalt && !vaultSalt
+
+    if (saltsDiffer || noLocalSalt) {
+      // Store encrypted payload in session so SyncView can confirm with password
+      await chrome.storage.session.set({ pendingPull: { ciphertext, iv, salt: backupSalt } })
+      return { ok: true, needsPassword: true }
+    }
+
+    // Same salt (same device/profile) or legacy backup without salt — decrypt normally
     const decReply = await sendToOffscreen({ type: 'SYNC_DECRYPT', payload: { ciphertext, iv } }) as { ok: boolean; data: { plaintext: string } }
-    if (!decReply.ok) throw new Error('Decryption failed — wrong key or corrupted file')
+    if (!decReply.ok) {
+      if (!backupSalt) {
+        // Legacy backup — no salt stored. Must push from the original device first.
+        throw new Error('Cannot decrypt: this backup was created with an older version. Push from your original device first to include the encryption key, then pull here.')
+      }
+      throw new Error('Decryption failed — wrong key or corrupted data')
+    }
 
-    const { notes, secrets, subscriptions } = JSON.parse(decReply.data.plaintext)
-    const importReply = await sendToOffscreen({ type: 'DB_IMPORT', payload: { notes, secrets, subscriptions } }) as { ok: boolean; data: { notesUpdated: number; secretsAdded: number; subsUpdated: number } }
-    if (!importReply.ok) throw new Error('DB import failed')
-
-    const syncedAt = new Date().toISOString()
-    await chrome.storage.local.set({ syncedAt })
-    return { ok: true, data: { syncedAt, ...importReply.data } }
+    return finishImport(decReply.data.plaintext)
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) }
   }
+}
+
+async function handlePullConfirm(password: string): Promise<{ ok: boolean; data?: { syncedAt: string; notesUpdated: number; secretsAdded: number }; error?: string }> {
+  try {
+    const session = await chrome.storage.session.get('pendingPull') as { pendingPull?: { ciphertext: string; iv: string; salt: number[] } }
+    if (!session.pendingPull) throw new Error('No pending pull — start a pull first')
+    const { ciphertext, iv, salt } = session.pendingPull
+
+    const decReply = await sendToOffscreen({ type: 'SYNC_DECRYPT_WITH_SALT', payload: { ciphertext, iv, salt, password } }) as { ok: boolean; data: { plaintext: string } }
+    if (!decReply.ok) throw new Error('Wrong password — decryption failed')
+
+    await chrome.storage.session.remove('pendingPull')
+
+    // Replace local vault salt with backup salt so future unlocks/pushes are consistent
+    await chrome.storage.local.set({ vaultSalt: salt })
+
+    return finishImport(decReply.data.plaintext)
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
+}
+
+async function finishImport(plaintext: string): Promise<{ ok: boolean; data?: { syncedAt: string; notesUpdated: number; secretsAdded: number }; error?: string }> {
+  const { notes, secrets, subscriptions } = JSON.parse(plaintext)
+  const importReply = await sendToOffscreen({ type: 'DB_IMPORT', payload: { notes, secrets, subscriptions } }) as { ok: boolean; data: { notesUpdated: number; secretsAdded: number; subsUpdated: number } }
+  if (!importReply.ok) throw new Error('DB import failed')
+
+  const syncedAt = new Date().toISOString()
+  await chrome.storage.local.set({ syncedAt })
+  return { ok: true, data: { syncedAt, ...importReply.data } }
 }

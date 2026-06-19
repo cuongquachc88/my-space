@@ -1,7 +1,7 @@
 import type React from 'react'
-import { NotesIcon, KeyvaultIcon, SyncIcon, SettingsIcon, GeneratorIcon, SubscriptionsIcon } from './icons'
+import { NotesIcon, KeyvaultIcon, SyncIcon, SettingsIcon, GeneratorIcon, SubscriptionsIcon, MapPinsIcon, TodoIcon } from './icons'
 
-export type View = 'notes' | 'keyvault' | 'generator' | 'subscriptions' | 'reports' | 'sync' | 'settings'
+export type View = 'notes' | 'keyvault' | 'generator' | 'subscriptions' | 'reports' | 'sync' | 'settings' | 'mapPins' | 'todo'
 
 interface Props {
   active: View
@@ -15,6 +15,8 @@ const items: Array<{ view: View; Icon: IconComponent; accent: string }> = [
   { view: 'keyvault',      Icon: KeyvaultIcon,      accent: '#f59e0b' },
   { view: 'generator',     Icon: GeneratorIcon,     accent: '#a78bfa' },
   { view: 'subscriptions', Icon: SubscriptionsIcon, accent: '#34d399' },
+  { view: 'mapPins',       Icon: MapPinsIcon,       accent: '#fb923c' },
+  { view: 'todo',          Icon: TodoIcon,          accent: '#38bdf8' },
 ]
 
 const bottomItems: Array<{ view: View; Icon: IconComponent; accent: string }> = [

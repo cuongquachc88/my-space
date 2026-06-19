@@ -153,6 +153,75 @@ export async function dispatch(msg: AnyMsg & { payload?: Record<string, unknown>
         return { ok: true, data: await db.getAllBills() }
       }
 
+      case 'TODO_LISTS_LIST': {
+        return { ok: true, data: await db.listTodoLists() }
+      }
+      case 'TODO_LISTS_CREATE': {
+        const { name, color, icon } = (msg as { payload: { name: string; color: string; icon?: string } }).payload
+        return { ok: true, data: await db.createTodoList(name, color, icon) }
+      }
+      case 'TODO_LISTS_UPDATE': {
+        const { id, name, color, icon } = (msg as { payload: { id: string; name?: string; color?: string; icon?: string } }).payload
+        return { ok: true, data: await db.updateTodoList(id, { name, color, icon }) }
+      }
+      case 'TODO_LISTS_DELETE': {
+        const { id } = (msg as { payload: { id: string } }).payload
+        await db.deleteTodoList(id)
+        return { ok: true }
+      }
+      case 'TODO_TASKS_LIST': {
+        const { list_id } = (msg as { payload: { list_id: string } }).payload
+        return { ok: true, data: await db.listTodoTasks(list_id) }
+      }
+      case 'TODO_TASKS_CREATE': {
+        const { list_id, title, note, priority, due_date, recurrence } = (msg as { payload: { list_id: string; title: string; note: string; priority: string; due_date: string | null; recurrence: string } }).payload
+        return { ok: true, data: await db.createTodoTask(list_id, title, note, priority, due_date, recurrence) }
+      }
+      case 'TODO_TASKS_UPDATE': {
+        const { id, ...fields } = (msg as { payload: { id: string; title?: string; note?: string; priority?: string; due_date?: string | null; recurrence?: string; done?: boolean } }).payload
+        return { ok: true, data: await db.updateTodoTask(id, fields) }
+      }
+      case 'TODO_TASKS_DELETE': {
+        const { id } = (msg as { payload: { id: string } }).payload
+        await db.deleteTodoTask(id)
+        return { ok: true }
+      }
+
+      case 'STACKS_LIST': {
+        return { ok: true, data: await db.listMapStacks() }
+      }
+      case 'STACKS_CREATE': {
+        const { name, color, icon } = (msg as { payload: { name: string; color: string; icon?: string } }).payload
+        return { ok: true, data: await db.createMapStack(name, color, icon) }
+      }
+      case 'STACKS_UPDATE': {
+        const { id, name, color, icon } = (msg as { payload: { id: string; name?: string; color?: string; icon?: string } }).payload
+        return { ok: true, data: await db.updateMapStack(id, { name, color, icon }) }
+      }
+      case 'STACKS_DELETE': {
+        const { id } = (msg as { payload: { id: string } }).payload
+        await db.deleteMapStack(id)
+        return { ok: true }
+      }
+
+      case 'PINS_LIST': {
+        const { stack_id } = (msg as { payload: { stack_id: string } }).payload
+        return { ok: true, data: await db.listMapPins(stack_id) }
+      }
+      case 'PINS_CREATE': {
+        const { stack_id, label, lat, lng, url, note, priority, category, rating, review_note } = (msg as { payload: { stack_id: string; label: string; lat: number; lng: number; url: string; note: string; priority?: string; category?: string; rating?: number; review_note?: string } }).payload
+        return { ok: true, data: await db.createMapPin(stack_id, label, lat, lng, url, note, priority, category, rating, review_note) }
+      }
+      case 'PINS_UPDATE': {
+        const { id, label, note, priority, category, rating, review_note } = (msg as { payload: { id: string; label?: string; note?: string; priority?: string; category?: string; rating?: number; review_note?: string } }).payload
+        return { ok: true, data: await db.updateMapPin(id, { label, note, priority, category, rating, review_note }) }
+      }
+      case 'PINS_DELETE': {
+        const { id } = (msg as { payload: { id: string } }).payload
+        await db.deleteMapPin(id)
+        return { ok: true }
+      }
+
       default:
         return { ok: false, error: `Unknown message type: ${(msg as { type: string }).type}` }
     }

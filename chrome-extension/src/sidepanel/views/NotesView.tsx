@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import type { Note } from '../../shared/messages'
 import { NoteCard } from '../components/NoteCard'
 import { TagInput } from '../components/TagInput'
@@ -6,6 +6,10 @@ import { renderMarkdown } from '../../lib/renderMarkdown'
 
 interface Props {
   sendMsg: (type: string, payload?: unknown) => Promise<{ ok: boolean; data?: unknown; error?: string }>
+}
+
+function parseImages(raw: string | undefined): string[] {
+  try { return JSON.parse(raw ?? '[]') } catch { return [] }
 }
 
 export function NotesView({ sendMsg }: Props) {
@@ -17,8 +21,10 @@ export function NotesView({ sendMsg }: Props) {
   const [editTitle, setEditTitle] = useState('')
   const [editContent, setEditContent] = useState('')
   const [editTags, setEditTags] = useState<string[]>([])
+  const [editImages, setEditImages] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
   const [previewMode, setPreviewMode] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const load = useCallback(async (q = '', tag?: string | null) => {
     const payload: Record<string, string> = {}
@@ -29,7 +35,6 @@ export function NotesView({ sendMsg }: Props) {
   }, [sendMsg])
 
   const loadTags = useCallback(async () => {
-    // Collect all tags from current notes list (no extra message needed)
     const res = await sendMsg('NOTES_LIST')
     if (res.ok) {
       const notes = res.data as Note[]
@@ -45,15 +50,23 @@ export function NotesView({ sendMsg }: Props) {
     setEditTitle(note.title)
     setEditContent(note.content)
     setEditTags(note.tags ?? [])
+    setEditImages(parseImages(note.image_data))
     setPreviewMode(false)
   }
 
-  async function save(overrideTags?: string[]) {
+  async function save(overrides?: { tags?: string[]; images?: string[] }) {
     if (!selected) return
     setSaving(true)
     try {
-      const tags = overrideTags ?? editTags
-      await sendMsg('NOTES_UPDATE', { id: selected.id, title: editTitle, content: editContent, tags })
+      const tags = overrides?.tags ?? editTags
+      const images = overrides?.images ?? editImages
+      await sendMsg('NOTES_UPDATE', {
+        id: selected.id,
+        title: editTitle,
+        content: editContent,
+        tags,
+        image_data: JSON.stringify(images),
+      })
       await load(query, activeTag)
       await loadTags()
     } finally {
@@ -62,7 +75,7 @@ export function NotesView({ sendMsg }: Props) {
   }
 
   async function createNote() {
-    const res = await sendMsg('NOTES_CREATE', { title: 'New note', content: '', tags: [] })
+    const res = await sendMsg('NOTES_CREATE', { title: 'New note', content: '', tags: [], image_data: '[]' })
     if (res.ok) {
       await load(query, activeTag)
       await loadTags()
@@ -84,12 +97,34 @@ export function NotesView({ sendMsg }: Props) {
     load(query, next)
   }
 
+  function handleImagePick(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    if (!files.length) return
+    const readers = files.map(file => new Promise<string>(resolve => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.readAsDataURL(file)
+    }))
+    Promise.all(readers).then(dataUrls => {
+      const next = [...editImages, ...dataUrls]
+      setEditImages(next)
+      save({ images: next })
+    })
+    // Reset input so same file can be picked again
+    e.target.value = ''
+  }
+
+  function removeImage(idx: number) {
+    const next = editImages.filter((_, i) => i !== idx)
+    setEditImages(next)
+    save({ images: next })
+  }
+
   return (
     <div style={{ display: 'flex', height: '100%' }}>
       {/* List pane */}
       <div className="flex flex-col shrink-0 border-r p-2 gap-2 overflow-y-auto"
         style={{ width: '38%', minWidth: '120px', maxWidth: '200px', borderColor: 'rgba(255,255,255,0.07)' }}>
-        {/* Search */}
         <div className="flex items-center gap-2 rounded-[10px] px-2 py-1.5"
           style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' }}>
           <svg width="10" height="10" viewBox="0 0 20 20" fill="none">
@@ -101,7 +136,6 @@ export function NotesView({ sendMsg }: Props) {
             onChange={e => { setQuery(e.target.value); load(e.target.value, activeTag) }} />
         </div>
 
-        {/* Tag filter */}
         {allTags.length > 0 && (
           <div className="flex flex-col gap-1">
             <span className="text-xs tracking-widest uppercase px-1" style={{ color: 'rgba(255,255,255,0.2)', fontSize: '9px' }}>Tags</span>
@@ -119,20 +153,17 @@ export function NotesView({ sendMsg }: Props) {
           </div>
         )}
 
-        {/* Header */}
         <div className="flex justify-between items-center px-1">
           <span className="text-xs font-bold tracking-widest uppercase" style={{ color: 'rgba(255,255,255,0.3)' }}>Notes</span>
           <button onClick={createNote} className="text-xs font-semibold px-2 py-1 rounded-md"
             style={{ background: 'linear-gradient(135deg,#818cf8,#6366f1)', color: 'white' }}>+</button>
         </div>
 
-        {/* Note list grouped by tag */}
         {activeTag ? (
           notes.map(n => (
             <NoteCard key={n.id} note={n} active={selected?.id === n.id} onClick={() => selectNote(n)} />
           ))
         ) : (
-          // Group by first tag, ungrouped at bottom
           (() => {
             const grouped: Record<string, Note[]> = {}
             const untagged: Note[] = []
@@ -186,8 +217,71 @@ export function NotesView({ sendMsg }: Props) {
 
           <div className="rounded-lg px-2 py-1" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
             <TagInput tags={editTags} accent="#818cf8"
-              onChange={tags => { setEditTags(tags); save(tags) }} />
+              onChange={tags => { setEditTags(tags); save({ tags }) }} />
           </div>
+
+          {/* Image toolbar */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-1 text-xs px-2 py-1 rounded-md"
+              style={{ background: 'rgba(129,140,248,0.1)', border: '1px solid rgba(129,140,248,0.25)', color: '#818cf8' }}
+            >
+              <svg width="11" height="11" viewBox="0 0 20 20" fill="none">
+                <rect x="2" y="4" width="16" height="12" rx="2" stroke="currentColor" strokeWidth="1.6"/>
+                <circle cx="7" cy="9" r="1.5" fill="currentColor"/>
+                <path d="M2 14l4-4 3 3 3-3 6 6" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
+              </svg>
+              Add image
+            </button>
+            {editImages.length > 0 && (
+              <span className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                {editImages.length} image{editImages.length > 1 ? 's' : ''}
+              </span>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={handleImagePick}
+            />
+          </div>
+
+          {/* Image strip */}
+          {editImages.length > 0 && (
+            <div className="flex gap-2 flex-wrap">
+              {editImages.map((src, idx) => (
+                <div key={idx} className="relative shrink-0">
+                  <img
+                    src={src}
+                    alt=""
+                    style={{
+                      width: 64, height: 64,
+                      objectFit: 'cover',
+                      borderRadius: 8,
+                      border: '1px solid rgba(255,255,255,0.1)',
+                    }}
+                  />
+                  <button
+                    onClick={() => removeImage(idx)}
+                    style={{
+                      position: 'absolute', top: 2, right: 2,
+                      width: 16, height: 16,
+                      borderRadius: '50%',
+                      background: 'rgba(0,0,0,0.75)',
+                      color: 'white',
+                      fontSize: 10,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      border: 'none', cursor: 'pointer',
+                      lineHeight: 1,
+                    }}
+                  >×</button>
+                </div>
+              ))}
+            </div>
+          )}
 
           {previewMode ? (
             <div

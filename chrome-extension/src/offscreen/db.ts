@@ -50,11 +50,57 @@ export async function initDb(fs?: IdbFs | MemoryFS): Promise<void> {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       PRIMARY KEY (sub_id, year, month)
     );
+    CREATE TABLE IF NOT EXISTS todo_lists (
+      id         TEXT PRIMARY KEY DEFAULT gen_random_uuid(),
+      name       TEXT NOT NULL,
+      color      TEXT NOT NULL DEFAULT '#818cf8',
+      icon       TEXT NOT NULL DEFAULT '',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS todo_tasks (
+      id         TEXT PRIMARY KEY DEFAULT gen_random_uuid(),
+      list_id    TEXT NOT NULL REFERENCES todo_lists(id) ON DELETE CASCADE,
+      title      TEXT NOT NULL,
+      note       TEXT NOT NULL DEFAULT '',
+      priority   TEXT NOT NULL DEFAULT 'medium',
+      due_date   TEXT,
+      recurrence TEXT NOT NULL DEFAULT 'none',
+      done       BOOLEAN NOT NULL DEFAULT false,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS map_stacks (
+      id         TEXT PRIMARY KEY DEFAULT gen_random_uuid(),
+      name       TEXT NOT NULL,
+      color      TEXT NOT NULL DEFAULT '#34d399',
+      icon       TEXT NOT NULL DEFAULT '',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS map_pins (
+      id          TEXT PRIMARY KEY DEFAULT gen_random_uuid(),
+      stack_id    TEXT NOT NULL REFERENCES map_stacks(id) ON DELETE CASCADE,
+      label       TEXT NOT NULL,
+      lat         DOUBLE PRECISION NOT NULL,
+      lng         DOUBLE PRECISION NOT NULL,
+      url         TEXT NOT NULL DEFAULT '',
+      note        TEXT NOT NULL DEFAULT '',
+      priority    TEXT NOT NULL DEFAULT 'none',
+      category    TEXT NOT NULL DEFAULT '',
+      rating      INTEGER NOT NULL DEFAULT 0,
+      review_note TEXT NOT NULL DEFAULT '',
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
     -- Migrations for older schemas
     ALTER TABLE notes          ADD COLUMN IF NOT EXISTS tags       TEXT[] NOT NULL DEFAULT '{}';
     ALTER TABLE secrets        ADD COLUMN IF NOT EXISTS tags       TEXT[] NOT NULL DEFAULT '{}';
     ALTER TABLE notes          ADD COLUMN IF NOT EXISTS image_data TEXT   NOT NULL DEFAULT '[]';
     ALTER TABLE subscriptions  ADD COLUMN IF NOT EXISTS active     BOOLEAN NOT NULL DEFAULT true;
+    ALTER TABLE todo_lists     ADD COLUMN IF NOT EXISTS icon        TEXT    NOT NULL DEFAULT '';
+    ALTER TABLE map_stacks     ADD COLUMN IF NOT EXISTS icon        TEXT    NOT NULL DEFAULT '';
+    ALTER TABLE map_pins       ADD COLUMN IF NOT EXISTS priority    TEXT    NOT NULL DEFAULT 'none';
+    ALTER TABLE map_pins       ADD COLUMN IF NOT EXISTS category    TEXT    NOT NULL DEFAULT '';
+    ALTER TABLE map_pins       ADD COLUMN IF NOT EXISTS rating      INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE map_pins       ADD COLUMN IF NOT EXISTS review_note TEXT    NOT NULL DEFAULT '';
   `)
 }
 
@@ -401,3 +447,211 @@ export async function getAllBills(): Promise<Bill[]> {
   const res = await getDb().query<Bill>(`SELECT * FROM bills ORDER BY year DESC, month DESC`)
   return res.rows
 }
+
+// --- Todo Lists ---
+export interface TodoList {
+  id: string
+  name: string
+  color: string
+  icon: string
+  created_at: string
+}
+
+export interface TodoTask {
+  id: string
+  list_id: string
+  title: string
+  note: string
+  priority: 'low' | 'medium' | 'high'
+  due_date: string | null
+  recurrence: 'none' | 'daily' | 'weekly' | 'monthly'
+  done: boolean
+  created_at: string
+  updated_at: string
+}
+
+export async function listTodoLists(): Promise<TodoList[]> {
+  const res = await getDb().query<TodoList>(`SELECT * FROM todo_lists ORDER BY created_at ASC`)
+  return res.rows
+}
+
+export async function createTodoList(name: string, color: string, icon = ''): Promise<TodoList> {
+  const res = await getDb().query<TodoList>(
+    `INSERT INTO todo_lists (name, color, icon) VALUES ($1, $2, $3) RETURNING *`,
+    [name, color, icon]
+  )
+  return res.rows[0]
+}
+
+export async function updateTodoList(id: string, fields: { name?: string; color?: string; icon?: string }): Promise<TodoList> {
+  const sets: string[] = []
+  const values: unknown[] = []
+  let i = 1
+  if (fields.name  !== undefined) { sets.push(`name = $${i++}`);  values.push(fields.name) }
+  if (fields.color !== undefined) { sets.push(`color = $${i++}`); values.push(fields.color) }
+  if (fields.icon  !== undefined) { sets.push(`icon = $${i++}`);  values.push(fields.icon) }
+  if (!sets.length) throw new Error('No fields to update')
+  values.push(id)
+  const res = await getDb().query<TodoList>(
+    `UPDATE todo_lists SET ${sets.join(', ')} WHERE id = $${i} RETURNING *`,
+    values
+  )
+  if (!res.rows[0]) throw new Error(`List ${id} not found`)
+  return res.rows[0]
+}
+
+export async function deleteTodoList(id: string): Promise<void> {
+  await getDb().query(`DELETE FROM todo_lists WHERE id = $1`, [id])
+}
+
+export async function listTodoTasks(listId: string): Promise<TodoTask[]> {
+  const res = await getDb().query<TodoTask>(
+    `SELECT * FROM todo_tasks WHERE list_id = $1 ORDER BY done ASC, due_date ASC NULLS LAST, priority DESC, created_at ASC`,
+    [listId]
+  )
+  return res.rows
+}
+
+export async function createTodoTask(
+  listId: string,
+  title: string,
+  note: string,
+  priority: string,
+  due_date: string | null,
+  recurrence: string
+): Promise<TodoTask> {
+  const res = await getDb().query<TodoTask>(
+    `INSERT INTO todo_tasks (list_id, title, note, priority, due_date, recurrence)
+     VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+    [listId, title, note, priority, due_date, recurrence]
+  )
+  return res.rows[0]
+}
+
+export async function updateTodoTask(
+  id: string,
+  fields: { title?: string; note?: string; priority?: string; due_date?: string | null; recurrence?: string; done?: boolean }
+): Promise<TodoTask> {
+  const sets: string[] = []
+  const values: unknown[] = []
+  let i = 1
+  if (fields.title      !== undefined) { sets.push(`title = $${i++}`);      values.push(fields.title) }
+  if (fields.note       !== undefined) { sets.push(`note = $${i++}`);       values.push(fields.note) }
+  if (fields.priority   !== undefined) { sets.push(`priority = $${i++}`);   values.push(fields.priority) }
+  if (fields.due_date   !== undefined) { sets.push(`due_date = $${i++}`);   values.push(fields.due_date) }
+  if (fields.recurrence !== undefined) { sets.push(`recurrence = $${i++}`); values.push(fields.recurrence) }
+  if (fields.done       !== undefined) { sets.push(`done = $${i++}`);       values.push(fields.done) }
+  if (!sets.length) throw new Error('No fields to update')
+  sets.push(`updated_at = now()`)
+  values.push(id)
+  const res = await getDb().query<TodoTask>(
+    `UPDATE todo_tasks SET ${sets.join(', ')} WHERE id = $${i} RETURNING *`,
+    values
+  )
+  if (!res.rows[0]) throw new Error(`Task ${id} not found`)
+  return res.rows[0]
+}
+
+export async function deleteTodoTask(id: string): Promise<void> {
+  await getDb().query(`DELETE FROM todo_tasks WHERE id = $1`, [id])
+}
+
+// --- Map Stacks ---
+export interface MapStack {
+  id: string
+  name: string
+  color: string
+  icon: string
+  created_at: string
+}
+
+export interface MapPin {
+  id: string
+  stack_id: string
+  label: string
+  lat: number
+  lng: number
+  url: string
+  note: string
+  priority: 'none' | 'low' | 'medium' | 'high'
+  category: string
+  rating: number
+  review_note: string
+  created_at: string
+}
+
+export async function listMapStacks(): Promise<MapStack[]> {
+  const res = await getDb().query<MapStack>(`SELECT * FROM map_stacks ORDER BY created_at DESC`)
+  return res.rows
+}
+
+export async function createMapStack(name: string, color: string, icon = ''): Promise<MapStack> {
+  const res = await getDb().query<MapStack>(
+    `INSERT INTO map_stacks (name, color, icon) VALUES ($1, $2, $3) RETURNING *`,
+    [name, color, icon]
+  )
+  return res.rows[0]
+}
+
+export async function updateMapStack(id: string, fields: { name?: string; color?: string; icon?: string }): Promise<MapStack> {
+  const sets: string[] = []
+  const values: unknown[] = []
+  let i = 1
+  if (fields.name  !== undefined) { sets.push(`name = $${i++}`);  values.push(fields.name) }
+  if (fields.color !== undefined) { sets.push(`color = $${i++}`); values.push(fields.color) }
+  if (fields.icon  !== undefined) { sets.push(`icon = $${i++}`);  values.push(fields.icon) }
+  if (!sets.length) throw new Error('No fields to update')
+  values.push(id)
+  const res = await getDb().query<MapStack>(
+    `UPDATE map_stacks SET ${sets.join(', ')} WHERE id = $${i} RETURNING *`,
+    values
+  )
+  if (!res.rows[0]) throw new Error(`Stack ${id} not found`)
+  return res.rows[0]
+}
+
+export async function deleteMapStack(id: string): Promise<void> {
+  await getDb().query(`DELETE FROM map_stacks WHERE id = $1`, [id])
+}
+
+// --- Map Pins ---
+export async function listMapPins(stackId: string): Promise<MapPin[]> {
+  const res = await getDb().query<MapPin>(
+    `SELECT * FROM map_pins WHERE stack_id = $1 ORDER BY created_at DESC`,
+    [stackId]
+  )
+  return res.rows
+}
+
+export async function createMapPin(stackId: string, label: string, lat: number, lng: number, url: string, note: string, priority = 'none', category = '', rating = 0, review_note = ''): Promise<MapPin> {
+  const res = await getDb().query<MapPin>(
+    `INSERT INTO map_pins (stack_id, label, lat, lng, url, note, priority, category, rating, review_note) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+    [stackId, label, lat, lng, url, note, priority, category, rating, review_note]
+  )
+  return res.rows[0]
+}
+
+export async function updateMapPin(id: string, fields: { label?: string; note?: string; priority?: string; category?: string; rating?: number; review_note?: string }): Promise<MapPin> {
+  const sets: string[] = []
+  const values: unknown[] = []
+  let i = 1
+  if (fields.label       !== undefined) { sets.push(`label = $${i++}`);       values.push(fields.label) }
+  if (fields.note        !== undefined) { sets.push(`note = $${i++}`);        values.push(fields.note) }
+  if (fields.priority    !== undefined) { sets.push(`priority = $${i++}`);    values.push(fields.priority) }
+  if (fields.category    !== undefined) { sets.push(`category = $${i++}`);    values.push(fields.category) }
+  if (fields.rating      !== undefined) { sets.push(`rating = $${i++}`);      values.push(fields.rating) }
+  if (fields.review_note !== undefined) { sets.push(`review_note = $${i++}`); values.push(fields.review_note) }
+  if (!sets.length) throw new Error('No fields to update')
+  values.push(id)
+  const res = await getDb().query<MapPin>(
+    `UPDATE map_pins SET ${sets.join(', ')} WHERE id = $${i} RETURNING *`,
+    values
+  )
+  if (!res.rows[0]) throw new Error(`Pin ${id} not found`)
+  return res.rows[0]
+}
+
+export async function deleteMapPin(id: string): Promise<void> {
+  await getDb().query(`DELETE FROM map_pins WHERE id = $1`, [id])
+}
+

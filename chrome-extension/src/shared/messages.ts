@@ -109,6 +109,79 @@ export type BillsUpsertMsg     = Msg<'BILLS_UPSERT', { sub_id: string; year: num
 export type BillsDeleteMsg     = Msg<'BILLS_DELETE',      { sub_id: string; year: number; month: number }>
 export type BillsGetAllMsg     = Msg<'BILLS_GET_ALL'>
 
+// --- Todo List shape ---
+export interface TodoList {
+  id: string
+  name: string
+  color: string
+  icon: string
+  created_at: string
+}
+
+// --- Todo Task shape ---
+export interface TodoTask {
+  id: string
+  list_id: string
+  title: string
+  note: string
+  priority: 'low' | 'medium' | 'high'
+  due_date: string | null
+  recurrence: 'none' | 'daily' | 'weekly' | 'monthly'
+  done: boolean
+  created_at: string
+  updated_at: string
+}
+
+// --- Todo List messages ---
+export type TodoListsListMsg   = Msg<'TODO_LISTS_LIST'>
+export type TodoListsCreateMsg = Msg<'TODO_LISTS_CREATE', { name: string; color: string; icon?: string }>
+export type TodoListsUpdateMsg = Msg<'TODO_LISTS_UPDATE', { id: string; name?: string; color?: string; icon?: string }>
+export type TodoListsDeleteMsg = Msg<'TODO_LISTS_DELETE', { id: string }>
+
+// --- Todo Task messages ---
+export type TodoTasksListMsg   = Msg<'TODO_TASKS_LIST',   { list_id: string }>
+export type TodoTasksCreateMsg = Msg<'TODO_TASKS_CREATE', { list_id: string; title: string; note: string; priority: string; due_date: string | null; recurrence: string }>
+export type TodoTasksUpdateMsg = Msg<'TODO_TASKS_UPDATE', { id: string; title?: string; note?: string; priority?: string; due_date?: string | null; recurrence?: string; done?: boolean }>
+export type TodoTasksDeleteMsg = Msg<'TODO_TASKS_DELETE', { id: string }>
+
+// --- Map Stack shape ---
+export interface MapStack {
+  id: string
+  name: string
+  color: string
+  icon: string
+  created_at: string
+}
+
+// --- Map Pin shape ---
+export interface MapPin {
+  id: string
+  stack_id: string
+  label: string
+  lat: number
+  lng: number
+  url: string
+  note: string
+  priority: 'none' | 'low' | 'medium' | 'high'
+  category: string
+  rating: number
+  review_note: string
+  created_at: string
+}
+
+// --- Map Stack messages ---
+export type StacksListMsg   = Msg<'STACKS_LIST'>
+export type StacksCreateMsg = Msg<'STACKS_CREATE', { name: string; color: string; icon?: string }>
+export type StacksUpdateMsg = Msg<'STACKS_UPDATE', { id: string; name?: string; color?: string; icon?: string }>
+export type StacksDeleteMsg = Msg<'STACKS_DELETE', { id: string }>
+
+// --- Map Pin messages ---
+export type PinsListMsg   = Msg<'PINS_LIST',   { stack_id: string }>
+export type PinsCreateMsg = Msg<'PINS_CREATE', { stack_id: string; label: string; lat: number; lng: number; url: string; note: string; priority?: string; category?: string; rating?: number; review_note?: string }>
+export type PinsUpdateMsg = Msg<'PINS_UPDATE', { id: string; label?: string; note?: string; priority?: string; category?: string; rating?: number; review_note?: string }>
+export type PinsDeleteMsg = Msg<'PINS_DELETE', { id: string }>
+
+
 export type AnyMsg =
   | NotesListMsg | NotesGetMsg | NotesCreateMsg | NotesUpdateMsg | NotesDeleteMsg
   | VaultUnlockMsg | VaultLockMsg | VaultStatusMsg
@@ -117,3 +190,7 @@ export type AnyMsg =
   | DbImportMsg | DbExportMsg
   | SubsListMsg | SubsGetMsg | SubsCreateMsg | SubsUpdateMsg | SubsDeleteMsg
   | BillsListMonthMsg | BillsListSubMsg | BillsUpsertMsg | BillsDeleteMsg | BillsGetAllMsg
+  | StacksListMsg | StacksCreateMsg | StacksUpdateMsg | StacksDeleteMsg
+  | PinsListMsg | PinsCreateMsg | PinsUpdateMsg | PinsDeleteMsg
+  | TodoListsListMsg | TodoListsCreateMsg | TodoListsUpdateMsg | TodoListsDeleteMsg
+  | TodoTasksListMsg | TodoTasksCreateMsg | TodoTasksUpdateMsg | TodoTasksDeleteMsg
