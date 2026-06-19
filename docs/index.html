@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My SPACE — Private. Encrypted. Yours.</title>
   <!-- Primary SEO -->
-  <meta name="description" content="My SPACE — a private, offline-first Chrome extension. Notes, secrets, passwords, and subscriptions, all AES-GCM encrypted on your device. No servers. No signup." />
-  <meta name="keywords" content="password manager, chrome extension, secret vault, encrypted notes, subscription tracker, offline, privacy, AES-GCM, Google Drive sync, side panel" />
+  <meta name="description" content="My SPACE — your private vault. Notes, secrets, passwords, to-dos, map pins &amp; subscriptions, all AES-GCM encrypted on your device. No servers. No signup." />
+  <meta name="keywords" content="password manager, chrome extension, secret vault, encrypted notes, subscription tracker, todo list, map pins, offline, privacy, AES-GCM, Google Drive sync, side panel" />
   <meta name="author" content="cuongquachc88" />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://cuongquachc88.github.io/my-space/" />
@@ -15,7 +15,7 @@
   <meta property="og:type"        content="website" />
   <meta property="og:url"         content="https://cuongquachc88.github.io/my-space/" />
   <meta property="og:title"       content="My SPACE — Private. Encrypted. Yours." />
-  <meta property="og:description" content="A private, offline-first Chrome side panel extension. Notes, secrets, passwords, and subscriptions — all AES-GCM encrypted. No servers. No signup. Your data stays on your device." />
+  <meta property="og:description" content="Your private vault — notes, secrets, passwords, to-dos, map pins &amp; subscriptions. All AES-GCM encrypted, offline-first, synced via Google Drive. No servers. No signup." />
   <meta property="og:image"       content="https://cuongquachc88.github.io/my-space/og-image.png" />
   <meta property="og:image:width"  content="1200" />
   <meta property="og:image:height" content="630" />
@@ -24,7 +24,7 @@
   <!-- Twitter / X -->
   <meta name="twitter:card"        content="summary_large_image" />
   <meta name="twitter:title"       content="My SPACE — Private. Encrypted. Yours." />
-  <meta name="twitter:description" content="A private Chrome side panel vault. Notes, secrets, passwords &amp; subscriptions — AES-GCM encrypted, offline-first. No servers. No signup." />
+  <meta name="twitter:description" content="Your private vault — notes, secrets, to-dos, map pins &amp; subscriptions. AES-GCM encrypted, offline-first, Google Drive sync. No servers." />
   <meta name="twitter:image"       content="https://cuongquachc88.github.io/my-space/og-image.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -333,6 +333,8 @@
     .feature-card.subs::before   { background: radial-gradient(circle at 0 0, rgba(52,211,153,0.1), transparent 65%); }
     .feature-card.sync::before   { background: radial-gradient(circle at 0 0, rgba(59,130,246,0.1), transparent 65%); }
     .feature-card.import::before { background: radial-gradient(circle at 0 0, rgba(251,191,36,0.07), transparent 65%); }
+    .feature-card.todo::before   { background: radial-gradient(circle at 0 0, rgba(56,189,248,0.1),  transparent 65%); }
+    .feature-card.maps::before   { background: radial-gradient(circle at 0 0, rgba(251,146,60,0.1),  transparent 65%); }
 
     .feature-icon {
       width: 44px; height: 44px; border-radius: 12px;
@@ -614,7 +616,7 @@
   </h1>
 
   <p class="hero-sub">
-    Notes, secrets, passwords, and subscriptions — all encrypted on your device.
+    Notes, secrets, to-dos, map pins &amp; subscriptions — all encrypted on your device.
     No servers. No tracking. No compromise.
   </p>
 
@@ -705,7 +707,7 @@
   <div class="container">
     <div class="features-header reveal">
       <p class="section-label">Everything you need</p>
-      <h2 class="section-title">Six tools.<br/>One side panel.</h2>
+      <h2 class="section-title">Eight tools.<br/>One side panel.</h2>
       <p class="section-sub">Always accessible, never in your way.</p>
     </div>
     <div class="features-grid">
@@ -744,6 +746,18 @@
         <div class="feature-name">Import</div>
         <p class="feature-desc">Migrate from 1Password or Bitwarden in seconds. Supports CSV and JSON exports — never locked in.</p>
         <span class="feature-tag" style="background:rgba(251,191,36,0.08);color:rgba(253,224,71,0.75);border:1px solid rgba(251,191,36,0.15)">1Password · Bitwarden</span>
+      </div>
+      <div class="feature-card todo">
+        <div class="feature-icon" style="background:rgba(56,189,248,0.12)">✅</div>
+        <div class="feature-name">To-Do Lists</div>
+        <p class="feature-desc">Organise tasks into colour-coded lists. Set priority, due date, and recurrence. Timeline view groups tasks by today, overdue, and upcoming.</p>
+        <span class="feature-tag" style="background:rgba(56,189,248,0.1);color:rgba(125,211,252,0.85);border:1px solid rgba(56,189,248,0.2)">Priority · Recurrence</span>
+      </div>
+      <div class="feature-card maps">
+        <div class="feature-icon" style="background:rgba(251,146,60,0.12)">📍</div>
+        <div class="feature-name">Map Pins</div>
+        <p class="feature-desc">Save locations from any map URL — Google Maps, OSM, Bing, Apple Maps. Organise into stacks with category, priority, star rating, and review notes.</p>
+        <span class="feature-tag" style="background:rgba(251,146,60,0.1);color:rgba(253,186,116,0.85);border:1px solid rgba(251,146,60,0.2)">Auto-parse · Share link</span>
       </div>
     </div>
   </div>
