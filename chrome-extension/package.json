@@ -1,7 +1,7 @@
 {
   "name": "my-space",
   "productName": "My SPACE",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Your private vault — notes, secrets, passwords, subscriptions & Google Drive sync. Offline-first, fully encrypted.",
   "main": "index.js",
   "directories": {
