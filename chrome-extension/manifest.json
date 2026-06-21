@@ -9,8 +9,7 @@
     "offscreen",
     "identity",
     "sidePanel",
-    "activeTab",
-    "scripting"
+    "activeTab"
   ],
   "externally_connectable": {
     "matches": [
