@@ -87,8 +87,8 @@ export async function dispatch(msg: AnyMsg & { payload?: Record<string, unknown>
         return { ok: true, data: await db.exportAllRows() }
       }
       case 'DB_IMPORT': {
-        const { notes, secrets, subscriptions } = (msg as unknown as { payload: { notes: Note[]; secrets: db.SecretRow[]; subscriptions?: db.Subscription[] } }).payload
-        return { ok: true, data: await db.importRows(notes, secrets, subscriptions) }
+        const { notes, secrets, subscriptions, bills, mapStacks, mapPins, todoLists, todoTasks } = (msg as unknown as { payload: { notes: Note[]; secrets: db.SecretRow[]; subscriptions?: db.Subscription[]; bills?: db.Bill[]; mapStacks?: db.MapStack[]; mapPins?: db.MapPin[]; todoLists?: db.TodoList[]; todoTasks?: db.TodoTask[] } }).payload
+        return { ok: true, data: await db.importRows(notes, secrets, subscriptions, bills, mapStacks, mapPins, todoLists, todoTasks) }
       }
 
       case 'SYNC_ENCRYPT': {

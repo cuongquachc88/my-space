@@ -277,8 +277,8 @@ async function handlePullConfirm(password: string): Promise<{ ok: boolean; data?
 }
 
 async function finishImport(plaintext: string): Promise<{ ok: boolean; data?: { syncedAt: string; notesUpdated: number; secretsAdded: number }; error?: string }> {
-  const { notes, secrets, subscriptions } = JSON.parse(plaintext)
-  const importReply = await sendToOffscreen({ type: 'DB_IMPORT', payload: { notes, secrets, subscriptions } }) as { ok: boolean; data: { notesUpdated: number; secretsAdded: number; subsUpdated: number } }
+  const { notes, secrets, subscriptions, bills, mapStacks, mapPins, todoLists, todoTasks } = JSON.parse(plaintext)
+  const importReply = await sendToOffscreen({ type: 'DB_IMPORT', payload: { notes, secrets, subscriptions, bills, mapStacks, mapPins, todoLists, todoTasks } }) as { ok: boolean; data: { notesUpdated: number; secretsAdded: number; subsUpdated: number; mapsUpdated: number; todosUpdated: number } }
   if (!importReply.ok) throw new Error('DB import failed')
 
   const syncedAt = new Date().toISOString()

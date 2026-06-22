@@ -234,24 +234,37 @@ export async function listSecretTags(): Promise<string[]> {
   return res.rows.map(r => r.tag)
 }
 
-export async function exportAllRows(): Promise<{ notes: Note[]; secrets: SecretRow[]; subscriptions: Subscription[]; bills: Bill[] }> {
+export async function exportAllRows(): Promise<{ notes: Note[]; secrets: SecretRow[]; subscriptions: Subscription[]; bills: Bill[]; mapStacks: MapStack[]; mapPins: MapPin[]; todoLists: TodoList[]; todoTasks: TodoTask[] }> {
   const notes = await listNotes()
   const secrets = await getDb().query<SecretRow>(`SELECT * FROM secrets`)
   const subs = await getDb().query<Subscription>(`SELECT * FROM subscriptions`)
   const bills = await getDb().query<Bill>(`SELECT * FROM bills`)
-  return { notes, secrets: secrets.rows, subscriptions: subs.rows, bills: bills.rows }
+  const mapStacks = await getDb().query<MapStack>(`SELECT * FROM map_stacks ORDER BY created_at ASC`)
+  const mapPins = await getDb().query<MapPin>(`SELECT * FROM map_pins ORDER BY created_at ASC`)
+  const todoLists = await getDb().query<TodoList>(`SELECT * FROM todo_lists ORDER BY created_at ASC`)
+  const todoTasks = await getDb().query<TodoTask>(`SELECT * FROM todo_tasks ORDER BY created_at ASC`)
+  return {
+    notes, secrets: secrets.rows, subscriptions: subs.rows, bills: bills.rows,
+    mapStacks: mapStacks.rows, mapPins: mapPins.rows, todoLists: todoLists.rows, todoTasks: todoTasks.rows,
+  }
 }
 
 export async function importRows(
   notes: Note[],
   secrets: SecretRow[],
   subscriptions: Subscription[] = [],
-  bills: Bill[] = []
-): Promise<{ notesUpdated: number; secretsAdded: number; subsUpdated: number; billsUpdated: number }> {
+  bills: Bill[] = [],
+  mapStacks: MapStack[] = [],
+  mapPins: MapPin[] = [],
+  todoLists: TodoList[] = [],
+  todoTasks: TodoTask[] = []
+): Promise<{ notesUpdated: number; secretsAdded: number; subsUpdated: number; billsUpdated: number; mapsUpdated: number; todosUpdated: number }> {
   let notesUpdated = 0
   let secretsAdded = 0
   let subsUpdated = 0
   let billsUpdated = 0
+  let mapsUpdated = 0
+  let todosUpdated = 0
   const d = getDb()
   for (const n of notes) {
     const existing = await d.query<Note>(`SELECT updated_at FROM notes WHERE id = $1`, [n.id])
@@ -313,7 +326,48 @@ export async function importRows(
     )
     billsUpdated++
   }
-  return { notesUpdated, secretsAdded, subsUpdated, billsUpdated }
+  // Map stacks must be imported before pins (foreign key). No updated_at — first-write-wins.
+  for (const st of mapStacks) {
+    const r = await d.query(
+      `INSERT INTO map_stacks (id, name, color, icon, created_at) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (id) DO NOTHING`,
+      [st.id, st.name, st.color, st.icon ?? '', st.created_at]
+    )
+    if ((r as { rowCount?: number }).rowCount) mapsUpdated++
+  }
+  for (const p of mapPins) {
+    const r = await d.query(
+      `INSERT INTO map_pins (id, stack_id, label, lat, lng, url, note, priority, category, rating, review_note, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) ON CONFLICT (id) DO NOTHING`,
+      [p.id, p.stack_id, p.label, p.lat, p.lng, p.url ?? '', p.note ?? '', p.priority ?? 'none', p.category ?? '', p.rating ?? 0, p.review_note ?? '', p.created_at]
+    )
+    if ((r as { rowCount?: number }).rowCount) mapsUpdated++
+  }
+  // Todo lists before tasks (foreign key). No updated_at — first-write-wins.
+  for (const tl of todoLists) {
+    const r = await d.query(
+      `INSERT INTO todo_lists (id, name, color, icon, created_at) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (id) DO NOTHING`,
+      [tl.id, tl.name, tl.color, tl.icon ?? '', tl.created_at]
+    )
+    if ((r as { rowCount?: number }).rowCount) todosUpdated++
+  }
+  for (const tt of todoTasks) {
+    const ex = await d.query<TodoTask>(`SELECT updated_at FROM todo_tasks WHERE id = $1`, [tt.id])
+    if (!ex.rows[0]) {
+      await d.query(
+        `INSERT INTO todo_tasks (id, list_id, title, note, priority, due_date, recurrence, done, created_at, updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+        [tt.id, tt.list_id, tt.title, tt.note ?? '', tt.priority, tt.due_date ?? null, tt.recurrence, tt.done ?? false, tt.created_at, tt.updated_at]
+      )
+      todosUpdated++
+    } else if (new Date(tt.updated_at) > new Date(ex.rows[0].updated_at)) {
+      await d.query(
+        `UPDATE todo_tasks SET title=$1, note=$2, priority=$3, due_date=$4, recurrence=$5, done=$6, updated_at=$7 WHERE id=$8`,
+        [tt.title, tt.note ?? '', tt.priority, tt.due_date ?? null, tt.recurrence, tt.done ?? false, tt.updated_at, tt.id]
+      )
+      todosUpdated++
+    }
+  }
+  return { notesUpdated, secretsAdded, subsUpdated, billsUpdated, mapsUpdated, todosUpdated }
 }
 
 // --- Subscriptions ---
