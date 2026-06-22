@@ -117,6 +117,7 @@ function ProgressBar({ pct, done, error }: { pct: number; done: boolean; error: 
 export function SyncView({ sendMsg }: Props) {
   const [connected, setConnected] = useState(false)
   const [email, setEmail] = useState<string | null>(null)
+  const [avatar, setAvatar] = useState<string | null>(null)
   const [lastSync, setLastSync] = useState<string | null>(null)
   const [loading, setLoading] = useState<'connect' | 'push' | 'pull' | null>(null)
   const [pct, setPct] = useState(0)
@@ -128,10 +129,24 @@ export function SyncView({ sendMsg }: Props) {
   const pctTimer = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
-    chrome.storage.local.get(['driveConnected', 'syncedAt', 'driveEmail']).then(res => {
-      setConnected(!!res.driveConnected)
+    chrome.storage.local.get(['driveConnected', 'syncedAt', 'driveEmail', 'driveAvatar']).then(async res => {
+      const isConnected = !!res.driveConnected
+      setConnected(isConnected)
       setLastSync(typeof res.syncedAt === 'string' ? res.syncedAt : null)
       setEmail(typeof res.driveEmail === 'string' ? res.driveEmail : null)
+      setAvatar(typeof res.driveAvatar === 'string' ? res.driveAvatar : null)
+
+      // Backfill avatar/email for existing connections that predate these fields
+      if (isConnected && (!res.driveEmail || !res.driveAvatar)) {
+        try {
+          const r = await sendMsg('SYNC_FETCH_USERINFO')
+          if (r.ok && r.data) {
+            const d = r.data as { email?: string; avatar?: string }
+            if (d.email) setEmail(d.email)
+            if (d.avatar) setAvatar(d.avatar)
+          }
+        } catch { /* silently ignore */ }
+      }
     })
   }, [])
 
@@ -177,9 +192,10 @@ export function SyncView({ sendMsg }: Props) {
     setLoading(null)
     if (res.ok) {
       setConnected(true)
-      const e = (res.data as { email?: string } | undefined)?.email
-      if (e) setEmail(e)
-      addLog(`Connected${e ? ` as ${e}` : ' to Google Drive'}`, 'success')
+      const d = res.data as { email?: string; avatar?: string } | undefined
+      if (d?.email) setEmail(d.email)
+      if (d?.avatar) setAvatar(d.avatar)
+      addLog(`Connected${d?.email ? ` as ${d.email}` : ' to Google Drive'}`, 'success')
     } else {
       setHasError(true)
       addLog(res.error ?? 'Connection failed', 'error')
@@ -187,9 +203,9 @@ export function SyncView({ sendMsg }: Props) {
   }
 
   async function disconnect() {
-    await chrome.storage.local.remove(['driveConnected', 'driveFileId', 'driveEmail'])
+    await chrome.storage.local.remove(['driveConnected', 'driveFileId', 'driveEmail', 'driveAvatar'])
     await chrome.storage.session.remove('driveAccessToken')
-    setConnected(false); setEmail(null); setLogs([]); setDone(false); setHasError(false); setPct(0)
+    setConnected(false); setEmail(null); setAvatar(null); setLogs([]); setDone(false); setHasError(false); setPct(0)
   }
 
   async function push() {
@@ -241,10 +257,12 @@ export function SyncView({ sendMsg }: Props) {
 
   function handlePullResult(res: { ok: boolean; data?: unknown; error?: string }) {
     if (res.ok && res.data) {
-      const d = res.data as { syncedAt: string; notesUpdated: number; secretsAdded: number; subsUpdated: number }
+      const d = res.data as { syncedAt: string; notesUpdated: number; secretsAdded: number; subsUpdated: number; mapsUpdated: number; todosUpdated: number; totalNotes: number; totalSecrets: number; totalSubs: number; totalMaps: number; totalTodos: number }
       setLastSync(d.syncedAt)
       addLog('Pull complete', 'success')
-      addLog(`${d.notesUpdated} notes  ${d.secretsAdded} secrets  ${d.subsUpdated} subs`, 'highlight')
+      addLog(`${d.totalNotes} notes  ${d.totalSecrets} secrets  ${d.totalSubs} subs  ${d.totalMaps} pins  ${d.totalTodos} tasks`, 'highlight')
+      const updated = d.notesUpdated + d.secretsAdded + d.subsUpdated + d.mapsUpdated + d.todosUpdated
+      addLog(updated > 0 ? `${updated} records updated` : 'Already up to date', 'dim')
     } else if (!res.ok) {
       addLog(res.error ?? 'Pull failed', 'error')
     }
@@ -262,11 +280,33 @@ export function SyncView({ sendMsg }: Props) {
         {/* Status row */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div style={{
-              width: 8, height: 8, borderRadius: '50%',
-              background: connected ? '#22c55e' : '#6b7280',
-              animation: connected ? 'pulse-dot 2s ease-in-out infinite' : 'none',
-            }} />
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              {connected && avatar ? (
+                <img src={avatar} alt="Google account"
+                  style={{ width: 28, height: 28, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.12)', objectFit: 'cover' }} />
+              ) : (
+                <div style={{
+                  width: 28, height: 28, borderRadius: '50%',
+                  background: connected ? 'rgba(34,197,94,0.15)' : 'rgba(107,114,128,0.2)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <div style={{
+                    width: 8, height: 8, borderRadius: '50%',
+                    background: connected ? '#22c55e' : '#6b7280',
+                    animation: connected ? 'pulse-dot 2s ease-in-out infinite' : 'none',
+                  }} />
+                </div>
+              )}
+              {connected && (
+                <div style={{
+                  position: 'absolute', bottom: 0, right: 0,
+                  width: 8, height: 8, borderRadius: '50%',
+                  background: '#22c55e',
+                  border: '1.5px solid rgba(0,0,0,0.5)',
+                  animation: 'pulse-dot 2s ease-in-out infinite',
+                }} />
+              )}
+            </div>
             <div>
               <p className="text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.8)' }}>Google Drive</p>
               <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
@@ -341,7 +381,7 @@ export function SyncView({ sendMsg }: Props) {
         {needsPassword && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <p className="text-xs" style={{ color: 'rgba(196,181,253,0.8)' }}>
-              This backup was created on a different device. Enter your master password to decrypt it.
+              Enter your master password to decrypt the backup.
             </p>
             <input
               type="password"

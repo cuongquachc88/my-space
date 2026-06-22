@@ -19,7 +19,9 @@
   "oauth2": {
     "client_id": "564441755508-2uecg3qt74buhca2jfabqndmb5nngcms.apps.googleusercontent.com",
     "scopes": [
-      "https://www.googleapis.com/auth/drive.appdata"
+      "https://www.googleapis.com/auth/drive.appdata",
+      "https://www.googleapis.com/auth/userinfo.email",
+      "https://www.googleapis.com/auth/userinfo.profile"
     ]
   },
   "host_permissions": [

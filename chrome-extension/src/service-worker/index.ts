@@ -56,9 +56,15 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
 
   if (msg.type === 'SYNC_STATUS') {
-    chrome.storage.local.get(['driveConnected', 'syncedAt', 'driveEmail']).then(res => {
-      sendResponse({ ok: true, data: { connected: !!res.driveConnected, lastSync: res.syncedAt ?? null, email: res.driveEmail ?? null } })
+    chrome.storage.local.get(['driveConnected', 'syncedAt', 'driveEmail', 'driveAvatar']).then(res => {
+      sendResponse({ ok: true, data: { connected: !!res.driveConnected, lastSync: res.syncedAt ?? null, email: res.driveEmail ?? null, avatar: res.driveAvatar ?? null } })
     })
+    return true
+  }
+
+  if (msg.type === 'SYNC_FETCH_USERINFO') {
+    fetchAndSaveUserInfo()
+      .then(sendResponse).catch(e => sendResponse({ ok: false, error: String(e) }))
     return true
   }
 
@@ -87,7 +93,11 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
 // --- OAuth helpers ---
 
-const SCOPES = ['https://www.googleapis.com/auth/drive.appdata']
+const SCOPES = [
+  'https://www.googleapis.com/auth/drive.appdata',
+  'https://www.googleapis.com/auth/userinfo.email',
+  'https://www.googleapis.com/auth/userinfo.profile',
+]
 
 function getAuthToken(interactive: boolean): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -102,15 +112,50 @@ function getAuthToken(interactive: boolean): Promise<string> {
   })
 }
 
-async function handleConnect(): Promise<{ ok: boolean; email?: string; error?: string }> {
+async function fetchAndSaveUserInfo(): Promise<{ ok: boolean; data?: { email?: string; avatar?: string }; error?: string }> {
   try {
-    await getAuthToken(true)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const info = await new Promise<{ email: string; id: string }>(resolve =>
-      (chrome.identity.getProfileUserInfo as any)({ accountStatus: 'ANY' }, resolve)
-    )
-    await chrome.storage.local.set({ driveConnected: true, driveEmail: info.email || null })
-    return { ok: true, email: info.email || undefined }
+    const token = await getAuthToken(true)
+    const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    const userInfo = await res.json() as { email?: string; picture?: string }
+    await chrome.storage.local.set({
+      driveEmail: userInfo.email || null,
+      driveAvatar: userInfo.picture || null,
+    })
+    return { ok: true, data: { email: userInfo.email || undefined, avatar: userInfo.picture || undefined } }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
+}
+
+async function removeCachedToken(): Promise<void> {
+  await new Promise<void>(resolve => {
+    chrome.identity.getAuthToken({ interactive: false, scopes: SCOPES }, token => {
+      if (token && typeof token === 'string') {
+        chrome.identity.removeCachedAuthToken({ token }, resolve)
+      } else {
+        resolve()
+      }
+    })
+  })
+}
+
+async function handleConnect(): Promise<{ ok: boolean; email?: string; avatar?: string; error?: string }> {
+  try {
+    // Clear any cached token so Chrome re-presents the consent screen with current scopes
+    await removeCachedToken()
+    const token = await getAuthToken(true)
+    const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    const userInfo = await res.json() as { email?: string; picture?: string }
+    await chrome.storage.local.set({
+      driveConnected: true,
+      driveEmail: userInfo.email || null,
+      driveAvatar: userInfo.picture || null,
+    })
+    return { ok: true, email: userInfo.email || undefined, avatar: userInfo.picture || undefined }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) }
   }
@@ -252,14 +297,20 @@ async function handlePull(): Promise<{ ok: boolean; needsPassword?: boolean; dat
       return { ok: true, needsPassword: true }
     }
 
+    // Check vault is unlocked before attempting decrypt
+    const vaultStatus = await sendToOffscreen({ type: 'VAULT_STATUS' }) as { ok: boolean; data: { locked: boolean } }
+    if (vaultStatus.data.locked) throw new Error('Vault is locked — unlock before syncing')
+
     // Same salt (same device/profile) or legacy backup without salt — decrypt normally
     const decReply = await sendToOffscreen({ type: 'SYNC_DECRYPT', payload: { ciphertext, iv } }) as { ok: boolean; data: { plaintext: string } }
     if (!decReply.ok) {
       if (!backupSalt) {
-        // Legacy backup — no salt stored. Must push from the original device first.
         throw new Error('Cannot decrypt: this backup was created with an older version. Push from your original device first to include the encryption key, then pull here.')
       }
-      throw new Error('Decryption failed — wrong key or corrupted data')
+      // Salts match in storage but decryption still failed — vault key was derived with a different salt.
+      // Fall back to password prompt so the user can re-derive with the correct key.
+      await chrome.storage.session.set({ pendingPull: { ciphertext, iv, salt: backupSalt } })
+      return { ok: true, needsPassword: true }
     }
 
     return finishImport(decReply.data.plaintext)
@@ -279,21 +330,27 @@ async function handlePullConfirm(password: string): Promise<{ ok: boolean; data?
 
     await chrome.storage.session.remove('pendingPull')
 
-    // Replace local vault salt with backup salt so future unlocks/pushes are consistent
-    await chrome.storage.local.set({ vaultSalt: salt })
-
     return finishImport(decReply.data.plaintext)
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) }
   }
 }
 
-async function finishImport(plaintext: string): Promise<{ ok: boolean; data?: { syncedAt: string; notesUpdated: number; secretsAdded: number }; error?: string }> {
-  const { notes, secrets, subscriptions, bills, mapStacks, mapPins, todoLists, todoTasks } = JSON.parse(plaintext)
+async function finishImport(plaintext: string): Promise<{ ok: boolean; data?: { syncedAt: string; notesUpdated: number; secretsAdded: number; subsUpdated: number; mapsUpdated: number; todosUpdated: number; totalNotes: number; totalSecrets: number; totalSubs: number; totalMaps: number; totalTodos: number }; error?: string }> {
+  const parsed = JSON.parse(plaintext) as { notes: unknown[]; secrets: unknown[]; subscriptions: unknown[]; bills: unknown[]; mapStacks: unknown[]; mapPins: unknown[]; todoLists: unknown[]; todoTasks: unknown[] }
+  const { notes, secrets, subscriptions, bills, mapStacks, mapPins, todoLists, todoTasks } = parsed
   const importReply = await sendToOffscreen({ type: 'DB_IMPORT', payload: { notes, secrets, subscriptions, bills, mapStacks, mapPins, todoLists, todoTasks } }) as { ok: boolean; data: { notesUpdated: number; secretsAdded: number; subsUpdated: number; mapsUpdated: number; todosUpdated: number } }
   if (!importReply.ok) throw new Error('DB import failed')
 
   const syncedAt = new Date().toISOString()
   await chrome.storage.local.set({ syncedAt })
-  return { ok: true, data: { syncedAt, ...importReply.data } }
+  return { ok: true, data: {
+    syncedAt,
+    ...importReply.data,
+    totalNotes:   notes.length,
+    totalSecrets: secrets.length,
+    totalSubs:    subscriptions.length,
+    totalMaps:    mapPins.length,
+    totalTodos:   todoTasks.length,
+  }}
 }
