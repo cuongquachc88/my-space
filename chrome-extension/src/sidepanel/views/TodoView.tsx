@@ -76,6 +76,7 @@ function TaskRow({ task, accentColor, onToggle, onDelete, onUpdate }: {
   onUpdate: (fields: Partial<TodoTask>) => void
 }) {
   const [editing, setEditing]       = useState(false)
+  const [expanded, setExpanded]     = useState(false)
   const [title, setTitle]           = useState(task.title)
   const [note, setNote]             = useState(task.note)
   const [priority, setPriority]     = useState<Priority>(task.priority)
@@ -124,8 +125,6 @@ function TaskRow({ task, accentColor, onToggle, onDelete, onUpdate }: {
       </div>
     )
   }
-
-  const [expanded, setExpanded] = useState(false)
 
   return (
     <div className="rounded-[10px] mb-1 overflow-hidden"
