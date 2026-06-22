@@ -56,8 +56,8 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
 
   if (msg.type === 'SYNC_STATUS') {
-    chrome.storage.local.get(['driveConnected', 'syncedAt']).then(res => {
-      sendResponse({ ok: true, data: { connected: !!res.driveConnected, lastSync: res.syncedAt ?? null } })
+    chrome.storage.local.get(['driveConnected', 'syncedAt', 'driveEmail']).then(res => {
+      sendResponse({ ok: true, data: { connected: !!res.driveConnected, lastSync: res.syncedAt ?? null, email: res.driveEmail ?? null } })
     })
     return true
   }
@@ -102,11 +102,15 @@ function getAuthToken(interactive: boolean): Promise<string> {
   })
 }
 
-async function handleConnect(): Promise<{ ok: boolean; error?: string }> {
+async function handleConnect(): Promise<{ ok: boolean; email?: string; error?: string }> {
   try {
     await getAuthToken(true)
-    await chrome.storage.local.set({ driveConnected: true })
-    return { ok: true }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const info = await new Promise<{ email: string; id: string }>(resolve =>
+      (chrome.identity.getProfileUserInfo as any)({ accountStatus: 'ANY' }, resolve)
+    )
+    await chrome.storage.local.set({ driveConnected: true, driveEmail: info.email || null })
+    return { ok: true, email: info.email || undefined }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) }
   }
@@ -185,7 +189,7 @@ async function writeFileToDrive(fileId: string | null, body: string): Promise<st
   return data.id
 }
 
-async function handlePush(): Promise<{ ok: boolean; data?: { syncedAt: string }; error?: string }> {
+async function handlePush(): Promise<{ ok: boolean; data?: { syncedAt: string; notes: number; secrets: number; subs: number; maps: number; todos: number }; error?: string }> {
   try {
     const keyReply = await sendToOffscreen({ type: 'VAULT_STATUS' }) as { ok: boolean; data: { locked: boolean } }
     if (keyReply.data.locked) throw new Error('Vault is locked — unlock before syncing')
@@ -193,7 +197,7 @@ async function handlePush(): Promise<{ ok: boolean; data?: { syncedAt: string };
     const { vaultSalt } = await chrome.storage.local.get('vaultSalt') as { vaultSalt: number[] }
     if (!vaultSalt) throw new Error('Vault not initialised — set a password first')
 
-    const exportReply = await sendToOffscreen({ type: 'DB_EXPORT' }) as { ok: boolean; data: unknown }
+    const exportReply = await sendToOffscreen({ type: 'DB_EXPORT' }) as { ok: boolean; data: { notes: unknown[]; secrets: unknown[]; subscriptions: unknown[]; bills: unknown[]; mapStacks: unknown[]; mapPins: unknown[]; todoLists: unknown[]; todoTasks: unknown[] } }
     if (!exportReply.ok) throw new Error('DB export failed')
 
     const plaintext = JSON.stringify(exportReply.data)
@@ -206,7 +210,15 @@ async function handlePush(): Promise<{ ok: boolean; data?: { syncedAt: string };
 
     const syncedAt = new Date().toISOString()
     await chrome.storage.local.set({ syncedAt })
-    return { ok: true, data: { syncedAt } }
+    const d = exportReply.data
+    return { ok: true, data: {
+      syncedAt,
+      notes:   d.notes.length,
+      secrets: d.secrets.length,
+      subs:    d.subscriptions.length,
+      maps:    d.mapPins.length,
+      todos:   d.todoTasks.length,
+    }}
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) }
   }

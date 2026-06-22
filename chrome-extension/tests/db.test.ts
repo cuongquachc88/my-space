@@ -5,7 +5,9 @@ import {
   createNote, listNotes, getNote, updateNote, deleteNote, listNoteTags,
   createSecretRow, listSecretMeta, getSecretRow, updateSecretRow, deleteSecretRow, listSecretTags,
   exportAllRows, importRows,
-  createSubscription, listSubscriptions, getSubscription, updateSubscription, deleteSubscription
+  createSubscription, listSubscriptions, getSubscription, updateSubscription, deleteSubscription,
+  createMapStack, listMapStacks, createMapPin, listMapPins,
+  createTodoList, listTodoLists, createTodoTask, listTodoTasks,
 } from '../src/offscreen/db'
 
 describe('db - notes', () => {
@@ -189,7 +191,7 @@ describe('db - exportAllRows / importRows', () => {
 
   it('importRows inserts new notes and secrets', async () => {
     const result = await importRows(
-      [{ id: 'n1', title: 'Imported', content: 'body', tags: [], created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' }],
+      [{ id: 'n1', title: 'Imported', content: 'body', tags: [], image_data: '[]', created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' }],
       [{ id: 's1', label: 'KEY', ciphertext: 'c', iv: 'v', tags: [], created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' }]
     )
     expect(result.notesUpdated).toBe(1)
@@ -198,7 +200,7 @@ describe('db - exportAllRows / importRows', () => {
 
   it('importRows preserves tags on insert', async () => {
     await importRows(
-      [{ id: 'n2', title: 'Tagged import', content: '', tags: ['work', 'sync'], created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' }],
+      [{ id: 'n2', title: 'Tagged import', content: '', tags: ['work', 'sync'], image_data: '[]', created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' }],
       []
     )
     const note = await getNote('n2')
@@ -259,5 +261,97 @@ describe('db - subscriptions', () => {
     const s = await createSubscription({ name: 'ToDelete', amount: 1, currency: 'USD', cycle: 'monthly', start_date: '2024-01-01', tags: [], notes: '' })
     await deleteSubscription(s.id)
     await expect(getSubscription(s.id)).rejects.toThrow('not found')
+  })
+})
+
+describe('db - sync: map pins', () => {
+  beforeEach(async () => {
+    await initDb(new MemoryFS())
+  })
+
+  it('exportAllRows includes map stacks and pins', async () => {
+    const stack = await createMapStack('Trip', '#fb923c')
+    await createMapPin(stack.id, 'Eiffel Tower', 48.8584, 2.2945, '', '')
+    const exported = await exportAllRows()
+    expect(exported.mapStacks.length).toBe(1)
+    expect(exported.mapPins.length).toBe(1)
+    expect(exported.mapStacks[0].name).toBe('Trip')
+    expect(exported.mapPins[0].label).toBe('Eiffel Tower')
+  })
+
+  it('importRows inserts new map stacks and pins', async () => {
+    const result = await importRows(
+      [], [], [], [],
+      [{ id: 'st1', name: 'Work', color: '#34d399', icon: '', created_at: '2024-01-01T00:00:00Z' }],
+      [{ id: 'p1', stack_id: 'st1', label: 'Office', lat: 10.0, lng: 106.0, url: '', note: '', priority: 'none', category: '', rating: 0, review_note: '', created_at: '2024-01-01T00:00:00Z' }],
+    )
+    expect(result.mapsUpdated).toBe(2)
+    const stacks = await listMapStacks()
+    expect(stacks.find(s => s.id === 'st1')).toBeDefined()
+    const pins = await listMapPins('st1')
+    expect(pins.find(p => p.id === 'p1')).toBeDefined()
+  })
+
+  it('importRows skips duplicate map stacks (first-write-wins)', async () => {
+    const stack = await createMapStack('Original', '#fff')
+    const result = await importRows(
+      [], [], [], [],
+      [{ id: stack.id, name: 'Overwrite', color: '#000', icon: '', created_at: '2024-01-01T00:00:00Z' }],
+    )
+    expect(result.mapsUpdated).toBe(0)
+    const stacks = await listMapStacks()
+    expect(stacks.find(s => s.id === stack.id)?.name).toBe('Original')
+  })
+})
+
+describe('db - sync: todo', () => {
+  beforeEach(async () => {
+    await initDb(new MemoryFS())
+  })
+
+  it('exportAllRows includes todo lists and tasks', async () => {
+    const list = await createTodoList('Personal', '#38bdf8')
+    await createTodoTask(list.id, 'Buy milk', '', 'low', null, 'none')
+    const exported = await exportAllRows()
+    expect(exported.todoLists.length).toBe(1)
+    expect(exported.todoTasks.length).toBe(1)
+    expect(exported.todoLists[0].name).toBe('Personal')
+    expect(exported.todoTasks[0].title).toBe('Buy milk')
+  })
+
+  it('importRows inserts new todo lists and tasks', async () => {
+    const result = await importRows(
+      [], [], [], [], [], [],
+      [{ id: 'tl1', name: 'Work', color: '#38bdf8', icon: '', created_at: '2024-01-01T00:00:00Z' }],
+      [{ id: 'tt1', list_id: 'tl1', title: 'Deploy', note: '', priority: 'high', due_date: null, recurrence: 'none', done: false, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' }],
+    )
+    expect(result.todosUpdated).toBe(2)
+    const lists = await listTodoLists()
+    expect(lists.find(l => l.id === 'tl1')).toBeDefined()
+    const tasks = await listTodoTasks('tl1')
+    expect(tasks.find(t => t.id === 'tt1')).toBeDefined()
+  })
+
+  it('importRows skips duplicate todo lists (first-write-wins)', async () => {
+    const list = await createTodoList('Original', '#fff')
+    const result = await importRows(
+      [], [], [], [], [], [],
+      [{ id: list.id, name: 'Overwrite', color: '#000', icon: '', created_at: '2024-01-01T00:00:00Z' }],
+    )
+    expect(result.todosUpdated).toBe(0)
+    const lists = await listTodoLists()
+    expect(lists.find(l => l.id === list.id)?.name).toBe('Original')
+  })
+
+  it('importRows updates todo tasks with last-write-wins', async () => {
+    const list = await createTodoList('Dev', '#818cf8')
+    const task = await createTodoTask(list.id, 'Original', '', 'medium', null, 'none')
+    const all = await exportAllRows()
+    const exported = all.todoTasks[0]
+    // newer version from remote
+    const newer = { ...exported, title: 'Updated', updated_at: new Date(Date.now() + 60000).toISOString() }
+    await importRows([], [], [], [], [], [], [], [newer])
+    const tasks = await listTodoTasks(list.id)
+    expect(tasks.find(t => t.id === task.id)?.title).toBe('Updated')
   })
 })

@@ -332,7 +332,7 @@ export async function importRows(
       `INSERT INTO map_stacks (id, name, color, icon, created_at) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (id) DO NOTHING`,
       [st.id, st.name, st.color, st.icon ?? '', st.created_at]
     )
-    if ((r as { rowCount?: number }).rowCount) mapsUpdated++
+    if ((r as { affectedRows?: number }).affectedRows) mapsUpdated++
   }
   for (const p of mapPins) {
     const r = await d.query(
@@ -340,7 +340,7 @@ export async function importRows(
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) ON CONFLICT (id) DO NOTHING`,
       [p.id, p.stack_id, p.label, p.lat, p.lng, p.url ?? '', p.note ?? '', p.priority ?? 'none', p.category ?? '', p.rating ?? 0, p.review_note ?? '', p.created_at]
     )
-    if ((r as { rowCount?: number }).rowCount) mapsUpdated++
+    if ((r as { affectedRows?: number }).affectedRows) mapsUpdated++
   }
   // Todo lists before tasks (foreign key). No updated_at — first-write-wins.
   for (const tl of todoLists) {
@@ -348,7 +348,7 @@ export async function importRows(
       `INSERT INTO todo_lists (id, name, color, icon, created_at) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (id) DO NOTHING`,
       [tl.id, tl.name, tl.color, tl.icon ?? '', tl.created_at]
     )
-    if ((r as { rowCount?: number }).rowCount) todosUpdated++
+    if ((r as { affectedRows?: number }).affectedRows) todosUpdated++
   }
   for (const tt of todoTasks) {
     const ex = await d.query<TodoTask>(`SELECT updated_at FROM todo_tasks WHERE id = $1`, [tt.id])

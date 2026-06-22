@@ -116,6 +116,7 @@ function ProgressBar({ pct, done, error }: { pct: number; done: boolean; error: 
 
 export function SyncView({ sendMsg }: Props) {
   const [connected, setConnected] = useState(false)
+  const [email, setEmail] = useState<string | null>(null)
   const [lastSync, setLastSync] = useState<string | null>(null)
   const [loading, setLoading] = useState<'connect' | 'push' | 'pull' | null>(null)
   const [pct, setPct] = useState(0)
@@ -127,9 +128,10 @@ export function SyncView({ sendMsg }: Props) {
   const pctTimer = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
-    chrome.storage.local.get(['driveConnected', 'syncedAt']).then(res => {
+    chrome.storage.local.get(['driveConnected', 'syncedAt', 'driveEmail']).then(res => {
       setConnected(!!res.driveConnected)
       setLastSync(typeof res.syncedAt === 'string' ? res.syncedAt : null)
+      setEmail(typeof res.driveEmail === 'string' ? res.driveEmail : null)
     })
   }, [])
 
@@ -175,7 +177,9 @@ export function SyncView({ sendMsg }: Props) {
     setLoading(null)
     if (res.ok) {
       setConnected(true)
-      addLog('Connected to Google Drive', 'success')
+      const e = (res.data as { email?: string } | undefined)?.email
+      if (e) setEmail(e)
+      addLog(`Connected${e ? ` as ${e}` : ' to Google Drive'}`, 'success')
     } else {
       setHasError(true)
       addLog(res.error ?? 'Connection failed', 'error')
@@ -183,9 +187,9 @@ export function SyncView({ sendMsg }: Props) {
   }
 
   async function disconnect() {
-    await chrome.storage.local.remove(['driveConnected', 'driveFileId'])
+    await chrome.storage.local.remove(['driveConnected', 'driveFileId', 'driveEmail'])
     await chrome.storage.session.remove('driveAccessToken')
-    setConnected(false); setLogs([]); setDone(false); setHasError(false); setPct(0)
+    setConnected(false); setEmail(null); setLogs([]); setDone(false); setHasError(false); setPct(0)
   }
 
   async function push() {
@@ -195,9 +199,10 @@ export function SyncView({ sendMsg }: Props) {
     stopProgress(res.ok)
     setLoading(null)
     if (res.ok && res.data) {
-      const d = res.data as { syncedAt: string }
+      const d = res.data as { syncedAt: string; notes: number; secrets: number; subs: number; maps: number; todos: number }
       setLastSync(d.syncedAt)
       addLog('Push complete', 'success')
+      addLog(`${d.notes} notes  ${d.secrets} secrets  ${d.subs} subs  ${d.maps} pins  ${d.todos} tasks`, 'highlight')
       addLog(`Synced at ${new Date(d.syncedAt).toLocaleTimeString()}`, 'dim')
     } else {
       addLog(res.error ?? 'Push failed', 'error')
@@ -269,6 +274,11 @@ export function SyncView({ sendMsg }: Props) {
                   ? (loading === 'push' ? 'Pushing…' : 'Pulling…')
                   : connected ? 'Connected' : 'Not connected'}
               </p>
+              {connected && email && (
+                <p className="text-[10px] mt-0.5 truncate max-w-[140px]" style={{ color: 'rgba(255,255,255,0.2)' }}>
+                  {email}
+                </p>
+              )}
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
