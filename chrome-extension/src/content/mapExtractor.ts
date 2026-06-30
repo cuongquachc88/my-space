@@ -52,13 +52,18 @@ const WRAP_ID = 'myspace-pin-wrap'
 const BTN_ID = 'myspace-pin-btn'
 const TOGGLE_ID = 'myspace-pin-toggle'
 
-// Wrapper: holds main button + collapse toggle. Positioned higher to avoid
-// Google Maps' own zoom/locate/pegman controls on the right edge.
+// Wrapper: holds main button + collapse toggle. Sits in the top-right
+// corner above Google Maps' search bar and tab row. !important on
+// position so Google Maps' nested `transform` containers don't capture
+// this element into their containing block (which would offset it
+// unpredictably).
 const WRAP_STYLES = `
-  position: fixed;
-  bottom: 220px;
-  right: 16px;
-  z-index: 2147483647;
+  position: fixed !important;
+  top: 80px !important;
+  right: 16px !important;
+  left: auto !important;
+  bottom: auto !important;
+  z-index: 2147483647 !important;
   display: flex;
   align-items: center;
   gap: 6px;
