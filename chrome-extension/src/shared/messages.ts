@@ -22,6 +22,8 @@ export interface SecretMeta {
   id: string
   label: string
   tags: string[]
+  url: string
+  description: string
   updated_at: string
 }
 
@@ -38,6 +40,7 @@ export type NotesGetMsg     = Msg<'NOTES_GET',    { id: string }>
 export type NotesCreateMsg  = Msg<'NOTES_CREATE', { title: string; content: string; tags?: string[]; image_data?: string }>
 export type NotesUpdateMsg  = Msg<'NOTES_UPDATE', { id: string; title?: string; content?: string; tags?: string[]; image_data?: string }>
 export type NotesDeleteMsg  = Msg<'NOTES_DELETE', { id: string }>
+export type NotesTagsMsg    = Msg<'NOTES_TAGS'>
 
 // --- Vault messages ---
 export type VaultUnlockMsg  = Msg<'VAULT_UNLOCK', { password: string; salt: number[] }>
@@ -47,9 +50,10 @@ export type VaultStatusMsg  = Msg<'VAULT_STATUS'>
 // --- Secret messages ---
 export type SecretsListMsg   = Msg<'SECRETS_LIST'>
 export type SecretsGetMsg    = Msg<'SECRETS_GET',    { id: string }>
-export type SecretsCreateMsg = Msg<'SECRETS_CREATE', { label: string; value: string; tags?: string[] }>
-export type SecretsUpdateMsg = Msg<'SECRETS_UPDATE', { id: string; label?: string; value?: string; tags?: string[] }>
+export type SecretsCreateMsg = Msg<'SECRETS_CREATE', { label: string; value: string; tags?: string[]; url?: string; description?: string }>
+export type SecretsUpdateMsg = Msg<'SECRETS_UPDATE', { id: string; label?: string; value?: string; tags?: string[]; url?: string; description?: string }>
 export type SecretsDeleteMsg = Msg<'SECRETS_DELETE', { id: string }>
+export type SecretsTagsMsg   = Msg<'SECRETS_TAGS'>
 
 // --- Sync messages ---
 export type SyncPushMsg    = Msg<'SYNC_PUSH'>
@@ -62,6 +66,17 @@ export type SyncDecryptWithSaltMsg   = Msg<'SYNC_DECRYPT_WITH_SALT', { ciphertex
 // --- DB import (service worker → offscreen) ---
 export type DbImportMsg = Msg<'DB_IMPORT', { notes: Note[]; secrets: Array<{ id: string; label: string; ciphertext: string; iv: string; updated_at: string }> }>
 export type DbExportMsg = Msg<'DB_EXPORT'>
+
+// --- Save password offer (content script → service worker → side panel) ---
+export interface SavePasswordPayload {
+  url: string
+  username: string
+  password: string
+  formAction?: string
+}
+export type SavePasswordOfferMsg = Msg<'SAVE_PASSWORD_OFFER', SavePasswordPayload>
+// Service worker broadcasts to side panel (no response)
+export type SavePasswordOfferFromPageMsg = Msg<'SAVE_PASSWORD_OFFER_FROM_PAGE', SavePasswordPayload>
 
 // --- Subscription shape ---
 export interface Subscription {
@@ -183,9 +198,9 @@ export type PinsDeleteMsg = Msg<'PINS_DELETE', { id: string }>
 
 
 export type AnyMsg =
-  | NotesListMsg | NotesGetMsg | NotesCreateMsg | NotesUpdateMsg | NotesDeleteMsg
+  | NotesListMsg | NotesGetMsg | NotesCreateMsg | NotesUpdateMsg | NotesDeleteMsg | NotesTagsMsg
   | VaultUnlockMsg | VaultLockMsg | VaultStatusMsg
-  | SecretsListMsg | SecretsGetMsg | SecretsCreateMsg | SecretsUpdateMsg | SecretsDeleteMsg
+  | SecretsListMsg | SecretsGetMsg | SecretsCreateMsg | SecretsUpdateMsg | SecretsDeleteMsg | SecretsTagsMsg
   | SyncPushMsg | SyncPullMsg | SyncStatusMsg | SyncEncryptMsg | SyncDecryptMsg | SyncDecryptWithSaltMsg
   | DbImportMsg | DbExportMsg
   | SubsListMsg | SubsGetMsg | SubsCreateMsg | SubsUpdateMsg | SubsDeleteMsg
@@ -194,3 +209,4 @@ export type AnyMsg =
   | PinsListMsg | PinsCreateMsg | PinsUpdateMsg | PinsDeleteMsg
   | TodoListsListMsg | TodoListsCreateMsg | TodoListsUpdateMsg | TodoListsDeleteMsg
   | TodoTasksListMsg | TodoTasksCreateMsg | TodoTasksUpdateMsg | TodoTasksDeleteMsg
+  | SavePasswordOfferMsg | SavePasswordOfferFromPageMsg

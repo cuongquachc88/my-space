@@ -35,26 +35,39 @@ src/
 ├── offscreen/
 │   ├── main.ts           # Offscreen entry — wires chrome.runtime.onMessage
 │   ├── handler.ts        # Dispatches messages to db.ts / crypto.ts
-│   ├── db.ts             # PGlite schema + CRUD for all tables
-│   └── crypto.ts         # AES-GCM encrypt/decrypt via Web Crypto API
+│   ├── db.ts             # PGlite schema + CRUD for all 8 tables
+│   ├── crypto.ts         # AES-GCM encrypt/decrypt via Web Crypto API
+│   └── polyfill.ts       # WASM/PGlite environment polyfills
 ├── sidepanel/
-│   ├── App.tsx           # Root — icon rail, view routing, idle lock
+│   ├── App.tsx           # Root — icon rail, view routing, idle lock, setup/lock screens
 │   ├── views/
-│   │   ├── NotesView.tsx
-│   │   ├── KeyvaultView.tsx
-│   │   ├── GeneratorView.tsx
-│   │   ├── SubscriptionsView.tsx
-│   │   ├── SyncView.tsx
-│   │   └── SettingsView.tsx
+│   │   ├── NotesView.tsx         # Markdown notes with tags, images, search
+│   │   ├── KeyvaultView.tsx      # Encrypted secrets with tag grouping
+│   │   ├── GeneratorView.tsx     # Password generator with strength meter
+│   │   ├── SubscriptionsView.tsx # Subscription tracker with renewal alerts
+│   │   ├── ReportsView.tsx       # Monthly reports, bills, 6-month bar chart
+│   │   ├── TodoView.tsx          # Task lists with priority, due dates, recurrence
+│   │   ├── MapPinsView.tsx       # Location pins with auto-extract, share links
+│   │   ├── SyncView.tsx          # Google Drive sync with animated progress
+│   │   └── SettingsView.tsx      # Change password, auto-lock, import
 │   ├── components/
-│   │   ├── IconRail.tsx
-│   │   └── icons/index.tsx
+│   │   ├── IconRail.tsx          # Vertical navigation rail
+│   │   ├── NoteCard.tsx          # Note list item
+│   │   ├── SecretCard.tsx        # Secret with reveal/copy/auto-hide
+│   │   ├── TagInput.tsx          # Tag chip input
+│   │   ├── IconPicker.tsx        # Pixel icon selector for lists/stacks
+│   │   └── icons/index.tsx       # SVG icon components
 │   └── index.css         # Tailwind + glass-card design tokens
+├── content/
+│   ├── mapExtractor.ts   # Content script — floating Pin button on map pages (extracts lat/lng + URL)
+│   └── savePrompt.ts     # Content script — "Save to My SPACE?" badge on login forms across the web
 ├── lib/
 │   ├── renderMarkdown.ts # Markdown → HTML with XSS sanitisation
-│   ├── generatePassword.ts
+│   ├── generatePassword.ts  # Crypto-random password generator
 │   ├── parseImport.ts    # 1Password / Bitwarden / generic CSV parser
-│   └── nextBilling.ts    # Next billing date calculator
+│   ├── nextBilling.ts    # Next billing date calculator
+│   ├── currency.ts       # Multi-currency USD conversion rates
+│   └── shareLink.ts      # LZ-compressed share link encode/decode
 └── shared/
     └── messages.ts       # All message type definitions (AnyMsg union)
 ```
@@ -79,34 +92,89 @@ if (res.ok) console.log(res.data)
 
 PGlite runs inside the offscreen document. Schema is initialised in `src/offscreen/db.ts` → `initDb()`.
 
-Tables: `notes`, `secrets`, `subscriptions`
+Eight tables:
+
+| Table | Purpose |
+|---|---|
+| `notes` | Markdown notes with tags and embedded images (base64 data URLs) |
+| `secrets` | AES-GCM encrypted credentials (ciphertext + IV stored, value never plaintext) plus `url` and `description` columns for the save-password matcher and human context |
+| `subscriptions` | Recurring billing tracker with currency, cycle, active toggle, logo |
+| `bills` | Actual paid bills per subscription per month (composite PK: sub_id, year, month) |
+| `todo_lists` | Colour-coded, icon-tagged task lists |
+| `todo_tasks` | Tasks with priority, due date, recurrence (FK to todo_lists, CASCADE delete) |
+| `map_stacks` | Colour-coded, icon-tagged pin collections |
+| `map_pins` | Location pins with lat/lng, category, priority, rating, review (FK to map_stacks, CASCADE delete) |
 
 All CRUD functions are in `db.ts` and called from `handler.ts`. The vault (secrets table) is only accessible after `VAULT_UNLOCK` sets the encryption key in memory.
+
+The `exportAllRows()` function serialises all 8 tables for sync, and `importRows()` performs upsert-by-updated_at conflict resolution (last-write-wins for notes/secrets/subs/tasks, first-write-wins for stacks/pins).
+
+## Content Scripts
+
+My SPACE ships two content scripts that live in `src/content/` and are registered in `manifest.json`:
+
+### 1. `mapExtractor.ts` — floating Pin button on map pages
+
+Matches: `google.com/maps`, `maps.google.com`, `openstreetmap.org`, `bing.com/maps`, `maps.apple.com`.
+
+Flow:
+
+1. On load, scans the URL for lat/lng patterns (`/@lat,lng`, `ll=lat,lng`, `map=zoom/lat/lng`, `cp=lat~lng`, `!3dlat!4dlng`, `lat=…&lng=…`).
+2. If coords are found, injects a floating "Pin to My SPACE" button at `bottom: 220px right: 16px` (above the Google Maps zoom / locate / pegman controls).
+3. A small "×" collapse button next to it shrinks the badge to an icon-only state.
+4. On click, the button sends `{ type: 'MAP_PIN_CAPTURE', payload: ExtractedPin }` to the service worker.
+5. The service worker forwards `{ type: 'MAP_PIN_FROM_PAGE', payload }` to the side panel.
+6. `MapPinsView` listens for `MAP_PIN_FROM_PAGE` — when received, it sets `pendingPin` and `addMode='page'` so the confirm form is pre-filled with the captured coords + page title.
+
+A `MutationObserver` re-scans the URL on SPA navigation (Google Maps pushes new coordinates as the user pans without a full reload).
+
+### 2. `savePrompt.ts` — Save Password badge on login forms
+
+Matches: `<all_urls>` (excluding the map domains listed above plus localhost).
+
+Flow:
+
+1. Scans the page for `<input type="password">` fields. For each, looks for a matching username field (heuristics: `type=email|tel|text`, `autocomplete=username|email`, `id|name|placeholder` matching `/email|user|login|account|signin/`).
+2. Listens for `input` events on both fields (debounced 500 ms).
+3. When both fields have non-empty values (password ≥ 4 chars), shows a floating orange "Save to My SPACE?" badge beside the password field.
+4. On click, captures `{ url, username, password, formAction? }` and sends `{ type: 'SAVE_PASSWORD_OFFER', payload }` to the service worker.
+5. The service worker forwards `{ type: 'SAVE_PASSWORD_OFFER_FROM_PAGE', payload }` to the side panel.
+6. `KeyvaultView` listens for this message — when received, it renders a confirm card at the top with label (default = hostname), URL, tags, and description fields pre-filled. The user can edit these and click "Save to Vault" → `SECRETS_CREATE` is called.
+
+Security: the password is sent in-process only (service-worker → side-panel is local). It is never written to storage until the user explicitly confirms. If the side panel is closed, the badge shows "Open My SPACE first" and the user clicks the extension icon. The badge collapses (×) and the prompt is dismissed silently when the user is not interested.
+
+A 1.5 s scan interval re-attaches the badge for SPAs that mount forms after page load.
+
+### Adding a new content script
+
+1. Drop the script in `src/content/<name>.ts`. It must be self-contained (no sidepanel imports).
+2. Add an entry in `manifest.json > content_scripts` with `matches`, optional `exclude_matches`, and `run_at`.
+3. If it needs to talk to the side panel, use the same pattern: send to service worker, forward as `*_FROM_PAGE` to the side panel, listen in the relevant view.
+4. Always clean up on `beforeunload` and disconnect any long-lived observers.
 
 ## Crypto
 
 `src/offscreen/crypto.ts` wraps the Web Crypto API:
 
-- **Vault encryption**: AES-GCM, key derived from passphrase via PBKDF2
-- **Sync encryption**: AES-GCM with a per-export random IV, key derived from the vault key
+- **Vault encryption**: AES-GCM 256-bit, key derived from passphrase via PBKDF2 (600,000 iterations, SHA-256)
+- **Sync encryption**: AES-GCM with a per-export random 12-byte IV, using the same vault key
+- **Cross-device decrypt**: `SYNC_DECRYPT_WITH_SALT` re-derives a temporary key from the backup's salt + user password (never cached)
+- **Salt storage**: 16-byte random salt stored in `chrome.storage.local` as `vaultSalt`, included in backup payload
 
-The vault key is held in memory in the offscreen document only. It is never written to storage. Locking the vault clears it.
+The vault key is held in memory in the offscreen document only. It is never written to storage. Locking the vault clears it. An auto-lock timer (default 15 min, configurable in Settings) clears the key after inactivity.
 
 ## Google Drive Sync
 
 Handled entirely in `src/service-worker/index.ts`.
 
-Two OAuth flows are supported:
+OAuth uses `chrome.identity.getAuthToken` with three scopes: `drive.appdata`, `userinfo.email`, `userinfo.profile`. The user's Google avatar and email are fetched and displayed in the Sync view.
 
-| Flow | When | How |
-|---|---|---|
-| **Implicit** | Chrome Extension client (no secret) | `response_type=token`, access token stored in session storage |
-| **Code** | Desktop app client (with secret) | `response_type=code`, exchanges for refresh token, stored in local storage |
-
-`getAccessToken()` checks session storage first, then refreshes automatically (refresh token grant or silent implicit re-auth with `prompt=none`).
-
-Push flow: `DB_EXPORT` → encrypt → upload to Drive appData  
+Push flow: `DB_EXPORT` → encrypt → upload to Drive `appDataFolder` (file: `keyvault-backup.json`)
 Pull flow: download from Drive → decrypt → `DB_IMPORT`
+
+Cross-device pull: if the backup's salt differs from the local salt (different device/profile), the user is prompted for their master password. `SYNC_DECRYPT_WITH_SALT` re-derives the key using the backup's salt, decrypts, then imports. The local vault key is not affected.
+
+Token refresh: on 401 responses, the cached token is cleared and a fresh silent token is fetched automatically.
 
 ## Design System
 
@@ -116,12 +184,40 @@ Glass-card dark UI. Key CSS variables in `src/sidepanel/index.css`:
 --bg-base: #0d1117
 --glass-bg: rgba(255,255,255,0.06)
 --glass-border: rgba(255,255,255,0.08)
---accent-notes: #6366f1
---accent-vault: #f59e0b
---accent-sync: #3b82f6
+--accent-notes: #6366f1   (indigo)
+--accent-vault: #f59e0b   (amber)
+--accent-sync: #3b82f6    (blue)
+--accent-gen: #a78bfa     (violet)
+--accent-subs: #34d399    (emerald)
+--accent-reports: #f472b6 (pink)
+--accent-todo: #38bdf8    (sky)
+--accent-maps: #fb923c    (orange)
 ```
 
 Use `glass-card` class for cards. Tailwind v4 is available for layout and spacing.
+
+## Android App
+
+The `android/` directory contains a Kotlin + Jetpack Compose app that mirrors the Chrome extension's feature set.
+
+| Layer | Technology |
+|---|---|
+| UI | Jetpack Compose + Material3, HorizontalPager navigation |
+| Database | Room (SQLite), 8 entities, 6 migrations (v1→v7) |
+| Crypto | Android Keystore AES-GCM (hardware-backed) |
+| Sync | Google Drive REST API via OkHttp + OAuth implicit flow |
+| Images | Coil async image loading |
+
+Key files:
+- `crypto/CryptoManager.kt` — Keystore-backed AES-GCM encrypt/decrypt
+- `data/AppDatabase.kt` — Room database with all entities, DAOs, and migrations
+- `sync/DriveRepository.kt` — Drive push/pull with multipart upload
+- `ui/MySpaceApp.kt` — Root composable with pager navigation and accent glows
+- `ui/screens/` — 8 screen composables (Notes, Vault, Generator, Subs, Todo, MapPins, Sync, Reports, Splash)
+- `ui/theme/Theme.kt` — Dark colour scheme with per-feature accent colours
+- `util/BillingCalc.kt` — Monthly equivalent USD conversion and chart data builder
+
+The Android app syncs with the Chrome extension using the same Drive `appDataFolder` file (`keyvault-backup.json`). Cross-platform sync currently transfers notes, secrets, and subscriptions (Todo, Map Pins, and Bills sync are not yet in the Android `DriveExport`).
 
 ## Testing
 

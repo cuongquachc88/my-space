@@ -3,20 +3,26 @@ package com.myspace.app.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.myspace.app.crypto.CryptoManager
 import com.myspace.app.data.AppDatabase
 import com.myspace.app.data.SecretEntity
 import com.myspace.app.data.SecretMeta
 import com.myspace.app.ui.theme.AccentVault
+import com.myspace.app.ui.theme.BgCard
+import com.myspace.app.ui.theme.BgCardBorder
 import kotlinx.coroutines.launch
 import java.util.UUID
 
@@ -26,88 +32,264 @@ fun VaultScreen(db: AppDatabase) {
     val scope = rememberCoroutineScope()
     var secrets by remember { mutableStateOf<List<SecretMeta>>(emptyList()) }
     var revealed by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
-    var showAdd by remember { mutableStateOf(false) }
-    var newLabel by remember { mutableStateOf("") }
-    var newValue by remember { mutableStateOf("") }
-    var newVisible by remember { mutableStateOf(false) }
+    var showSheet by remember { mutableStateOf(false) }
+    var editingId by remember { mutableStateOf<String?>(null) }
+
+    // Form state — reused for Add and Edit. editValueDecrypted holds the current
+    // plaintext when editing, so the user can see (and replace) the value.
+    var formLabel by remember { mutableStateOf("") }
+    var formValue by remember { mutableStateOf("") }
+    var formUrl by remember { mutableStateOf("") }
+    var formDesc by remember { mutableStateOf("") }
+    var formVisible by remember { mutableStateOf(false) }
 
     fun reload() { scope.launch { secrets = db.secretDao().getMeta() } }
     LaunchedEffect(Unit) { reload() }
 
-    Scaffold(
-        topBar = { TopAppBar(title = { Text("Secret Vault") }, colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)) },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { showAdd = true }, containerColor = AccentVault) {
-                Icon(Icons.Default.Add, "Add secret")
+    fun openAdd() {
+        editingId = null
+        formLabel = ""
+        formValue = ""
+        formUrl = ""
+        formDesc = ""
+        formVisible = false
+        showSheet = true
+    }
+
+    fun openEdit(meta: SecretMeta) {
+        editingId = meta.id
+        formLabel = meta.label
+        formValue = "" // empty = keep current; user types to replace
+        formUrl = meta.url
+        formDesc = meta.description
+        formVisible = false
+        showSheet = true
+    }
+
+    fun saveSecret() {
+        val label = formLabel.trim()
+        val value = formValue
+        if (label.isEmpty()) return
+        val url = formUrl.trim()
+        val desc = formDesc.trim()
+        scope.launch {
+            val now = System.currentTimeMillis()
+            val existingId = editingId
+            if (existingId != null) {
+                // Edit: keep id, optionally re-encrypt if value changed
+                if (value.isNotEmpty()) {
+                    val (ct, iv) = CryptoManager.encrypt(value)
+                    val row = db.secretDao().getById(existingId)
+                    if (row != null) {
+                        db.secretDao().upsert(SecretEntity(existingId, label, ct, iv, row.tags, url, desc, row.createdAt, now))
+                    }
+                } else {
+                    val row = db.secretDao().getById(existingId)
+                    if (row != null) {
+                        db.secretDao().upsert(SecretEntity(existingId, label, row.ciphertext, row.iv, row.tags, url, desc, row.createdAt, now))
+                    }
+                }
+                revealed = revealed - existingId
+            } else {
+                if (value.isEmpty()) return@launch
+                val (ct, iv) = CryptoManager.encrypt(value)
+                db.secretDao().upsert(SecretEntity(UUID.randomUUID().toString(), label, ct, iv, "[]", url, desc, now, now))
             }
-        },
-        containerColor = MaterialTheme.colorScheme.background,
-    ) { padding ->
-        LazyColumn(Modifier.padding(padding).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(secrets, key = { it.id }) { meta ->
-                val value = revealed[meta.id]
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text(meta.label, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                            if (value != null)
-                                Text(value, style = MaterialTheme.typography.labelSmall, color = AccentVault)
-                            else
-                                Text("••••••••", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f))
-                        }
-                        IconButton(onClick = {
-                            scope.launch {
-                                if (value != null) {
-                                    revealed = revealed - meta.id
-                                } else {
-                                    val row = db.secretDao().getById(meta.id)
-                                    if (row != null) revealed = revealed + (meta.id to CryptoManager.decrypt(row.ciphertext, row.iv))
+            showSheet = false
+            reload()
+        }
+    }
+
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+            Spacer(Modifier.height(8.dp))
+
+            if (secrets.isEmpty()) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.Lock, null, tint = AccentVault.copy(alpha = 0.3f), modifier = Modifier.size(48.dp))
+                        Spacer(Modifier.height(12.dp))
+                        Text("Vault is empty", fontSize = 17.sp, fontWeight = FontWeight.Medium, color = Color(0x66FFFFFF))
+                        Spacer(Modifier.height(6.dp))
+                        Text("Tap + to add a secret", fontSize = 13.sp, color = Color(0x44FFFFFF))
+                    }
+                }
+            } else {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    items(secrets, key = { it.id }) { meta ->
+                        val value = revealed[meta.id]
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = BgCard),
+                            shape = RoundedCornerShape(14.dp),
+                        ) {
+                            Column(
+                                Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Text(meta.label, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                                        Text(
+                                            if (value != null) value else "••••••••••••",
+                                            fontSize = 14.sp,
+                                            color = if (value != null) AccentVault else Color(0x55FFFFFF),
+                                            letterSpacing = if (value != null) 0.sp else 2.sp,
+                                        )
+                                    }
+                                    IconButton(onClick = {
+                                        scope.launch {
+                                            if (value != null) {
+                                                revealed = revealed - meta.id
+                                            } else {
+                                                val row = db.secretDao().getById(meta.id)
+                                                if (row != null) revealed = revealed + (meta.id to CryptoManager.decrypt(row.ciphertext, row.iv))
+                                            }
+                                        }
+                                    }) {
+                                        Icon(
+                                            if (value != null) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                            "Toggle",
+                                            tint = AccentVault.copy(alpha = 0.7f),
+                                            modifier = Modifier.size(20.dp),
+                                        )
+                                    }
+                                    IconButton(onClick = { openEdit(meta) }) {
+                                        Icon(Icons.Default.Edit, "Edit", tint = Color(0x88FFFFFF), modifier = Modifier.size(20.dp))
+                                    }
+                                    IconButton(onClick = {
+                                        scope.launch { db.secretDao().delete(meta.id); reload() }
+                                    }) {
+                                        Icon(Icons.Default.Delete, "Delete", tint = Color(0x88FFFFFF), modifier = Modifier.size(20.dp))
+                                    }
+                                }
+                                if (meta.url.isNotBlank()) {
+                                    Text(meta.url, fontSize = 11.sp, color = Color(0x66FFFFFF), maxLines = 1)
+                                }
+                                if (meta.description.isNotBlank()) {
+                                    Text(meta.description, fontSize = 11.sp, color = Color(0x55FFFFFF), maxLines = 2)
                                 }
                             }
-                        }) {
-                            Icon(if (value != null) Icons.Default.VisibilityOff else Icons.Default.Visibility, "Toggle", tint = AccentVault.copy(alpha = 0.7f))
-                        }
-                        IconButton(onClick = { scope.launch { db.secretDao().delete(meta.id); reload() } }) {
-                            Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error.copy(alpha = 0.6f))
                         }
                     }
                 }
             }
         }
+
+        FloatingActionButton(
+            onClick = { openAdd() },
+            modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp),
+            containerColor = AccentVault,
+            shape = RoundedCornerShape(16.dp),
+        ) {
+            Icon(Icons.Default.Add, "Add secret", tint = Color.White, modifier = Modifier.size(24.dp))
+        }
     }
 
-    if (showAdd) {
-        AlertDialog(
-            onDismissRequest = { showAdd = false },
-            title = { Text("New Secret") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = newLabel, onValueChange = { newLabel = it }, label = { Text("Label") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(
-                        value = newValue, onValueChange = { newValue = it },
-                        label = { Text("Value") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                        visualTransformation = if (newVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        trailingIcon = {
-                            IconButton(onClick = { newVisible = !newVisible }) {
-                                Icon(if (newVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility, null)
-                            }
-                        }
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    if (newLabel.isNotBlank() && newValue.isNotBlank()) {
-                        scope.launch {
-                            val (ct, iv) = CryptoManager.encrypt(newValue)
-                            val now = System.currentTimeMillis()
-                            db.secretDao().upsert(SecretEntity(UUID.randomUUID().toString(), newLabel, ct, iv, "[]", now, now))
-                            newLabel = ""; newValue = ""; showAdd = false; reload()
-                        }
+    if (showSheet) {
+        val sheetState = rememberModalBottomSheetState()
+        ModalBottomSheet(
+            onDismissRequest = { showSheet = false },
+            sheetState = sheetState,
+            containerColor = Color(0xFF0D1117),
+            dragHandle = null,
+        ) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 32.dp)) {
+                Row(
+                    Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    TextButton(onClick = { showSheet = false }) {
+                        Text("Cancel", fontSize = 16.sp, color = Color(0x88FFFFFF))
                     }
-                }) { Text("Save", color = AccentVault) }
-            },
-            dismissButton = { TextButton(onClick = { showAdd = false }) { Text("Cancel") } },
-        )
+                    Text(
+                        if (editingId == null) "New Secret" else "Edit Secret",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White,
+                    )
+                    TextButton(
+                        onClick = { saveSecret() },
+                        enabled = formLabel.isNotBlank() && (editingId != null || formValue.isNotEmpty()),
+                    ) {
+                        Text("Save", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = AccentVault)
+                    }
+                }
+
+                HorizontalDivider(color = Color(0x20FFFFFF))
+                Spacer(Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = formLabel,
+                    onValueChange = { formLabel = it },
+                    label = { Text("Label", fontSize = 14.sp) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = vaultFieldColors(),
+                    textStyle = LocalTextStyle.current.copy(fontSize = 16.sp),
+                )
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = formValue,
+                    onValueChange = { formValue = it },
+                    label = {
+                        Text(
+                            if (editingId == null) "Value / Password" else "New value (empty = keep current)",
+                            fontSize = 14.sp,
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    visualTransformation = if (formVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        IconButton(onClick = { formVisible = !formVisible }) {
+                            Icon(
+                                if (formVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                null,
+                                tint = AccentVault.copy(alpha = 0.6f),
+                            )
+                        }
+                    },
+                    colors = vaultFieldColors(),
+                    textStyle = LocalTextStyle.current.copy(fontSize = 16.sp),
+                )
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = formUrl,
+                    onValueChange = { formUrl = it },
+                    label = { Text("URL (optional)", fontSize = 14.sp) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = vaultFieldColors(),
+                    textStyle = LocalTextStyle.current.copy(fontSize = 16.sp),
+                )
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = formDesc,
+                    onValueChange = { formDesc = it },
+                    label = { Text("Description (optional)", fontSize = 14.sp) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = vaultFieldColors(),
+                    textStyle = LocalTextStyle.current.copy(fontSize = 16.sp),
+                )
+            }
+        }
     }
 }
+
+@Composable
+private fun vaultFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedBorderColor = AccentVault.copy(alpha = 0.7f),
+    unfocusedBorderColor = BgCardBorder,
+    focusedContainerColor = BgCard,
+    unfocusedContainerColor = BgCard,
+    focusedTextColor = Color.White,
+    unfocusedTextColor = Color.White,
+    focusedLabelColor = AccentVault,
+    unfocusedLabelColor = Color(0x88FFFFFF),
+)

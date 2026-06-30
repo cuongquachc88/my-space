@@ -111,4 +111,67 @@ describe('renderMarkdown', () => {
     expect(html).not.toContain('<img')
     expect(html).not.toContain('onerror')
   })
+
+  it('renders blockquotes', () => {
+    const html = renderMarkdown('> This is a quote')
+    expect(html).toContain('<blockquote>')
+    expect(html).toContain('This is a quote')
+    expect(html).toContain('</blockquote>')
+  })
+
+  it('renders multi-line blockquotes', () => {
+    const html = renderMarkdown('> First line\n> Second line')
+    expect(html).toContain('<blockquote>')
+    expect(html).toContain('First line')
+    expect(html).toContain('Second line')
+    expect(html).toContain('</blockquote>')
+  })
+
+  it('renders tables with header and body', () => {
+    const md = '| Name | Value |\n| --- | --- |\n| A | 1 |\n| B | 2 |'
+    const html = renderMarkdown(md)
+    expect(html).toContain('<table>')
+    expect(html).toContain('<thead>')
+    expect(html).toContain('<th>Name</th>')
+    expect(html).toContain('<th>Value</th>')
+    expect(html).toContain('<tbody>')
+    expect(html).toContain('<td>A</td>')
+    expect(html).toContain('<td>1</td>')
+    expect(html).toContain('<td>B</td>')
+    expect(html).toContain('<td>2</td>')
+    expect(html).toContain('</table>')
+  })
+
+  it('renders task list unchecked item', () => {
+    const html = renderMarkdown('- [ ] Todo item')
+    expect(html).toContain('task-list')
+    expect(html).toContain('task-item')
+    expect(html).toContain('Todo item')
+  })
+
+  it('renders task list checked item with done class', () => {
+    const html = renderMarkdown('- [x] Done item')
+    expect(html).toContain('task-item done')
+    expect(html).toContain('Done item')
+  })
+
+  it('renders nested unordered list items with nested class', () => {
+    const html = renderMarkdown('- Parent\n  - Child')
+    expect(html).toContain('<ul>')
+    expect(html).toContain('nested')
+    expect(html).toContain('Child')
+  })
+
+  it('renders nested ordered list items with nested class', () => {
+    const html = renderMarkdown('1. Parent\n  1. Child')
+    expect(html).toContain('<ol>')
+    expect(html).toContain('nested')
+    expect(html).toContain('Child')
+  })
+
+  it('closes blockquote before following paragraph', () => {
+    const html = renderMarkdown('> Quote line\nNormal text')
+    expect(html).toContain('</blockquote>')
+    expect(html).toContain('<p>Normal text</p>')
+  })
 })

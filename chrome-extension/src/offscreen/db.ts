@@ -93,6 +93,8 @@ export async function initDb(fs?: IdbFs | MemoryFS): Promise<void> {
     -- Migrations for older schemas
     ALTER TABLE notes          ADD COLUMN IF NOT EXISTS tags       TEXT[] NOT NULL DEFAULT '{}';
     ALTER TABLE secrets        ADD COLUMN IF NOT EXISTS tags       TEXT[] NOT NULL DEFAULT '{}';
+    ALTER TABLE secrets        ADD COLUMN IF NOT EXISTS url         TEXT   NOT NULL DEFAULT '';
+    ALTER TABLE secrets        ADD COLUMN IF NOT EXISTS description TEXT   NOT NULL DEFAULT '';
     ALTER TABLE notes          ADD COLUMN IF NOT EXISTS image_data TEXT   NOT NULL DEFAULT '[]';
     ALTER TABLE subscriptions  ADD COLUMN IF NOT EXISTS active     BOOLEAN NOT NULL DEFAULT true;
     ALTER TABLE todo_lists     ADD COLUMN IF NOT EXISTS icon        TEXT    NOT NULL DEFAULT '';
@@ -171,10 +173,10 @@ export async function listNoteTags(): Promise<string[]> {
 // --- Secrets ---
 export interface SecretRow {
   id: string; label: string; ciphertext: string; iv: string
-  tags: string[]; created_at: string; updated_at: string
+  tags: string[]; url: string; description: string; created_at: string; updated_at: string
 }
 
-export async function listSecretMeta(query?: string, tag?: string): Promise<Array<{ id: string; label: string; tags: string[]; updated_at: string }>> {
+export async function listSecretMeta(query?: string, tag?: string): Promise<Array<{ id: string; label: string; tags: string[]; url: string; description: string; updated_at: string }>> {
   const d = getDb()
   const conditions: string[] = []
   const values: unknown[] = []
@@ -182,8 +184,8 @@ export async function listSecretMeta(query?: string, tag?: string): Promise<Arra
   if (query) { conditions.push(`label ILIKE $${i}`); values.push(`%${query}%`); i++ }
   if (tag)   { conditions.push(`$${i} = ANY(tags)`); values.push(tag); i++ }
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
-  const res = await d.query<{ id: string; label: string; tags: string[]; updated_at: string }>(
-    `SELECT id, label, tags, updated_at FROM secrets ${where} ORDER BY updated_at DESC`,
+  const res = await d.query<{ id: string; label: string; tags: string[]; url: string; description: string; updated_at: string }>(
+    `SELECT id, label, tags, url, description, updated_at FROM secrets ${where} ORDER BY updated_at DESC`,
     values
   )
   return res.rows
@@ -195,30 +197,32 @@ export async function getSecretRow(id: string): Promise<SecretRow> {
   return res.rows[0]
 }
 
-export async function createSecretRow(label: string, ciphertext: string, iv: string, tags: string[] = []): Promise<{ id: string; label: string; tags: string[] }> {
-  const res = await getDb().query<{ id: string; label: string; tags: string[] }>(
-    `INSERT INTO secrets (label, ciphertext, iv, tags) VALUES ($1, $2, $3, $4) RETURNING id, label, tags`,
-    [label, ciphertext, iv, tags]
+export async function createSecretRow(label: string, ciphertext: string, iv: string, tags: string[] = [], url = '', description = ''): Promise<{ id: string; label: string; tags: string[]; url: string; description: string }> {
+  const res = await getDb().query<{ id: string; label: string; tags: string[]; url: string; description: string }>(
+    `INSERT INTO secrets (label, ciphertext, iv, tags, url, description) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, label, tags, url, description`,
+    [label, ciphertext, iv, tags, url, description]
   )
   return res.rows[0]
 }
 
 export async function updateSecretRow(
   id: string,
-  fields: { label?: string; ciphertext?: string; iv?: string; tags?: string[] }
-): Promise<{ id: string; label: string; tags: string[] }> {
+  fields: { label?: string; ciphertext?: string; iv?: string; tags?: string[]; url?: string; description?: string }
+): Promise<{ id: string; label: string; tags: string[]; url: string; description: string }> {
   if (!Object.keys(fields).length) throw new Error('No fields to update')
   const sets: string[] = []
   const values: unknown[] = []
   let i = 1
-  if (fields.label      !== undefined) { sets.push(`label = $${i++}`);      values.push(fields.label) }
-  if (fields.ciphertext !== undefined) { sets.push(`ciphertext = $${i++}`); values.push(fields.ciphertext) }
-  if (fields.iv         !== undefined) { sets.push(`iv = $${i++}`);         values.push(fields.iv) }
-  if (fields.tags       !== undefined) { sets.push(`tags = $${i++}`);       values.push(fields.tags) }
+  if (fields.label       !== undefined) { sets.push(`label = $${i++}`);       values.push(fields.label) }
+  if (fields.ciphertext  !== undefined) { sets.push(`ciphertext = $${i++}`);  values.push(fields.ciphertext) }
+  if (fields.iv          !== undefined) { sets.push(`iv = $${i++}`);           values.push(fields.iv) }
+  if (fields.tags        !== undefined) { sets.push(`tags = $${i++}`);         values.push(fields.tags) }
+  if (fields.url         !== undefined) { sets.push(`url = $${i++}`);          values.push(fields.url) }
+  if (fields.description !== undefined) { sets.push(`description = $${i++}`);  values.push(fields.description) }
   sets.push(`updated_at = now()`)
   values.push(id)
-  const res = await getDb().query<{ id: string; label: string; tags: string[] }>(
-    `UPDATE secrets SET ${sets.join(', ')} WHERE id = $${i} RETURNING id, label, tags`,
+  const res = await getDb().query<{ id: string; label: string; tags: string[]; url: string; description: string }>(
+    `UPDATE secrets SET ${sets.join(', ')} WHERE id = $${i} RETURNING id, label, tags, url, description`,
     values
   )
   if (!res.rows[0]) throw new Error(`Secret ${id} not found`)
@@ -286,14 +290,14 @@ export async function importRows(
     const existing = await d.query<SecretRow>(`SELECT updated_at FROM secrets WHERE id = $1`, [s.id])
     if (!existing.rows[0]) {
       await d.query(
-        `INSERT INTO secrets (id, label, ciphertext, iv, tags, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-        [s.id, s.label, s.ciphertext, s.iv, s.tags ?? [], s.created_at, s.updated_at]
+        `INSERT INTO secrets (id, label, ciphertext, iv, tags, url, description, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+        [s.id, s.label, s.ciphertext, s.iv, s.tags ?? [], s.url ?? '', s.description ?? '', s.created_at, s.updated_at]
       )
       secretsAdded++
     } else if (new Date(s.updated_at) > new Date(existing.rows[0].updated_at)) {
       await d.query(
-        `UPDATE secrets SET label=$1, ciphertext=$2, iv=$3, tags=$4, updated_at=$5 WHERE id=$6`,
-        [s.label, s.ciphertext, s.iv, s.tags ?? [], s.updated_at, s.id]
+        `UPDATE secrets SET label=$1, ciphertext=$2, iv=$3, tags=$4, url=$5, description=$6, updated_at=$7 WHERE id=$8`,
+        [s.label, s.ciphertext, s.iv, s.tags ?? [], s.url ?? '', s.description ?? '', s.updated_at, s.id]
       )
       secretsAdded++
     }

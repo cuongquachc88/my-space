@@ -239,6 +239,20 @@ function StackDetail({
 
   useEffect(() => { loadPins() }, [loadPins])
 
+  // Listen for pins captured by the content script floating button
+  useEffect(() => {
+    const handler = (msg: { type: string; payload?: { lat: number; lng: number; label: string; url: string } }) => {
+      if (msg.type === 'MAP_PIN_FROM_PAGE' && msg.payload) {
+        setPendingPin(msg.payload)
+        setNewLabel(msg.payload.label)
+        setNewNote('')
+        setAddMode('page')
+      }
+    }
+    chrome.runtime.onMessage.addListener(handler)
+    return () => chrome.runtime.onMessage.removeListener(handler)
+  }, [])
+
 
   async function captureFromTab() {
     setCapturing(true)

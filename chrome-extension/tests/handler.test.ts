@@ -101,6 +101,20 @@ describe('handler — notes', () => {
     const r = await dispatch({ type: 'NOTES_DELETE', payload: { id: 'nonexistent' } })
     expect(r.ok).toBe(false)
   })
+
+  it('NOTES_TAGS returns distinct tags from all notes', async () => {
+    await dispatch({ type: 'NOTES_CREATE', payload: { title: 'A', content: '', tags: ['work', 'urgent'] } })
+    await dispatch({ type: 'NOTES_CREATE', payload: { title: 'B', content: '', tags: ['personal'] } })
+    const r = await dispatch({ type: 'NOTES_TAGS' })
+    expect(r.ok).toBe(true)
+    expect(data<string[]>(r)).toEqual(expect.arrayContaining(['personal', 'urgent', 'work']))
+  })
+
+  it('NOTES_TAGS returns empty array when no notes have tags', async () => {
+    const r = await dispatch({ type: 'NOTES_TAGS' })
+    expect(r.ok).toBe(true)
+    expect(data<string[]>(r)).toEqual([])
+  })
 })
 
 describe('handler — vault', () => {
@@ -205,6 +219,22 @@ describe('handler — secrets', () => {
     const list = data<Array<{ label: string }>>(r)
     expect(list.length).toBe(1)
     expect(list[0].label).toBe('InfraToken')
+  })
+
+  it('SECRETS_TAGS returns distinct tags from all secrets', async () => {
+    await unlock()
+    await dispatch({ type: 'SECRETS_CREATE', payload: { label: 'A', value: 'x', tags: ['infra', 'prod'] } })
+    await dispatch({ type: 'SECRETS_CREATE', payload: { label: 'B', value: 'y', tags: ['app'] } })
+    const r = await dispatch({ type: 'SECRETS_TAGS' })
+    expect(r.ok).toBe(true)
+    expect(data<string[]>(r)).toEqual(expect.arrayContaining(['app', 'infra', 'prod']))
+  })
+
+  it('SECRETS_TAGS returns empty array when no secrets have tags', async () => {
+    await unlock()
+    const r = await dispatch({ type: 'SECRETS_TAGS' })
+    expect(r.ok).toBe(true)
+    expect(data<string[]>(r)).toEqual([])
   })
 })
 

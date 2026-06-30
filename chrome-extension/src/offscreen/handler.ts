@@ -32,6 +32,9 @@ export async function dispatch(msg: AnyMsg & { payload?: Record<string, unknown>
         await db.deleteNote(id)
         return { ok: true }
       }
+      case 'NOTES_TAGS': {
+        return { ok: true, data: await db.listNoteTags() }
+      }
 
       case 'VAULT_UNLOCK': {
         const { password, salt } = (msg as { payload: { password: string; salt: number[] } }).payload
@@ -58,16 +61,18 @@ export async function dispatch(msg: AnyMsg & { payload?: Record<string, unknown>
         return { ok: true, data: { id: row.id, label: row.label, value } }
       }
       case 'SECRETS_CREATE': {
-        const { label, value, tags } = (msg as { payload: { label: string; value: string; tags?: string[] } }).payload
+        const { label, value, tags, url, description } = (msg as { payload: { label: string; value: string; tags?: string[]; url?: string; description?: string } }).payload
         const { ciphertext, iv } = await encrypt(getKey(), value)
         resetLockTimer(LOCK_TIMEOUT_MS)
-        return { ok: true, data: await db.createSecretRow(label, ciphertext, iv, tags) }
+        return { ok: true, data: await db.createSecretRow(label, ciphertext, iv, tags, url, description) }
       }
       case 'SECRETS_UPDATE': {
-        const { id, label, value, tags } = (msg as { payload: { id: string; label?: string; value?: string; tags?: string[] } }).payload
-        const fields: { label?: string; ciphertext?: string; iv?: string; tags?: string[] } = {}
-        if (label !== undefined) fields.label = label
-        if (tags  !== undefined) fields.tags  = tags
+        const { id, label, value, tags, url, description } = (msg as { payload: { id: string; label?: string; value?: string; tags?: string[]; url?: string; description?: string } }).payload
+        const fields: { label?: string; ciphertext?: string; iv?: string; tags?: string[]; url?: string; description?: string } = {}
+        if (label       !== undefined) fields.label = label
+        if (tags        !== undefined) fields.tags  = tags
+        if (url         !== undefined) fields.url  = url
+        if (description !== undefined) fields.description = description
         if (value !== undefined) {
           const enc = await encrypt(getKey(), value)
           fields.ciphertext = enc.ciphertext
@@ -81,6 +86,9 @@ export async function dispatch(msg: AnyMsg & { payload?: Record<string, unknown>
         const { id } = (msg as { payload: { id: string } }).payload
         await db.deleteSecretRow(id)
         return { ok: true }
+      }
+      case 'SECRETS_TAGS': {
+        return { ok: true, data: await db.listSecretTags() }
       }
 
       case 'DB_EXPORT': {

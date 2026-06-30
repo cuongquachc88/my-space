@@ -29,9 +29,9 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.target === 'offscreen') return false
 
   const offscreenTypes = [
-    'NOTES_LIST','NOTES_GET','NOTES_CREATE','NOTES_UPDATE','NOTES_DELETE',
+    'NOTES_LIST','NOTES_GET','NOTES_CREATE','NOTES_UPDATE','NOTES_DELETE','NOTES_TAGS',
     'VAULT_UNLOCK','VAULT_LOCK','VAULT_STATUS',
-    'SECRETS_LIST','SECRETS_GET','SECRETS_CREATE','SECRETS_UPDATE','SECRETS_DELETE',
+    'SECRETS_LIST','SECRETS_GET','SECRETS_CREATE','SECRETS_UPDATE','SECRETS_DELETE','SECRETS_TAGS',
     'SUBS_LIST','SUBS_GET','SUBS_CREATE','SUBS_UPDATE','SUBS_DELETE',
     'DB_EXPORT','DB_IMPORT',
     'STACKS_LIST','STACKS_CREATE','STACKS_UPDATE','STACKS_DELETE',
@@ -50,6 +50,14 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.type === 'MAP_PIN_CAPTURE') {
     // Forward extracted pin from content script to the sidepanel
     chrome.runtime.sendMessage({ type: 'MAP_PIN_FROM_PAGE', payload: msg.payload })
+      .catch(() => {/* sidepanel not open */})
+    sendResponse({ ok: true })
+    return false
+  }
+
+  if (msg.type === 'SAVE_PASSWORD_OFFER') {
+    // Forward save-password offer from content script to the sidepanel
+    chrome.runtime.sendMessage({ type: 'SAVE_PASSWORD_OFFER_FROM_PAGE', payload: msg.payload })
       .catch(() => {/* sidepanel not open */})
     sendResponse({ ok: true })
     return false

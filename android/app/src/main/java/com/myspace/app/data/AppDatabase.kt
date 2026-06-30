@@ -21,6 +21,8 @@ data class SecretEntity(
     val ciphertext: String,
     val iv: String,
     val tags: String,
+    val url: String = "",
+    val description: String = "",
     val createdAt: Long,
     val updatedAt: Long,
 )
@@ -54,6 +56,56 @@ data class BillEntity(
     val notes: String = "",
     val updatedAt: Long,
 )
+
+@Entity(tableName = "todo_lists")
+data class TodoListEntity(
+    @PrimaryKey val id: String,
+    val name: String,
+    val color: String,   // hex e.g. "#38BDF8"
+    val icon: String = "",
+    val createdAt: Long,
+)
+
+@Entity(tableName = "todo_tasks")
+data class TodoTaskEntity(
+    @PrimaryKey val id: String,
+    val listId: String,
+    val title: String,
+    val note: String = "",
+    val priority: String = "medium",  // "low"|"medium"|"high"
+    val dueDate: String? = null,       // ISO date yyyy-MM-dd or null
+    val recurrence: String = "none",   // "none"|"daily"|"weekly"|"monthly"
+    val done: Boolean = false,
+    val createdAt: Long,
+    val updatedAt: Long,
+)
+
+@Entity(tableName = "map_stacks")
+data class MapStackEntity(
+    @PrimaryKey val id: String,
+    val name: String,
+    val color: String,   // hex
+    val icon: String = "",
+    val createdAt: Long,
+)
+
+@Entity(tableName = "map_pins")
+data class MapPinEntity(
+    @PrimaryKey val id: String,
+    val stackId: String,
+    val label: String,
+    val lat: Double,
+    val lng: Double,
+    val url: String = "",
+    val note: String = "",
+    val priority: String = "none",    // "none"|"low"|"medium"|"high"
+    val category: String = "",
+    val rating: Int = 0,
+    val reviewNote: String = "",
+    val createdAt: Long,
+)
+
+// ── DAOs ─────────────────────────────────────────────────────────────────────
 
 @Dao
 interface BillDao {
@@ -102,7 +154,7 @@ interface NoteDao {
 
 @Dao
 interface SecretDao {
-    @Query("SELECT id, label, tags, createdAt, updatedAt FROM secrets ORDER BY updatedAt DESC")
+    @Query("SELECT id, label, tags, url, description, createdAt, updatedAt FROM secrets ORDER BY updatedAt DESC")
     suspend fun getMeta(): List<SecretMeta>
 
     @Query("SELECT * FROM secrets WHERE id = :id")
@@ -121,7 +173,7 @@ interface SecretDao {
     suspend fun getAll(): List<SecretEntity>
 }
 
-data class SecretMeta(val id: String, val label: String, val tags: String, val createdAt: Long, val updatedAt: Long)
+data class SecretMeta(val id: String, val label: String, val tags: String, val url: String, val description: String, val createdAt: Long, val updatedAt: Long)
 
 @Dao
 interface SubscriptionDao {
@@ -141,9 +193,104 @@ interface SubscriptionDao {
     suspend fun deleteAll()
 }
 
+@Dao
+interface TodoListDao {
+    @Query("SELECT * FROM todo_lists ORDER BY createdAt ASC")
+    suspend fun getAll(): List<TodoListEntity>
+
+    @Query("SELECT * FROM todo_lists WHERE id = :id")
+    suspend fun getById(id: String): TodoListEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(list: TodoListEntity)
+
+    @Query("DELETE FROM todo_lists WHERE id = :id")
+    suspend fun delete(id: String)
+
+    @Query("DELETE FROM todo_lists")
+    suspend fun deleteAll()
+}
+
+@Dao
+interface TodoTaskDao {
+    @Query("SELECT * FROM todo_tasks ORDER BY createdAt ASC")
+    suspend fun getAll(): List<TodoTaskEntity>
+
+    @Query("SELECT * FROM todo_tasks WHERE id = :id")
+    suspend fun getById(id: String): TodoTaskEntity?
+
+    @Query("SELECT * FROM todo_tasks WHERE listId = :listId ORDER BY createdAt ASC")
+    suspend fun getForList(listId: String): List<TodoTaskEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(task: TodoTaskEntity)
+
+    @Query("DELETE FROM todo_tasks WHERE id = :id")
+    suspend fun delete(id: String)
+
+    @Query("DELETE FROM todo_tasks WHERE listId = :listId")
+    suspend fun deleteForList(listId: String)
+
+    @Query("DELETE FROM todo_tasks")
+    suspend fun deleteAll()
+}
+
+@Dao
+interface MapStackDao {
+    @Query("SELECT * FROM map_stacks ORDER BY createdAt ASC")
+    suspend fun getAll(): List<MapStackEntity>
+
+    @Query("SELECT * FROM map_stacks WHERE id = :id")
+    suspend fun getById(id: String): MapStackEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(stack: MapStackEntity)
+
+    @Query("DELETE FROM map_stacks WHERE id = :id")
+    suspend fun delete(id: String)
+
+    @Query("DELETE FROM map_stacks")
+    suspend fun deleteAll()
+}
+
+@Dao
+interface MapPinDao {
+    @Query("SELECT * FROM map_pins ORDER BY createdAt ASC")
+    suspend fun getAll(): List<MapPinEntity>
+
+    @Query("SELECT * FROM map_pins WHERE id = :id")
+    suspend fun getById(id: String): MapPinEntity?
+
+    @Query("SELECT * FROM map_pins WHERE stackId = :stackId ORDER BY createdAt ASC")
+    suspend fun getForStack(stackId: String): List<MapPinEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(pin: MapPinEntity)
+
+    @Query("DELETE FROM map_pins WHERE id = :id")
+    suspend fun delete(id: String)
+
+    @Query("DELETE FROM map_pins WHERE stackId = :stackId")
+    suspend fun deleteForStack(stackId: String)
+
+    @Query("DELETE FROM map_pins")
+    suspend fun deleteAll()
+}
+
+// ── Database ──────────────────────────────────────────────────────────────────
+
 @Database(
-    entities = [NoteEntity::class, SecretEntity::class, SubscriptionEntity::class, BillEntity::class],
-    version = 6,
+    entities = [
+        NoteEntity::class,
+        SecretEntity::class,
+        SubscriptionEntity::class,
+        BillEntity::class,
+        TodoListEntity::class,
+        TodoTaskEntity::class,
+        MapStackEntity::class,
+        MapPinEntity::class,
+    ],
+    version = 8,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -151,6 +298,10 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun secretDao(): SecretDao
     abstract fun subscriptionDao(): SubscriptionDao
     abstract fun billDao(): BillDao
+    abstract fun todoListDao(): TodoListDao
+    abstract fun todoTaskDao(): TodoTaskDao
+    abstract fun mapStackDao(): MapStackDao
+    abstract fun mapPinDao(): MapPinDao
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
@@ -200,9 +351,73 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_6_7 = object : androidx.room.migration.Migration(6, 7) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS todo_lists (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        color TEXT NOT NULL,
+                        icon TEXT NOT NULL DEFAULT '',
+                        createdAt INTEGER NOT NULL
+                    )
+                """.trimIndent())
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS todo_tasks (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        listId TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        note TEXT NOT NULL DEFAULT '',
+                        priority TEXT NOT NULL DEFAULT 'medium',
+                        dueDate TEXT,
+                        recurrence TEXT NOT NULL DEFAULT 'none',
+                        done INTEGER NOT NULL DEFAULT 0,
+                        createdAt INTEGER NOT NULL,
+                        updatedAt INTEGER NOT NULL
+                    )
+                """.trimIndent())
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS map_stacks (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        color TEXT NOT NULL,
+                        icon TEXT NOT NULL DEFAULT '',
+                        createdAt INTEGER NOT NULL
+                    )
+                """.trimIndent())
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS map_pins (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        stackId TEXT NOT NULL,
+                        label TEXT NOT NULL,
+                        lat REAL NOT NULL,
+                        lng REAL NOT NULL,
+                        url TEXT NOT NULL DEFAULT '',
+                        note TEXT NOT NULL DEFAULT '',
+                        priority TEXT NOT NULL DEFAULT 'none',
+                        category TEXT NOT NULL DEFAULT '',
+                        rating INTEGER NOT NULL DEFAULT 0,
+                        reviewNote TEXT NOT NULL DEFAULT '',
+                        createdAt INTEGER NOT NULL
+                    )
+                """.trimIndent())
+            }
+        }
+
+        private val MIGRATION_7_8 = object : androidx.room.migration.Migration(7, 8) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE secrets ADD COLUMN url TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE secrets ADD COLUMN description TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
         fun get(context: Context): AppDatabase = INSTANCE ?: synchronized(this) {
             INSTANCE ?: Room.databaseBuilder(context, AppDatabase::class.java, "myspace.db")
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+                .addMigrations(
+                    MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4,
+                    MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7,
+                    MIGRATION_7_8,
+                )
                 .build()
                 .also { INSTANCE = it }
         }

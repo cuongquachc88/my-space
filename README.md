@@ -4,7 +4,7 @@
 
 [![Chrome Web Store](https://img.shields.io/badge/Chrome-Extension-4285F4?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/my-space/jepnoaiigfppibgfcjmecfoepjipngjb)
 [![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.1.3-green.svg)](chrome-extension/package.json)
+[![Version](https://img.shields.io/badge/version-0.3.0-green.svg)](chrome-extension/package.json)
 
 ---
 
@@ -12,12 +12,19 @@
 
 | Feature | Description |
 |---|---|
-| 📝 **Notes** | Markdown notes with tag filtering and full-text search |
-| 🔐 **Secret Vault** | AES-GCM encrypted credentials — unlocked with your master password |
-| 🔑 **Password Generator** | Configurable length, charset, one-click copy |
-| 💳 **Subscriptions** | Track recurring costs with multi-currency conversion |
-| ☁️ **Google Drive Sync** | End-to-end encrypted push/pull via Drive appDataFolder |
-| 📥 **Import** | 1Password and Bitwarden CSV import |
+| 📝 **Notes** | Markdown notes with tag filtering, image attachments, and full-text search |
+| 🔐 **Secret Vault** | AES-GCM encrypted credentials, unlocked with your master password (PBKDF2, 600k iterations) |
+| 🔐 **URL + Description on Secrets** | Each secret can carry its origin URL and a free-form note (for the autofill matcher and human context) |
+| ✏️ **Inline Edit Vault Items** | Edit label, value, URL and description directly from each secret card without retyping |
+| 💾 **Save Password Prompt** | Floating "Save to My SPACE?" badge appears on login forms across the web — one click sends credentials to the side panel for review and save |
+| 🔑 **Password Generator** | Crypto-random passwords with strength meter, configurable length and charset |
+| 💳 **Subscriptions** | Track recurring costs with multi-currency conversion and renewal date alerts |
+| 📊 **Reports & Bills** | Monthly spending reports with 6-month bar chart, actual vs expected, receipt images |
+| ✅ **To-Do Lists** | Colour-coded lists with priority, due dates, recurrence, and timeline grouping |
+| 📍 **Map Pins** | Save locations from any map URL (Google, OSM, Bing, Apple), share stacks via compressed links |
+| 📍 **Pin Button on Map Pages** | Floating "Pin to My SPACE" button on Google Maps, OSM, Bing and Apple Maps — click to capture current coordinates into the active map stack |
+| ☁️ **Google Drive Sync** | End-to-end encrypted push/pull via Drive appDataFolder, cross-device password prompt |
+| 📥 **Import** | 1Password and Bitwarden CSV/JSON import |
 
 ---
 
@@ -27,11 +34,12 @@
 my-space/
 ├── chrome-extension/     Chrome MV3 side panel extension
 │   ├── src/
-│   │   ├── sidepanel/    React UI (views + components)
+│   │   ├── sidepanel/    React UI (9 views + 6 components)
 │   │   ├── offscreen/    PGlite WASM database + crypto host
 │   │   ├── service-worker/  OAuth + Drive sync + message router
+│   │   ├── content/      Map page coordinate extractor
 │   │   ├── shared/       Message type definitions
-│   │   └── lib/          Password generator, billing, markdown, import parser
+│   │   └── lib/          Password gen, billing, markdown, import, currency, share links
 │   ├── public/           Extension icons
 │   ├── scripts/          Version bump script
 │   └── output/           Packed .zip files (gitignored)
@@ -40,13 +48,15 @@ my-space/
 │   └── app/src/main/
 │       ├── java/com/myspace/app/
 │       │   ├── crypto/   Android Keystore AES-GCM
-│       │   ├── data/     Room database (notes, secrets, subscriptions)
+│       │   ├── data/     Room database (8 entities, 6 migrations)
 │       │   ├── sync/     Google Drive REST sync
-│       │   └── ui/       Jetpack Compose screens
+│       │   ├── util/     Billing calculations, currency conversion
+│       │   └── ui/       Jetpack Compose screens + theme
 │       └── res/
 │
 └── docs/                 GitHub Pages landing page
-    ├── index.html
+    ├── index.html        Landing page with 8 feature cards
+    ├── developer-guide.md
     ├── privacy-policy.md
     └── terms-of-service.md
 ```

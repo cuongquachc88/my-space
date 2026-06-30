@@ -35,12 +35,8 @@ export function NotesView({ sendMsg }: Props) {
   }, [sendMsg])
 
   const loadTags = useCallback(async () => {
-    const res = await sendMsg('NOTES_LIST')
-    if (res.ok) {
-      const notes = res.data as Note[]
-      const tags = [...new Set(notes.flatMap(n => n.tags ?? []))].sort()
-      setAllTags(tags)
-    }
+    const res = await sendMsg('NOTES_TAGS')
+    if (res.ok) setAllTags(res.data as string[])
   }, [sendMsg])
 
   useEffect(() => { load(); loadTags() }, [load, loadTags])

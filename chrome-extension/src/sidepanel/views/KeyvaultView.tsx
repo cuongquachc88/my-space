@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import type { SecretMeta } from '../../shared/messages'
+import type { SecretMeta, SavePasswordPayload } from '../../shared/messages'
 import { SecretCard } from '../components/SecretCard'
 import { TagInput } from '../components/TagInput'
 
@@ -17,7 +17,14 @@ export function KeyvaultView({ sendMsg, onLock }: Props) {
   const [newLabel, setNewLabel] = useState('')
   const [newValue, setNewValue] = useState('')
   const [newTags, setNewTags] = useState<string[]>([])
+  const [newUrl, setNewUrl] = useState('')
+  const [newDesc, setNewDesc] = useState('')
   const [countdown, setCountdown] = useState('')
+  const [saveOffer, setSaveOffer] = useState<SavePasswordPayload | null>(null)
+  const [offerLabel, setOfferLabel] = useState('')
+  const [offerUrl, setOfferUrl] = useState('')
+  const [offerTags, setOfferTags] = useState<string[]>([])
+  const [saving, setSaving] = useState(false)
 
   const loadSecrets = useCallback(async (q = '', tag?: string | null) => {
     const payload: Record<string, string> = {}
@@ -65,9 +72,9 @@ export function KeyvaultView({ sendMsg, onLock }: Props) {
 
   async function addSecret() {
     if (!newLabel || !newValue) return
-    const res = await sendMsg('SECRETS_CREATE', { label: newLabel, value: newValue, tags: newTags })
+    const res = await sendMsg('SECRETS_CREATE', { label: newLabel, value: newValue, tags: newTags, url: newUrl, description: newDesc })
     if (res.ok) {
-      setNewLabel(''); setNewValue(''); setNewTags([])
+      setNewLabel(''); setNewValue(''); setNewTags([]); setNewUrl(''); setNewDesc('')
       await loadSecrets(query, activeTag)
     }
   }
@@ -76,6 +83,64 @@ export function KeyvaultView({ sendMsg, onLock }: Props) {
     await sendMsg('SECRETS_DELETE', { id })
     await loadSecrets(query, activeTag)
   }
+
+  async function updateSecret(id: string, fields: { label?: string; value?: string; url?: string; description?: string }): Promise<boolean> {
+    const res = await sendMsg('SECRETS_UPDATE', { id, ...fields })
+    if (res.ok) await loadSecrets(query, activeTag)
+    return !!res.ok
+  }
+
+  function hostnameOf(url: string): string {
+    try { return new URL(url).hostname } catch { return url }
+  }
+
+  function acceptSaveOffer() {
+    if (!saveOffer || !offerLabel.trim()) return
+    setSaving(true)
+    const tagSet = new Set(offerTags)
+    tagSet.add('auto-saved')
+    void (async () => {
+      const res = await sendMsg('SECRETS_CREATE', {
+        label: offerLabel.trim(),
+        value: saveOffer.password,
+        tags: Array.from(tagSet),
+        url: offerUrl || saveOffer.url,
+        description: `Login: ${saveOffer.username}`,
+      })
+      setSaving(false)
+      if (res.ok) {
+        setSaveOffer(null)
+        setOfferLabel('')
+        setOfferUrl('')
+        setOfferTags([])
+        await loadSecrets(query, activeTag)
+      }
+    })()
+  }
+
+  function dismissSaveOffer() {
+    setSaveOffer(null)
+    setOfferLabel('')
+    setOfferUrl('')
+    setOfferTags([])
+  }
+
+  // Listen for offers from the content script "Save to My SPACE?" badge
+  useEffect(() => {
+    const handler = (msg: { type: string; payload?: SavePasswordPayload }) => {
+      if (msg.type === 'SAVE_PASSWORD_OFFER_FROM_PAGE' && msg.payload) {
+        const p = msg.payload
+        setSaveOffer(p)
+        // Default label = hostname (e.g. github.com)
+        const host = hostnameOf(p.url)
+        setOfferLabel(host)
+        setOfferUrl(p.url)
+        setOfferTags(['auto-saved'])
+      }
+    }
+    chrome.runtime.onMessage.addListener(handler)
+    return () => chrome.runtime.onMessage.removeListener(handler)
+  }, [])
 
   function selectTag(tag: string) {
     const next = activeTag === tag ? null : tag
@@ -106,6 +171,42 @@ export function KeyvaultView({ sendMsg, onLock }: Props) {
         <span className="text-xs" style={{ color: 'rgba(251,191,36,0.8)' }}>Vault unlocked</span>
         <span className="text-xs" style={{ color: 'rgba(251,191,36,0.5)' }}>{countdown} left</span>
       </div>
+
+      {/* Save password offer (from content script) */}
+      {saveOffer && (
+        <div className="rounded-xl p-3 flex flex-col gap-2"
+          style={{ background: 'rgba(110,231,183,0.07)', border: '1px solid rgba(110,231,183,0.3)' }}>
+          <div className="flex justify-between items-center">
+            <span className="text-xs font-bold tracking-widest uppercase" style={{ color: 'rgba(110,231,183,0.85)' }}>
+              Save password?
+            </span>
+            <button onClick={dismissSaveOffer} className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>×</button>
+          </div>
+          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>
+            <span style={{ color: 'rgba(255,255,255,0.8)' }}>{saveOffer.username}</span>
+            <span> · {hostnameOf(saveOffer.url)}</span>
+          </p>
+          <input className="rounded-lg px-3 py-2 text-xs outline-none"
+            style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(110,231,183,0.3)', color: 'white' }}
+            placeholder="Label"
+            value={offerLabel}
+            onChange={e => setOfferLabel(e.target.value)} />
+          <input className="rounded-lg px-3 py-2 text-xs outline-none"
+            style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
+            placeholder="URL"
+            value={offerUrl}
+            onChange={e => setOfferUrl(e.target.value)} />
+          <div className="rounded-lg px-2 py-1" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+            <TagInput tags={offerTags} accent="#6ee7b7" onChange={setOfferTags} />
+          </div>
+          <button onClick={acceptSaveOffer}
+            disabled={saving || !offerLabel.trim()}
+            className="py-2 rounded-lg text-xs font-semibold"
+            style={{ background: saving ? 'rgba(110,231,183,0.3)' : 'linear-gradient(135deg,#34d399,#10b981)', color: '#0f1419' }}>
+            {saving ? 'Saving...' : 'Save to Vault'}
+          </button>
+        </div>
+      )}
 
       {/* Search */}
       <div className="flex items-center gap-2 rounded-[10px] px-3 py-2"
@@ -143,7 +244,7 @@ export function KeyvaultView({ sendMsg, onLock }: Props) {
             </span>
           </div>
           {secrets.map(s => (
-            <SecretCard key={s.id} secret={s} onReveal={revealSecret} onCopy={copySecret} onDelete={deleteSecret} />
+            <SecretCard key={s.id} secret={s} onReveal={revealSecret} onCopy={copySecret} onDelete={deleteSecret} onUpdate={updateSecret} />
           ))}
         </>
       ) : (
@@ -151,10 +252,10 @@ export function KeyvaultView({ sendMsg, onLock }: Props) {
           {Object.entries(grouped).map(([tag, list]) => (
             <div key={tag} className="flex flex-col gap-2">
               <span className="text-xs px-1 font-semibold" style={{ color: '#f59e0b', fontSize: '10px' }}>#{tag}</span>
-              {list.map(s => <SecretCard key={s.id} secret={s} onReveal={revealSecret} onCopy={copySecret} onDelete={deleteSecret} />)}
+              {list.map(s => <SecretCard key={s.id} secret={s} onReveal={revealSecret} onCopy={copySecret} onDelete={deleteSecret} onUpdate={updateSecret} />)}
             </div>
           ))}
-          {untagged.map(s => <SecretCard key={s.id} secret={s} onReveal={revealSecret} onCopy={copySecret} onDelete={deleteSecret} />)}
+          {untagged.map(s => <SecretCard key={s.id} secret={s} onReveal={revealSecret} onCopy={copySecret} onDelete={deleteSecret} onUpdate={updateSecret} />)}
         </>
       )}
 
@@ -174,6 +275,14 @@ export function KeyvaultView({ sendMsg, onLock }: Props) {
           style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
           placeholder="Secret value"
           value={newValue} onChange={e => setNewValue(e.target.value)} />
+        <input className="rounded-lg px-3 py-2 text-xs outline-none"
+          style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
+          placeholder="URL (e.g. https://github.com/login)"
+          value={newUrl} onChange={e => setNewUrl(e.target.value)} />
+        <input className="rounded-lg px-3 py-2 text-xs outline-none"
+          style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
+          placeholder="Description (optional)"
+          value={newDesc} onChange={e => setNewDesc(e.target.value)} />
         <div className="rounded-lg px-2 py-1" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
           <TagInput tags={newTags} accent="#f59e0b" onChange={setNewTags} />
         </div>
