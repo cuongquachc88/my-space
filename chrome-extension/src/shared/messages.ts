@@ -78,6 +78,15 @@ export type SavePasswordOfferMsg = Msg<'SAVE_PASSWORD_OFFER', SavePasswordPayloa
 // Service worker broadcasts to side panel (no response)
 export type SavePasswordOfferFromPageMsg = Msg<'SAVE_PASSWORD_OFFER_FROM_PAGE', SavePasswordPayload>
 
+// --- Save prompt enable/disable (side panel → service worker) ---
+// Chrome Web Store flags "<all_urls>" in content_scripts as a broad host
+// permission, so we keep the script registration dynamic and only request
+// `<all_urls>` as an optional_host_permissions grant when the user enables.
+export type SavePromptStatusMsg = Msg<'SAVE_PROMPT_STATUS'>
+export type SavePromptEnableMsg = Msg<'SAVE_PROMPT_ENABLE'>
+export type SavePromptDisableMsg = Msg<'SAVE_PROMPT_DISABLE'>
+export interface SavePromptStatusData { enabled: boolean }
+
 // --- Subscription shape ---
 export interface Subscription {
   id: string
@@ -210,3 +219,4 @@ export type AnyMsg =
   | TodoListsListMsg | TodoListsCreateMsg | TodoListsUpdateMsg | TodoListsDeleteMsg
   | TodoTasksListMsg | TodoTasksCreateMsg | TodoTasksUpdateMsg | TodoTasksDeleteMsg
   | SavePasswordOfferMsg | SavePasswordOfferFromPageMsg
+  | SavePromptStatusMsg | SavePromptEnableMsg | SavePromptDisableMsg

@@ -18,9 +18,17 @@ export default defineConfig({
     'process': JSON.stringify({ exitCode: 0, env: {}, version: '', versions: {} }),
   },
   build: {
-    rollupOptions: {
+    rolldownOptions: {
       input: {
         offscreen: 'src/offscreen/index.html',
+        // savePrompt.js is dynamically registered via chrome.scripting at
+        // runtime after the user enables the Save Password feature in Settings.
+        // Give it a stable filename so the registration code can reference it
+        // without depending on the build hash.
+        savePrompt: 'src/content/savePrompt.ts',
+      },
+      output: {
+        entryFileNames: (chunk) => chunk.name === 'savePrompt' ? 'savePrompt.js' : 'assets/[name]-[hash].js',
       },
     },
   },

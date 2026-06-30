@@ -44,11 +44,13 @@ Secrets store `id`, `label`, `ciphertext`, `iv`, `tags` (JSON array), `url`, `de
 
 Each `SecretCard` has an Edit action that opens an inline form right inside the card. The user can change label, value (leave empty to keep current), URL and description, and save via `SECRETS_UPDATE`. Cancel reverts the form. Tag editing is done via delete + recreate, to keep the inline form compact.
 
-## Save Password prompt (web)
+## Save Password prompt (web) — opt-in
 
-A second content script — `savePrompt.ts` — runs on `<all_urls>` (excluding map domains and localhost). It detects login forms (a `<input type="password">` plus a username/email field), and once the user has typed a real password (≥ 4 chars) it shows a floating orange "Save to My SPACE?" badge beside the field. Clicking the badge sends the credentials to the service worker, which forwards them to the side panel. `KeyvaultView` listens for `SAVE_PASSWORD_OFFER_FROM_PAGE` and renders a confirm card at the top with label (default = hostname), URL, tags (auto-tagged `auto-saved`) and description pre-filled. The user reviews and clicks "Save to Vault", and `SECRETS_CREATE` encrypts and stores the entry.
+A second content script — `savePrompt.ts` — wants to run on every login form. Because that would normally trigger Chrome Web Store's "Broad Host Permissions" review, the extension ships with **no content-script registration for `<all_urls>`** and **no broad host grant**. The Settings view shows an opt-in card with an orange "Enable on every site" button. Clicking it calls `SAVE_PROMPT_ENABLE`, which asks `chrome.permissions.request({ origins: ['<all_urls>'] })`. On grant the service worker calls `chrome.scripting.registerContentScripts` with id `save-prompt-v1`, attaching the bundled `savePrompt.js` (built with a non-hashed filename so the registration code can reference it stably).
 
-If the side panel is not open, the badge shows "Open My SPACE first" and the user clicks the extension icon. The badge can also be dismissed with a small × chip.
+Once registered, the script detects login forms (`<input type="password">` plus a username/email field), and once the user has typed a real password (≥ 4 chars) it shows a floating orange "Save to My SPACE?" badge beside the field. Clicking the badge sends the credentials to the service worker, which forwards them to the side panel. `KeyvaultView` listens for `SAVE_PASSWORD_OFFER_FROM_PAGE` and renders a confirm card at the top with label (default = hostname), URL, tags (auto-tagged `auto-saved`) and description pre-filled. The user reviews and clicks "Save to Vault", and `SECRETS_CREATE` encrypts and stores the entry.
+
+If the side panel is not open, the badge shows "Open My SPACE first" and the user clicks the extension icon. The badge can also be dismissed with a small × chip. The Settings card has a "disable" action that calls `SAVE_PROMPT_DISABLE`, which unregisters the script and removes the `<all_urls>` grant via `chrome.permissions.remove`. On `chrome.runtime.onStartup` and `chrome.runtime.onInstalled` the service worker re-checks `chrome.permissions.contains` and re-registers the script if the user previously granted, so the feature survives upgrades.
 
 ## Key source files
 

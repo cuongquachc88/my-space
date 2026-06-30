@@ -63,6 +63,41 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return false
   }
 
+  if (msg.type === 'SAVE_PROMPT_STATUS') {
+    chrome.permissions.contains({ origins: ['<all_urls>'] })
+      .then(granted => sendResponse({ ok: true, data: { enabled: granted } }))
+      .catch(e => sendResponse({ ok: false, error: String(e) }))
+    return true
+  }
+
+  if (msg.type === 'SAVE_PROMPT_ENABLE') {
+    chrome.permissions.request({ origins: ['<all_urls>'] })
+      .then(async granted => {
+        if (!granted) { sendResponse({ ok: false, error: 'denied' }); return }
+        await chrome.storage.local.set({ savePromptEnabled: true })
+        try { await registerSavePromptScript() } catch (e) {
+          sendResponse({ ok: false, error: 'register failed: ' + String(e) })
+          return
+        }
+        sendResponse({ ok: true })
+      })
+      .catch(e => sendResponse({ ok: false, error: String(e) }))
+    return true
+  }
+
+  if (msg.type === 'SAVE_PROMPT_DISABLE') {
+    (async () => {
+      try { await unregisterSavePromptScript() } catch { /* ok */ }
+      try {
+        const removed = await chrome.permissions.remove({ origins: ['<all_urls>'] })
+        if (!removed) { sendResponse({ ok: false, error: 'permission not held' }); return }
+        await chrome.storage.local.set({ savePromptEnabled: false })
+        sendResponse({ ok: true })
+      } catch (e) { sendResponse({ ok: false, error: String(e) }) }
+    })()
+    return true
+  }
+
   if (msg.type === 'SYNC_STATUS') {
     chrome.storage.local.get(['driveConnected', 'syncedAt', 'driveEmail', 'driveAvatar']).then(res => {
       sendResponse({ ok: true, data: { connected: !!res.driveConnected, lastSync: res.syncedAt ?? null, email: res.driveEmail ?? null, avatar: res.driveAvatar ?? null } })
@@ -136,6 +171,67 @@ async function fetchAndSaveUserInfo(): Promise<{ ok: boolean; data?: { email?: s
     return { ok: false, error: e instanceof Error ? e.message : String(e) }
   }
 }
+
+// ── Save Password Prompt: dynamic content-script registration ──────────────
+//
+// The Save Password feature needs access to every site where a login form
+// might live, which would normally trigger Chrome Web Store's "Broad Host
+// Permissions" review. To stay minimal, we ask for `<all_urls>` as an
+// OPTIONAL host permission and only register the savePrompt.ts content
+// script when the user explicitly enables the feature in Settings.
+//
+// We also re-register on startup if the permission was previously granted
+// (e.g. after an extension upgrade from a build that declared it directly).
+
+const SAVE_PROMPT_ID = 'save-prompt-v1'
+const SAVE_PROMPT_MATCHES: chrome.scripting.MatchPattern[] = ['<all_urls>']
+const SAVE_PROMPT_EXCLUDES: chrome.scripting.MatchPattern[] = [
+  'https://www.google.com/maps/*',
+  'https://maps.google.com/*',
+  'https://www.openstreetmap.org/*',
+  'https://openstreetmap.org/*',
+  'https://www.bing.com/maps/*',
+  'https://maps.apple.com/*',
+  '*://localhost/*',
+  '*://127.0.0.1/*',
+]
+
+async function registerSavePromptScript(): Promise<void> {
+  try {
+    await chrome.scripting.unregisterContentScripts({ ids: [SAVE_PROMPT_ID] })
+  } catch { /* not registered yet */ }
+  await chrome.scripting.registerContentScripts([{
+    id: SAVE_PROMPT_ID,
+    js: ['savePrompt.js'],
+    matches: SAVE_PROMPT_MATCHES,
+    excludeMatches: SAVE_PROMPT_EXCLUDES,
+    runAt: 'document_idle',
+  }])
+}
+
+async function unregisterSavePromptScript(): Promise<void> {
+  try {
+    await chrome.scripting.unregisterContentScripts({ ids: [SAVE_PROMPT_ID] })
+  } catch { /* not registered */ }
+}
+
+// On startup: if the user previously granted `<all_urls>` (e.g. before this
+// build), re-register the script so the feature keeps working.
+chrome.runtime.onStartup.addListener(async () => {
+  const granted = await chrome.permissions.contains({ origins: ['<all_urls>'] })
+  if (granted) {
+    await chrome.storage.local.set({ savePromptEnabled: true })
+    try { await registerSavePromptScript() } catch { /* manifest asset hash may change between builds */ }
+  }
+})
+
+chrome.runtime.onInstalled.addListener(async () => {
+  const granted = await chrome.permissions.contains({ origins: ['<all_urls>'] })
+  if (granted) {
+    await chrome.storage.local.set({ savePromptEnabled: true })
+    try { await registerSavePromptScript() } catch { /* see above */ }
+  }
+})
 
 async function removeCachedToken(): Promise<void> {
   await new Promise<void>(resolve => {

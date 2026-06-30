@@ -21,6 +21,10 @@ export function SettingsView({ sendMsg, onLock }: Props) {
   const [timeout, setTimeout_] = useState(15 * 60 * 1000)
   const [changingPw, setChangingPw] = useState(false)
 
+  const [savePromptEnabled, setSavePromptEnabled] = useState<boolean | null>(null)
+  const [savePromptBusy, setSavePromptBusy] = useState(false)
+  const [savePromptMsg, setSavePromptMsg] = useState('')
+
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [importPreview, setImportPreview] = useState<ImportedSecret[] | null>(null)
   const [importMsg, setImportMsg] = useState('')
@@ -30,7 +34,38 @@ export function SettingsView({ sendMsg, onLock }: Props) {
     chrome.storage.local.get('autoLockMs').then(res => {
       if (typeof res.autoLockMs === 'number') setTimeout_(res.autoLockMs)
     })
-  }, [])
+    sendMsg('SAVE_PROMPT_STATUS').then(res => {
+      if (res.ok) setSavePromptEnabled((res.data as { enabled: boolean })?.enabled ?? false)
+    })
+  }, [sendMsg])
+
+  async function toggleSavePrompt() {
+    setSavePromptBusy(true)
+    setSavePromptMsg('')
+    try {
+      if (savePromptEnabled) {
+        const res = await sendMsg('SAVE_PROMPT_DISABLE')
+        if (res.ok) {
+          setSavePromptEnabled(false)
+          setSavePromptMsg('Save Prompt disabled — reload tabs for changes to take effect')
+        } else {
+          setSavePromptMsg('Could not disable: ' + (res.error ?? 'unknown'))
+        }
+      } else {
+        const res = await sendMsg('SAVE_PROMPT_ENABLE')
+        if (res.ok) {
+          setSavePromptEnabled(true)
+          setSavePromptMsg('Save Prompt enabled on every site — reload open tabs')
+        } else if ((res.error ?? '').includes('denied')) {
+          setSavePromptMsg('Permission denied — accept the prompt to enable')
+        } else {
+          setSavePromptMsg('Could not enable: ' + (res.error ?? 'unknown'))
+        }
+      }
+    } finally {
+      setSavePromptBusy(false)
+    }
+  }
 
   function selectTimeout(ms: number) {
     setTimeout_(ms)
@@ -175,6 +210,33 @@ export function SettingsView({ sendMsg, onLock }: Props) {
             </button>
           ))}
         </div>
+      </div>
+
+      <div className="glass-card p-4 flex flex-col gap-3">
+        <p className="text-xs font-bold tracking-widest uppercase" style={{ color: 'rgba(255,255,255,0.3)' }}>
+          Save Password Prompt
+        </p>
+        <p className="text-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.4)' }}>
+          When enabled, My SPACE shows a small "Save to My SPACE?" badge next to login
+          forms across the web. Click the badge to send the credentials straight to
+          the side panel for review.
+        </p>
+        <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
+          Off by default. Chrome will prompt you to grant access to every website —
+          you can revoke from <code>chrome://extensions</code> at any time.
+        </p>
+        <button onClick={toggleSavePrompt} disabled={savePromptBusy || savePromptEnabled === null}
+          className="py-2 rounded-lg text-xs font-semibold disabled:opacity-50"
+          style={savePromptEnabled
+            ? { background: 'rgba(110,231,183,0.12)', border: '1px solid rgba(110,231,183,0.25)', color: 'rgba(110,231,183,0.9)' }
+            : { background: 'linear-gradient(135deg,#fb923c,#f97316)', color: '#1c1917' }}>
+          {savePromptBusy ? 'Working...' : savePromptEnabled ? 'Enabled — click to disable' : 'Enable on every site'}
+        </button>
+        {savePromptMsg && (
+          <p className="text-xs" style={{ color: savePromptMsg.includes('denied') || savePromptMsg.includes('Could') ? 'rgba(239,68,68,0.8)' : 'rgba(110,231,183,0.85)' }}>
+            {savePromptMsg}
+          </p>
+        )}
       </div>
 
       <div className="glass-card p-4 flex flex-col gap-3">

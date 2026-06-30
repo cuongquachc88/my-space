@@ -27,6 +27,9 @@
   "host_permissions": [
     "https://www.googleapis.com/*"
   ],
+  "optional_host_permissions": [
+    "<all_urls>"
+  ],
   "background": {
     "service_worker": "src/service-worker/index.ts",
     "type": "module"
@@ -61,28 +64,15 @@
         "src/content/mapExtractor.ts"
       ],
       "run_at": "document_idle"
-    },
-    {
-      "matches": [
-        "<all_urls>"
-      ],
-      "exclude_matches": [
-        "https://www.google.com/maps/*",
-        "https://maps.google.com/*",
-        "https://www.openstreetmap.org/*",
-        "https://openstreetmap.org/*",
-        "https://www.bing.com/maps/*",
-        "https://maps.apple.com/*",
-        "*://localhost/*",
-        "*://127.0.0.1/*"
-      ],
-      "js": [
-        "src/content/savePrompt.ts"
-      ],
-      "run_at": "document_idle"
     }
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "matches": ["<all_urls>"],
+      "resources": ["savePrompt.js"]
+    }
+  ]
 }
