@@ -52,16 +52,18 @@ const WRAP_ID = 'myspace-pin-wrap'
 const BTN_ID = 'myspace-pin-btn'
 const TOGGLE_ID = 'myspace-pin-toggle'
 
-// Wrapper: holds main button + collapse toggle. Anchored to the bottom
-// of the page, centred horizontally so it never sits over Google Maps'
-// zoom/locate/pegman stack on the bottom-right or the Layers button on
-// the bottom-left. !important is needed on every position property
-// because Google Maps inserts nested `transform` containers that would
-// otherwise capture this element into their containing block.
+// The wrapper is the positioning container. Anchored to the bottom of the
+// page, centred horizontally so it never sits over Google Maps' zoom/
+// locate/pegman stack at bottom-right or the Layers/scale controls at
+// bottom-left.
 //
-// The wrapper is appended to documentElement (not body) — some page
-// shells set CSS on <body> that breaks position:fixed positioning, and
-// appending to <html> escapes those.
+// !important is needed on every position property because Google Maps
+// inserts nested `transform` containers that would otherwise capture
+// this element as their containing block, defeating position:fixed.
+//
+// The wrapper is appended to documentElement (not body) since some page
+// shells set CSS on <body> that breaks position:fixed positioning; <html>
+// escapes those.
 const WRAP_STYLES = `
   position: fixed !important;
   bottom: 24px !important;
@@ -90,15 +92,12 @@ const BTN_STYLES = `
   font-weight: 600;
   cursor: pointer;
   box-shadow: 0 4px 16px rgba(251,146,60,0.4), 0 1px 3px rgba(0,0,0,0.2);
-  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s, padding 0.2s, width 0.2s;
+  transition: opacity 0.2s, background 0.2s, box-shadow 0.2s;
   opacity: 0;
-  transform: translateY(8px) scale(0.9);
   pointer-events: none;
   white-space: nowrap;
-  overflow: hidden;
 `
-const BTN_VISIBLE = 'opacity: 1; transform: translateY(0) scale(1); pointer-events: auto;'
-const BTN_HOVER = 'transform: translateY(0) scale(1.05); box-shadow: 0 6px 20px rgba(251,146,60,0.5);'
+const BTN_VISIBLE = 'opacity: 1; pointer-events: auto;'
 const BTN_CLICKED = 'background: linear-gradient(135deg, #34d399, #10b981); box-shadow: 0 4px 16px rgba(52,211,153,0.4);'
 const BTN_ERROR = 'background: linear-gradient(135deg, #f87171, #ef4444); box-shadow: 0 4px 16px rgba(248,113,113,0.4);'
 
@@ -118,15 +117,18 @@ const TOGGLE_STYLES = `
   font-weight: 600;
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-  transition: transform 0.15s, background 0.15s;
+  transition: transform 0.15s, background 0.15s, opacity 0.2s;
   pointer-events: auto;
   opacity: 0;
-  transform: translateY(8px);
 `
-const TOGGLE_VISIBLE = 'opacity: 1; transform: translateY(0);'
+const TOGGLE_VISIBLE = 'opacity: 1;'
 const TOGGLE_HOVER = 'transform: scale(1.1); background: rgba(0,0,0,0.75);'
 
-function createPinButton(): { btn: HTMLButtonElement; toggle: HTMLButtonElement } {
+function createPinButton(): { wrap: HTMLDivElement; btn: HTMLButtonElement; toggle: HTMLButtonElement } {
+  const wrap = document.createElement('div')
+  wrap.id = WRAP_ID
+  wrap.setAttribute('style', WRAP_STYLES)
+
   const btn = document.createElement('button')
   btn.id = BTN_ID
   btn.setAttribute('style', BTN_STYLES)
@@ -145,33 +147,33 @@ function createPinButton(): { btn: HTMLButtonElement; toggle: HTMLButtonElement 
   toggle.title = 'Collapse'
   toggle.textContent = '×'
 
+  wrap.appendChild(btn)
+  wrap.appendChild(toggle)
+
+  function restoreBtn() {
+    btn.style.cssText = BTN_STYLES + BTN_VISIBLE
+    btn.querySelector('span')!.textContent = 'Pin to My SPACE'
+  }
+
   function flashError(label: string) {
     btn.style.cssText = BTN_STYLES + BTN_VISIBLE + BTN_ERROR
     btn.querySelector('span')!.textContent = label
-    btn.dataset.state = 'flash'
-    setTimeout(() => {
-      removeAttribute.call(btn, 'data-state')
-      btn.style.cssText = BTN_STYLES + BTN_VISIBLE
-      btn.querySelector('span')!.textContent = 'Pin to My SPACE'
-    }, 2500)
+    setTimeout(restoreBtn, 2500)
   }
 
   function flashSuccess() {
     btn.style.cssText = BTN_STYLES + BTN_VISIBLE + BTN_CLICKED
     btn.querySelector('span')!.textContent = 'Pinned!'
-    btn.dataset.state = 'flash'
-    setTimeout(() => {
-      removeAttribute.call(btn, 'data-state')
-      btn.style.cssText = BTN_STYLES + BTN_VISIBLE
-      btn.querySelector('span')!.textContent = 'Pin to My SPACE'
-    }, 2000)
+    setTimeout(restoreBtn, 2000)
   }
 
   btn.addEventListener('mouseenter', () => {
-    if (!btn.dataset.state) btn.style.cssText = BTN_STYLES + BTN_VISIBLE + BTN_HOVER
+    btn.style.cssText = BTN_STYLES + BTN_VISIBLE
+    btn.style.transform = 'scale(1.05)'
   })
   btn.addEventListener('mouseleave', () => {
-    if (!btn.dataset.state) btn.style.cssText = BTN_STYLES + BTN_VISIBLE
+    btn.style.transform = ''
+    btn.style.cssText = BTN_STYLES + BTN_VISIBLE
   })
 
   btn.addEventListener('click', () => {
@@ -187,59 +189,75 @@ function createPinButton(): { btn: HTMLButtonElement; toggle: HTMLButtonElement 
 
     chrome.runtime.sendMessage({ type: 'MAP_PIN_CAPTURE', payload: pin }, (response) => {
       if (chrome.runtime.lastError || !response?.ok) {
-        // Side panel not open — tell user to open it
-        btn.style.cssText = BTN_STYLES + BTN_VISIBLE + BTN_ERROR
-        btn.querySelector('span')!.textContent = 'Open My SPACE first'
-        btn.dataset.clicked = '1'
-        setTimeout(() => {
-          btn.removeAttribute('data-clicked')
-          btn.style.cssText = BTN_STYLES + BTN_VISIBLE
-          btn.querySelector('span')!.textContent = 'Pin to My SPACE'
-        }, 2500)
+        flashError('Open My SPACE first')
       } else {
-        btn.style.cssText = BTN_STYLES + BTN_VISIBLE + BTN_CLICKED
-        btn.querySelector('span')!.textContent = 'Pinned!'
-        btn.dataset.clicked = '1'
-        setTimeout(() => {
-          btn.removeAttribute('data-clicked')
-          btn.style.cssText = BTN_STYLES + BTN_VISIBLE
-          btn.querySelector('span')!.textContent = 'Pin to My SPACE'
-        }, 2000)
+        flashSuccess()
       }
     })
   })
 
-  return btn
+  toggle.addEventListener('mouseenter', () => {
+    toggle.style.cssText = TOGGLE_STYLES + TOGGLE_VISIBLE + TOGGLE_HOVER
+  })
+  toggle.addEventListener('mouseleave', () => {
+    toggle.style.cssText = TOGGLE_STYLES + TOGGLE_VISIBLE
+  })
+  toggle.addEventListener('click', (e) => {
+    e.stopPropagation()
+    // Collapse to just the toggle × button. Hide the main button so
+    // the user sees only the small × chip.
+    btn.style.cssText = BTN_STYLES  // hidden: opacity 0
+    toggle.setAttribute('title', 'Expand')
+  })
+  // Double-click expand toggle
+  toggle.addEventListener('dblclick', (e) => {
+    e.stopPropagation()
+    btn.style.cssText = BTN_STYLES + BTN_VISIBLE
+    toggle.setAttribute('title', 'Collapse')
+  })
+
+  return { wrap, btn, toggle }
 }
 
 // ── Inject button and update on URL changes ─────────────────────────────────
 
+interface Mounted {
+  wrap: HTMLDivElement
+  btn: HTMLButtonElement
+  toggle: HTMLButtonElement
+}
+let mounted: Mounted | null = null
 let currentUrl = ''
+
+function show() {
+  if (!mounted) return
+  mounted.btn.style.cssText = BTN_STYLES + BTN_VISIBLE
+  mounted.toggle.style.cssText = TOGGLE_STYLES + TOGGLE_VISIBLE
+}
+
+function hide() {
+  if (!mounted) return
+  mounted.btn.style.cssText = BTN_STYLES
+  mounted.toggle.style.cssText = TOGGLE_STYLES
+}
 
 function updateButton() {
   if (location.href === currentUrl) return
   currentUrl = location.href
 
   const coords = extractFromUrl(location.href)
-  let btn = document.getElementById(BTN_ID) as HTMLButtonElement | null
 
   if (!coords) {
-    // Hide button if no coords
-    if (btn) btn.style.cssText = BTN_STYLES
+    hide()
     return
   }
 
-  if (!btn) {
-    btn = createPinButton()
-    document.documentElement.appendChild(btn)
+  if (!mounted) {
+    mounted = createPinButton()
+    document.documentElement.appendChild(mounted.wrap)
   }
 
-  // Show with slight delay for animation
-  requestAnimationFrame(() => {
-    if (btn && !btn.dataset.clicked) {
-      btn.style.cssText = BTN_STYLES + BTN_VISIBLE
-    }
-  })
+  show()
 }
 
 // Initial run
@@ -255,6 +273,8 @@ window.addEventListener('popstate', updateButton)
 // Clean up on page unload
 window.addEventListener('beforeunload', () => {
   observer.disconnect()
-  const btn = document.getElementById(BTN_ID)
-  if (btn) btn.remove()
+  if (mounted) {
+    mounted.wrap.remove()
+    mounted = null
+  }
 })
