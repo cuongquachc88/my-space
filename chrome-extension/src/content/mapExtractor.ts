@@ -52,17 +52,23 @@ const WRAP_ID = 'myspace-pin-wrap'
 const BTN_ID = 'myspace-pin-btn'
 const TOGGLE_ID = 'myspace-pin-toggle'
 
-// Wrapper: holds main button + collapse toggle. Sits in the top-right
-// corner above Google Maps' search bar and tab row. !important on
-// position so Google Maps' nested `transform` containers don't capture
-// this element into their containing block (which would offset it
-// unpredictably).
+// Wrapper: holds main button + collapse toggle. Anchored to the bottom
+// of the page, centred horizontally so it never sits over Google Maps'
+// zoom/locate/pegman stack on the bottom-right or the Layers button on
+// the bottom-left. !important is needed on every position property
+// because Google Maps inserts nested `transform` containers that would
+// otherwise capture this element into their containing block.
+//
+// The wrapper is appended to documentElement (not body) — some page
+// shells set CSS on <body> that breaks position:fixed positioning, and
+// appending to <html> escapes those.
 const WRAP_STYLES = `
   position: fixed !important;
-  top: 80px !important;
-  right: 16px !important;
-  left: auto !important;
-  bottom: auto !important;
+  bottom: 24px !important;
+  left: 50% !important;
+  top: auto !important;
+  right: auto !important;
+  transform: translateX(-50%) !important;
   z-index: 2147483647 !important;
   display: flex;
   align-items: center;
@@ -225,7 +231,7 @@ function updateButton() {
 
   if (!btn) {
     btn = createPinButton()
-    document.body.appendChild(btn)
+    document.documentElement.appendChild(btn)
   }
 
   // Show with slight delay for animation
