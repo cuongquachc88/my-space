@@ -52,25 +52,24 @@ const WRAP_ID = 'myspace-pin-wrap'
 const BTN_ID = 'myspace-pin-btn'
 const TOGGLE_ID = 'myspace-pin-toggle'
 
-// The wrapper is the positioning container. Anchored to the bottom of the
-// page, centred horizontally so it never sits over Google Maps' zoom/
-// locate/pegman stack at bottom-right or the Layers/scale controls at
-// bottom-left.
+// The wrapper is the positioning container. Sat at the TOP-RIGHT corner
+// of the viewport (16px from each edge) so it's well clear of Google
+// Maps' bottom controls AND its top search bar.
 //
-// !important is needed on every position property because Google Maps
-// inserts nested `transform` containers that would otherwise capture
-// this element as their containing block, defeating position:fixed.
+// !important on every position property to escape nested `transform`
+// containers that Google Maps (and many SPAs) insert — those create a
+// containing block that would otherwise override position:fixed.
 //
 // The wrapper is appended to documentElement (not body) since some page
 // shells set CSS on <body> that breaks position:fixed positioning; <html>
 // escapes those.
 const WRAP_STYLES = `
   position: fixed !important;
-  bottom: 24px !important;
-  left: 50% !important;
-  top: auto !important;
-  right: auto !important;
-  transform: translateX(-50%) !important;
+  top: 16px !important;
+  right: 16px !important;
+  left: auto !important;
+  bottom: auto !important;
+  transform: none !important;
   z-index: 2147483647 !important;
   display: flex;
   align-items: center;
@@ -254,6 +253,10 @@ function updateButton() {
 
   if (!mounted) {
     mounted = createPinButton()
+    document.documentElement.appendChild(mounted.wrap)
+  } else if (!document.documentElement.contains(mounted.wrap)) {
+    // Maps may have removed our element during a partial DOM rebuild.
+    // Re-append and keep going.
     document.documentElement.appendChild(mounted.wrap)
   }
 
