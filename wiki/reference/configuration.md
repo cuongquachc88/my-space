@@ -12,7 +12,7 @@ The manifest lives at `chrome-extension/manifest.json` and is the source of trut
 |---|---|---|
 | `manifest_version` | `3` | MV3. |
 | `name` | `"My SPACE"` | Display name. |
-| `version` | `"0.3.0"` | Bumped in lockstep with `package.json` by `scripts/bump.js`. |
+| `version` | `"0.3.2"` | Bumped in lockstep with `package.json` by `scripts/bump.js`. |
 | `description` | `"Free vault for your space"` | Web store description. |
 | `key` | (redacted) | Extension key used to pin the extension ID across loads. |
 

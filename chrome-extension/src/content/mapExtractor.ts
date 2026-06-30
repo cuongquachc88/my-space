@@ -65,7 +65,7 @@ const TOGGLE_ID = 'myspace-pin-toggle'
 // this element into a tile layer that ignores our z-index.
 const WRAP_STYLES = `
   position: fixed !important;
-  top: 16px !important;
+  top: 65px !important;
   right: 16px !important;
   left: auto !important;
   bottom: auto !important;

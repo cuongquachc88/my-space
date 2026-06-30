@@ -51,9 +51,9 @@ Runs `vite build` and then zips `dist/` into `chrome-extension/output/my-space-<
 
 ```bash
 cd chrome-extension
-npm run release:patch   # 0.2.0 -> 0.2.1
-npm run release:minor   # 0.2.0 -> 0.3.0
-npm run release:major   # 0.2.0 -> 1.0.0
+npm run release:patch   # 0.3.0 -> 0.3.1
+npm run release:minor   # 0.3.1 -> 0.4.0
+npm run release:major   # 0.3.1 -> 1.0.0
 ```
 
 Each release command runs `scripts/bump.js` to bump the version in both `package.json` and `manifest.json`, then runs `npm run pack`. See [Tooling](./tooling.md) for what `bump.js` does.

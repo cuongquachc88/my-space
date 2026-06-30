@@ -43,9 +43,9 @@ Tailwind is wired in via the `@tailwindcss/vite` plugin (not a PostCSS config). 
 `chrome-extension/scripts/bump.js` is a small Node script that bumps the version in both `package.json` and `manifest.json` in lockstep. It takes one argument (`patch`, `minor`, or `major`), parses the current `package.json` version, computes the next version, and writes both files:
 
 ```bash
-node scripts/bump.js patch   # 0.2.0 -> 0.2.1
-node scripts/bump.js minor   # 0.2.0 -> 0.3.0
-node scripts/bump.js major   # 0.2.0 -> 1.0.0
+node scripts/bump.js patch   # 0.3.0 -> 0.3.1
+node scripts/bump.js minor   # 0.3.1 -> 0.4.0
+node scripts/bump.js major   # 0.3.1 -> 1.0.0
 ```
 
 The npm scripts `release:patch`, `release:minor`, and `release:major` each run `bump.js` followed by `npm run pack`. Keeping the version in sync between `package.json` and `manifest.json` is required because the pack step reads the version from `package.json` to name the zip, while Chrome itself reads the version from `manifest.json`.
@@ -86,7 +86,7 @@ App-level config in `android/app/build.gradle.kts`:
 
 - `namespace = "com.myspace.app"`, `applicationId = "com.myspace.app"`
 - `compileSdk = 35`, `minSdk = 26`, `targetSdk = 35`
-- `versionCode = 2`, `versionName = "0.3.0"`
+- `versionCode = 3`, `versionName = "0.3.1"`
 - `isCoreLibraryDesugaringEnabled = true` with Java 17 source/target and `jvmTarget = 17`
 - `buildFeatures { compose = true }`
 - Release build has `isMinifyEnabled = true` with the default ProGuard rules plus `proguard-rules.pro`
