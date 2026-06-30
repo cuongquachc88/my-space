@@ -54,15 +54,15 @@ const TOGGLE_ID = 'myspace-pin-toggle'
 
 // The wrapper is the positioning container. Sat at the TOP-RIGHT corner
 // of the viewport (16px from each edge) so it's well clear of Google
-// Maps' bottom controls AND its top search bar.
+// Maps' bottom controls and its top search bar.
 //
-// !important on every position property to escape nested `transform`
-// containers that Google Maps (and many SPAs) insert — those create a
-// containing block that would otherwise override position:fixed.
+// !important on every position-related property to escape nested
+// `transform` containers and any `contain` / `will-change` quirks that
+// Google Maps (and other SPAs) insert, which would otherwise create a
+// containing block overriding position:fixed.
 //
-// The wrapper is appended to documentElement (not body) since some page
-// shells set CSS on <body> that breaks position:fixed positioning; <html>
-// escapes those.
+// `contain: layout` is explicitly set so Maps' compositing doesn't shift
+// this element into a tile layer that ignores our z-index.
 const WRAP_STYLES = `
   position: fixed !important;
   top: 16px !important;
@@ -70,6 +70,7 @@ const WRAP_STYLES = `
   left: auto !important;
   bottom: auto !important;
   transform: none !important;
+  contain: layout style !important;
   z-index: 2147483647 !important;
   display: flex;
   align-items: center;
@@ -253,15 +254,28 @@ function updateButton() {
 
   if (!mounted) {
     mounted = createPinButton()
-    document.documentElement.appendChild(mounted.wrap)
-  } else if (!document.documentElement.contains(mounted.wrap)) {
+    document.body.appendChild(mounted.wrap)
+  } else if (!document.body.contains(mounted.wrap)) {
     // Maps may have removed our element during a partial DOM rebuild.
     // Re-append and keep going.
-    document.documentElement.appendChild(mounted.wrap)
+    document.body.appendChild(mounted.wrap)
   }
 
   show()
 }
+
+// Periodic resurrection — Google Maps can detach the button during a
+// render even between mutations. Check every 500 ms and re-attach with
+// visible state if missing.
+setInterval(() => {
+  if (!mounted) return
+  const coords = extractFromUrl(location.href)
+  if (!coords) return
+  if (!document.body.contains(mounted.wrap)) {
+    document.body.appendChild(mounted.wrap)
+    show()
+  }
+}, 500)
 
 // Initial run
 updateButton()
