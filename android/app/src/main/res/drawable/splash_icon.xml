@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Shield shadow/depth -->
+    <path
+        android:fillColor="#80C77A00"
+        android:pathData="M56,10 L98,28 L98,62 C98,84 78,96 56,106 C34,96 14,84 14,62 L14,28 Z" />
+
+    <!-- Shield body — amber gradient simulation with two layers -->
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M54,8 L96,26 L96,60 C96,82 76,94 54,104 C32,94 12,82 12,60 L12,26 Z" />
+
+    <!-- Shield highlight top -->
+    <path
+        android:fillColor="#20FFFFFF"
+        android:pathData="M54,8 L96,26 L96,42 C80,38 54,30 54,8 Z" />
+
+    <!-- Shield outline/border -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#CC7A00"
+        android:strokeWidth="2.5"
+        android:pathData="M54,8 L96,26 L96,60 C96,82 76,94 54,104 C32,94 12,82 12,60 L12,26 Z" />
+
+    <!-- Lock body (dark rectangle) -->
+    <path
+        android:fillColor="#1A1A1A"
+        android:pathData="M36,52 Q36,50 38,50 L70,50 Q72,50 72,52 L72,80 Q72,82 70,82 L38,82 Q36,82 36,80 Z" />
+
+    <!-- Lock body highlight -->
+    <path
+        android:fillColor="#2A2A2A"
+        android:pathData="M36,50 L72,50 L72,58 L36,58 Z" />
+
+    <!-- Lock shackle (arch) -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#1A1A1A"
+        android:strokeWidth="8"
+        android:strokeLineCap="round"
+        android:pathData="M42,50 L42,36 C42,24 66,24 66,36 L66,50" />
+
+    <!-- Shackle inner (same as shield color to show arch cutout effect) -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#F59E0B"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M42,50 L42,36 C42,26 66,26 66,36 L66,50" />
+
+    <!-- Keyhole outer circle (white/light) -->
+    <path
+        android:fillColor="#E8E8E8"
+        android:pathData="M54,58 m-9,0 a9,9 0 1,0 18,0 a9,9 0 1,0 -18,0" />
+
+    <!-- Keyhole inner circle (dark center) -->
+    <path
+        android:fillColor="#1A1A1A"
+        android:pathData="M54,58 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
+
+    <!-- Keyhole stem -->
+    <path
+        android:fillColor="#1A1A1A"
+        android:pathData="M51,64 L51,76 L57,76 L57,64 Z" />
+</vector>

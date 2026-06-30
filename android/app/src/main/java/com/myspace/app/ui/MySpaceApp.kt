@@ -1,9 +1,13 @@
 package com.myspace.app.ui
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -22,29 +26,41 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.compose.*
 import com.myspace.app.data.AppDatabase
 import com.myspace.app.ui.screens.*
 import com.myspace.app.ui.theme.*
+import kotlinx.coroutines.launch
+
+// ── Screen descriptor ──────────────────────────────────────────────────────
+
 sealed class Screen(
     val route: String,
     val label: String,
     val icon: ImageVector,
     val accent: Color,
 ) {
-    object Notes     : Screen("notes",   "Notes",     Icons.Default.Note,       AccentNotes)
-    object Vault     : Screen("vault",   "Vault",     Icons.Default.Lock,       AccentVault)
-    object Generator : Screen("gen",     "Generator", Icons.Default.Key,        AccentGen)
-    object Subs      : Screen("subs",    "Subs",      Icons.Default.CreditCard, AccentSubs)
-    object Sync      : Screen("sync",    "Sync",      Icons.Default.Sync,       AccentSync)
+    object Notes     : Screen("notes",   "Notes",     Icons.Default.Note,        AccentNotes)
+    object Vault     : Screen("vault",   "Vault",     Icons.Default.Lock,        AccentVault)
+    object Generator : Screen("gen",     "Generator", Icons.Default.Key,         AccentGen)
+    object Subs      : Screen("subs",    "Subs",      Icons.Default.CreditCard,  AccentSubs)
+    object Todo      : Screen("todo",    "To-Do",     Icons.Default.CheckBox,    AccentTodo)
+    object MapPins   : Screen("maps",    "Map Pins",  Icons.Default.LocationOn,  AccentMaps)
+    object Sync      : Screen("sync",    "Sync",      Icons.Default.Sync,        AccentSync)
 }
 
-val bottomNavItems = listOf(
-    Screen.Notes, Screen.Vault, Screen.Generator, Screen.Subs, Screen.Sync
+val allScreens = listOf(
+    Screen.Notes,
+    Screen.Vault,
+    Screen.Generator,
+    Screen.Subs,
+    Screen.Todo,
+    Screen.MapPins,
+    Screen.Sync,
 )
+
+// ── Logo composable ────────────────────────────────────────────────────────
 
 @Composable
 fun SpaceLogo(modifier: Modifier = Modifier) {
@@ -120,14 +136,57 @@ private fun drawShield(scope: DrawScope) {
     }
 }
 
+// ── Pill/dot page indicator ────────────────────────────────────────────────
+
+@Composable
+private fun PagerIndicator(
+    pageCount: Int,
+    currentPage: Int,
+    accentColor: Color,
+    onPageSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        repeat(pageCount) { index ->
+            val selected = index == currentPage
+            val dotWidth by animateDpAsState(
+                targetValue = if (selected) 24.dp else 6.dp,
+                animationSpec = tween(250),
+                label = "dot_width_$index",
+            )
+            val dotColor by animateColorAsState(
+                targetValue = if (selected) accentColor else Color(0x33FFFFFF),
+                animationSpec = tween(250),
+                label = "dot_color_$index",
+            )
+            Box(
+                modifier = Modifier
+                    .height(6.dp)
+                    .width(dotWidth)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(dotColor)
+                    .clickable { onPageSelected(index) },
+            )
+        }
+    }
+}
+
+// ── App root ───────────────────────────────────────────────────────────────
+
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun MySpaceApp() {
-    val navController = rememberNavController()
     val context = LocalContext.current
     val db = remember { AppDatabase.get(context) }
-    val backStack by navController.currentBackStackEntryAsState()
-    val currentRoute = backStack?.destination?.route
-    val currentScreen = bottomNavItems.firstOrNull { it.route == currentRoute } ?: Screen.Notes
+    val scope = rememberCoroutineScope()
+
+    val pagerState = rememberPagerState(initialPage = 0) { allScreens.size }
+
+    val currentScreen = allScreens[pagerState.currentPage]
 
     val glowColor by animateColorAsState(
         targetValue = currentScreen.accent.copy(alpha = 0.10f),
@@ -141,7 +200,7 @@ fun MySpaceApp() {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xCC0A0E17))  // glass: semi-transparent dark
+                    .background(Color(0xCC0A0E17))
                     .drawBehind {
                         drawLine(
                             color = Color(0x20FFFFFF),
@@ -149,7 +208,7 @@ fun MySpaceApp() {
                             end = Offset(size.width, size.height),
                             strokeWidth = 1.dp.toPx(),
                         )
-                    }
+                    },
             ) {
                 Row(
                     modifier = Modifier
@@ -178,10 +237,10 @@ fun MySpaceApp() {
             }
         },
         bottomBar = {
-            NavigationBar(
-                containerColor = Color(0xCC0A0E17),  // glass bottom nav
-                tonalElevation = 0.dp,
+            Box(
                 modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xCC0A0E17))
                     .drawBehind {
                         drawLine(
                             color = Color(0x20FFFFFF),
@@ -192,54 +251,17 @@ fun MySpaceApp() {
                     }
                     .navigationBarsPadding(),
             ) {
-                bottomNavItems.forEach { screen ->
-                    val selected = currentRoute == screen.route
-                    val iconColor by animateColorAsState(
-                        targetValue = if (selected) screen.accent else Color(0x66FFFFFF),
-                        animationSpec = tween(250),
-                        label = "icon_${screen.route}",
-                    )
-                    NavigationBarItem(
-                        selected = selected,
-                        onClick = {
-                            navController.navigate(screen.route) {
-                                popUpTo(navController.graph.startDestinationId) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        icon = {
-                            Box(contentAlignment = Alignment.Center) {
-                                if (selected) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(40.dp)
-                                            .clip(CircleShape)
-                                            .background(screen.accent.copy(alpha = 0.15f)),
-                                    )
-                                }
-                                Icon(
-                                    screen.icon,
-                                    contentDescription = screen.label,
-                                    tint = iconColor,
-                                    modifier = Modifier.size(22.dp),
-                                )
-                            }
-                        },
-                        label = {
-                            Text(
-                                text = screen.label,
-                                fontSize = 13.sp,
-                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                                color = iconColor,
-                                textAlign = TextAlign.Center,
-                            )
-                        },
-                        colors = NavigationBarItemDefaults.colors(
-                            indicatorColor = Color.Transparent,
-                        ),
-                    )
-                }
+                PagerIndicator(
+                    pageCount = allScreens.size,
+                    currentPage = pagerState.currentPage,
+                    accentColor = currentScreen.accent,
+                    onPageSelected = { page ->
+                        scope.launch { pagerState.animateScrollToPage(page) }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 14.dp),
+                )
             }
         },
     ) { padding ->
@@ -256,12 +278,20 @@ fun MySpaceApp() {
                     )
                 },
         ) {
-            NavHost(navController, startDestination = Screen.Notes.route, modifier = Modifier.fillMaxSize()) {
-                composable(Screen.Notes.route)     { NotesScreen(db) }
-                composable(Screen.Vault.route)     { VaultScreen(db) }
-                composable(Screen.Generator.route) { GeneratorScreen() }
-                composable(Screen.Subs.route)      { SubscriptionsScreen(db) }
-                composable(Screen.Sync.route)      { SyncScreen(db, context) }
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize(),
+                beyondViewportPageCount = 1,
+            ) { page ->
+                when (allScreens[page]) {
+                    Screen.Notes     -> NotesScreen(db)
+                    Screen.Vault     -> VaultScreen(db)
+                    Screen.Generator -> GeneratorScreen()
+                    Screen.Subs      -> SubscriptionsScreen(db)
+                    Screen.Todo      -> TodoScreen(db)
+                    Screen.MapPins   -> MapPinsScreen(db)
+                    Screen.Sync      -> SyncScreen(db, context)
+                }
             }
         }
     }
