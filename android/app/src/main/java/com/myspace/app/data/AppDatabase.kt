@@ -157,6 +157,12 @@ interface SecretDao {
     @Query("SELECT id, label, tags, url, description, createdAt, updatedAt FROM secrets ORDER BY updatedAt DESC")
     suspend fun getMeta(): List<SecretMeta>
 
+    @Query("SELECT id, label, tags, url, description, createdAt, updatedAt FROM secrets WHERE label LIKE '%' || :q || '%' ORDER BY updatedAt DESC")
+    suspend fun searchMeta(q: String): List<SecretMeta>
+
+    @Query("SELECT id, label, tags, url, description, createdAt, updatedAt FROM secrets WHERE INSTR(tags, :tag) > 0 ORDER BY updatedAt DESC")
+    suspend fun getMetaByTag(tag: String): List<SecretMeta>
+
     @Query("SELECT * FROM secrets WHERE id = :id")
     suspend fun getById(id: String): SecretEntity?
 
