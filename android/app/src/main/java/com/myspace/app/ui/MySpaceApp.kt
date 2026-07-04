@@ -226,34 +226,31 @@ private fun LockScreen(onUnlock: () -> Unit) {
     }
 }
 
+// Shows a BiometricPrompt that accepts biometric OR device credential (PIN/pattern/password).
+// Only onSuccess unlocks — error/cancel keeps isLocked = true.
 private fun showBiometricPrompt(
     activity: FragmentActivity,
     onSuccess: () -> Unit,
-    onFallback: () -> Unit,
 ) {
-    val biometricManager = BiometricManager.from(activity)
-    if (biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_WEAK)
-        != BiometricManager.BIOMETRIC_SUCCESS
-    ) {
-        onFallback()
-        return
-    }
     val executor = ContextCompat.getMainExecutor(activity)
     val prompt = BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {
         override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
             onSuccess()
         }
         override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-            // user cancelled or no hardware — fall back to tap-to-unlock
-            onFallback()
+            // Keep locked — user must authenticate to proceed.
+            // (errorCode ERROR_NEGATIVE_BUTTON / ERROR_USER_CANCELED stays locked by not calling onSuccess)
         }
-        override fun onAuthenticationFailed() { /* retry handled by system UI */ }
+        override fun onAuthenticationFailed() { /* retry handled by system prompt UI */ }
     })
+    // DEVICE_CREDENTIAL allows PIN/pattern/password as fallback — no unauthenticated bypass.
+    val allowedAuthenticators = BiometricManager.Authenticators.BIOMETRIC_WEAK or
+            BiometricManager.Authenticators.DEVICE_CREDENTIAL
     prompt.authenticate(
         BiometricPrompt.PromptInfo.Builder()
             .setTitle("Unlock My SPACE")
             .setSubtitle("Confirm your identity to continue")
-            .setNegativeButtonText("Cancel")
+            .setAllowedAuthenticators(allowedAuthenticators)
             .build()
     )
 }
@@ -393,17 +390,16 @@ fun MySpaceApp() {
     if (isLocked) {
         LockScreen(
             onUnlock = {
-                val biometricEnabled = prefs.getBoolean("biometric_enabled", false)
                 val activity = context as? FragmentActivity
-                if (biometricEnabled && activity != null) {
+                if (activity != null) {
+                    // Always require device auth (biometric or PIN/pattern/password).
+                    // No tap-through: only onAuthenticationSucceeded clears isLocked.
                     showBiometricPrompt(
                         activity = activity,
                         onSuccess = { isLocked = false },
-                        onFallback = { isLocked = false },
                     )
-                } else {
-                    isLocked = false
                 }
+                // If context is not a FragmentActivity (e.g. preview), stay locked.
             },
         )
     }
