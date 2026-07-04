@@ -1,5 +1,8 @@
 package com.myspace.app.ui.screens
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,15 +19,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.myspace.app.data.AppDatabase
 import com.myspace.app.data.MapPinEntity
 import com.myspace.app.data.MapStackEntity
+import com.myspace.app.ui.components.PIN_ICON_IDS
+import com.myspace.app.ui.components.PinIconCanvas
+import com.myspace.app.ui.components.PinIconPicker
 import com.myspace.app.ui.theme.AccentMaps
 import com.myspace.app.ui.theme.BgCard
 import com.myspace.app.ui.theme.BgCardBorder
+import com.myspace.app.util.LZString
 import kotlinx.coroutines.launch
 import java.util.UUID
 
@@ -50,6 +58,41 @@ private fun parseStackColor(hex: String): Color = try {
     Color(("FF$clean").toLong(16))
 } catch (_: Exception) { Color(0xFFFB923C) }
 
+// ── Star rating composable ─────────────────────────────────────────────────
+
+@Composable
+private fun StarRating(value: Int, onChange: ((Int) -> Unit)? = null) {
+    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+        (1..5).forEach { i ->
+            val filled = i <= value
+            Icon(
+                imageVector = if (filled) Icons.Default.Star else Icons.Default.StarBorder,
+                contentDescription = null,
+                tint = if (filled) Color(0xFFFBBF24) else Color(0x33FFFFFF),
+                modifier = Modifier
+                    .size(16.dp)
+                    .then(if (onChange != null) Modifier.clickable { onChange(if (value == i) 0 else i) } else Modifier),
+            )
+        }
+    }
+}
+
+// ── Share URL builder ──────────────────────────────────────────────────────
+
+private fun buildShareUrl(stack: MapStackEntity, pins: List<MapPinEntity>): String {
+    val pinsJson = pins.joinToString(",") { p ->
+        """{"label":${escapeJson(p.label)},"lat":${p.lat},"lng":${p.lng},"note":${escapeJson(p.note)},"url":${escapeJson(p.url)}}"""
+    }
+    val payload = """{"name":${escapeJson(stack.name)},"color":${escapeJson(stack.color)},"pins":[$pinsJson]}"""
+    val compressed = LZString.compressToEncodedURIComponent(payload)
+    val firstPin = pins.firstOrNull()
+    val lat = firstPin?.lat ?: 0.0
+    val lng = firstPin?.lng ?: 0.0
+    return "https://www.google.com/maps/search/?api=1&query=$lat,$lng#myspace-pins?d=$compressed"
+}
+
+private fun escapeJson(s: String): String = "\"${s.replace("\\", "\\\\").replace("\"", "\\\"")}\""
+
 // ── Main screen ────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,6 +108,7 @@ fun MapPinsScreen(db: AppDatabase) {
     var showAddStack by remember { mutableStateOf(false) }
     var newStackName by remember { mutableStateOf("") }
     var newStackColor by remember { mutableStateOf(stackColorOptions.first()) }
+    var newStackIcon by remember { mutableStateOf(PIN_ICON_IDS.first()) }
 
     fun reloadStacks() {
         scope.launch {
@@ -139,6 +183,7 @@ fun MapPinsScreen(db: AppDatabase) {
         FloatingActionButton(
             onClick = {
                 newStackName = ""; newStackColor = stackColorOptions.first()
+                newStackIcon = PIN_ICON_IDS.first()
                 showAddStack = true
             },
             modifier = Modifier
@@ -181,6 +226,13 @@ fun MapPinsScreen(db: AppDatabase) {
                             MapColorDot(hex = hex, selected = newStackColor == hex, onClick = { newStackColor = hex })
                         }
                     }
+                    Spacer(Modifier.height(4.dp))
+                    Text("Icon", fontSize = 13.sp, color = Color(0x88FFFFFF))
+                    PinIconPicker(
+                        selected = newStackIcon,
+                        onSelect = { newStackIcon = it },
+                        accentColor = parseStackColor(newStackColor),
+                    )
                 }
             },
             confirmButton = {
@@ -192,6 +244,7 @@ fun MapPinsScreen(db: AppDatabase) {
                                     id = UUID.randomUUID().toString(),
                                     name = newStackName.trim(),
                                     color = newStackColor,
+                                    icon = newStackIcon,
                                     createdAt = System.currentTimeMillis(),
                                 )
                             )
@@ -234,10 +287,13 @@ private fun MapStackCard(
         ) {
             Box(
                 modifier = Modifier
-                    .size(14.dp)
-                    .clip(CircleShape)
-                    .background(accent),
-            )
+                    .size(32.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(accent.copy(alpha = 0.2f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                PinIconCanvas(id = stack.icon.ifBlank { "pin" }, color = accent, size = 18.dp)
+            }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(stack.name, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
@@ -266,6 +322,7 @@ private fun MapPinsStackView(
 ) {
     val scope = rememberCoroutineScope()
     val accent = parseStackColor(stack.color)
+    val context = LocalContext.current
 
     var pins by remember { mutableStateOf<List<MapPinEntity>>(emptyList()) }
 
@@ -277,6 +334,8 @@ private fun MapPinsStackView(
     var newNote by remember { mutableStateOf("") }
     var newCategory by remember { mutableStateOf(PIN_CATEGORIES.first()) }
     var newPriority by remember { mutableStateOf("none") }
+    var newRating by remember { mutableStateOf(0) }
+    var newReviewNote by remember { mutableStateOf("") }
 
     fun reloadPins() {
         scope.launch { pins = db.mapPinDao().getForStack(stack.id) }
@@ -320,6 +379,13 @@ private fun MapPinsStackView(
                         fontSize = 12.sp,
                         color = Color(0x66FFFFFF),
                     )
+                    IconButton(onClick = {
+                        val url = buildShareUrl(stack, pins)
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        clipboard.setPrimaryClip(ClipData.newPlainText("My SPACE share link", url))
+                    }) {
+                        Icon(Icons.Default.Share, "Share", tint = accent.copy(alpha = 0.8f), modifier = Modifier.size(20.dp))
+                    }
                 }
             }
 
@@ -360,6 +426,7 @@ private fun MapPinsStackView(
             onClick = {
                 newLabel = ""; newLat = ""; newLng = ""
                 newNote = ""; newCategory = PIN_CATEGORIES.first(); newPriority = "none"
+                newRating = 0; newReviewNote = ""
                 showAddPin = true
             },
             modifier = Modifier
@@ -476,6 +543,19 @@ private fun MapPinsStackView(
                             )
                         }
                     }
+
+                    // Rating
+                    Text("Rating", fontSize = 13.sp, color = Color(0x88FFFFFF))
+                    StarRating(value = newRating, onChange = { newRating = it })
+                    OutlinedTextField(
+                        value = newReviewNote,
+                        onValueChange = { newReviewNote = it },
+                        label = { Text("Review (optional)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = mapsFieldColors(),
+                        maxLines = 2,
+                    )
                 }
             },
             confirmButton = {
@@ -494,7 +574,8 @@ private fun MapPinsStackView(
                                     note = newNote.trim(),
                                     category = newCategory,
                                     priority = newPriority,
-                                    rating = 0,
+                                    rating = newRating,
+                                    reviewNote = newReviewNote.trim(),
                                     createdAt = System.currentTimeMillis(),
                                 )
                             )
@@ -585,18 +666,20 @@ private fun PinRow(
                         Text(pin.category, fontSize = 10.sp, color = accent.copy(alpha = 0.8f))
                     }
                 }
-                // Star rating
-                if (pin.rating > 0) {
-                    Row {
-                        repeat(5) { i ->
-                            Text(
-                                if (i < pin.rating) "★" else "☆",
-                                fontSize = 12.sp,
-                                color = if (i < pin.rating) Color(0xFFFBBF24) else Color(0x33FFFFFF),
-                            )
-                        }
-                    }
-                }
+            }
+
+            if (pin.rating > 0) {
+                StarRating(value = pin.rating)
+            }
+            if (pin.reviewNote.isNotBlank()) {
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    "\"${pin.reviewNote}\"",
+                    fontSize = 11.sp,
+                    color = Color(0x66FFFFFF),
+                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                    lineHeight = 15.sp,
+                )
             }
 
             if (pin.note.isNotBlank()) {
