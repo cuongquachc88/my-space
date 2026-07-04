@@ -40,27 +40,3 @@ npm-debug.log*
 .playwright-mcp/
 .claude/
 .superpowers/
-# SDD Progress Ledger — Android Feature Parity + Tests + Release Pipeline
-
-Plan: docs/superpowers/plans/2026-07-04-android-feature-parity-tests-release.md
-Branch: main
-Started: 2026-07-04
-
-## Tasks
-
-- [ ] Task 1: Pure utilities — TagUtils and LZString
-- [ ] Task 2: SecretDao search queries
-- [ ] Task 3: Vault search + tag filter UI
-- [ ] Task 4: PinIconPicker composable
-- [ ] Task 5: Map Pins enhancements
-- [ ] Task 6: Settings screen
-- [ ] Task 7: JVM unit tests — GeneratorTest
-- [ ] Task 8: Instrumented tests — Room CRUD + crypto
-- [ ] Task 9: Signing config in build.gradle.kts
-- [ ] Task 10: build-release.sh signing script
-- [ ] Task 11: run-emulator.sh --unit and --test flags
-- [ ] Task 12: GitHub Actions CI/CD workflow
-- [ ] Task 13: Full smoke test and final commit
-
-## Completed
-.superpowers/

@@ -1,5 +1,6 @@
 package com.myspace.app.ui
 
+import android.os.SystemClock
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.animation.animateColorAsState
@@ -17,6 +18,9 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
@@ -266,6 +270,29 @@ fun MySpaceApp() {
     val prefs = remember { context.getSharedPreferences("myspace_settings", android.content.Context.MODE_PRIVATE) }
 
     var isLocked by remember { mutableStateOf(false) }
+
+    var backgroundedAt by remember { mutableStateOf(0L) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_STOP -> {
+                    backgroundedAt = SystemClock.elapsedRealtime()
+                }
+                Lifecycle.Event.ON_START -> {
+                    val biometricEnabled = prefs.getBoolean("biometric_enabled", false)
+                    val autoLockMs = prefs.getLong("auto_lock_ms", 15 * 60 * 1000L)
+                    val elapsed = SystemClock.elapsedRealtime() - backgroundedAt
+                    if (biometricEnabled || (autoLockMs > 0L && elapsed > autoLockMs)) {
+                        isLocked = true
+                    }
+                }
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     val pagerState = rememberPagerState(initialPage = 0) { allScreens.size }
 
