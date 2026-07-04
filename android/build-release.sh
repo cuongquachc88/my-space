@@ -32,9 +32,10 @@ KEYSTORE_ABS="$(cd "$(dirname "$KEYSTORE_PATH")" && pwd)/$(basename "$KEYSTORE_P
 cleanup() { rm -f "$PROPS_FILE"; }
 trap cleanup EXIT
 
-# Create owner-only before writing secrets (prevents other users reading it during the build window)
-( umask 077 && : > "$PROPS_FILE" )
-cat > "$PROPS_FILE" <<EOF
+# Create owner-only (mode 600) before writing secrets — prevents other users
+# reading credentials during the build window. install -m 600 is atomic.
+install -m 600 /dev/null "$PROPS_FILE"
+cat >> "$PROPS_FILE" <<EOF
 storeFile=$KEYSTORE_ABS
 storePassword=$STORE_PASSWORD
 keyAlias=$KEY_ALIAS
