@@ -1,8 +1,5 @@
 package com.myspace.app.ui.screens
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,7 +16,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,6 +28,7 @@ import com.myspace.app.ui.components.PIN_ICON_IDS
 import com.myspace.app.ui.components.PinIconCanvas
 import com.myspace.app.ui.components.PinIconPicker
 import com.myspace.app.ui.theme.AccentMaps
+import com.myspace.app.ui.theme.AccentVault
 import com.myspace.app.ui.theme.BgCard
 import com.myspace.app.ui.theme.BgCardBorder
 import com.myspace.app.util.LZString
@@ -68,7 +67,7 @@ private fun StarRating(value: Int, onChange: ((Int) -> Unit)? = null) {
             Icon(
                 imageVector = if (filled) Icons.Default.Star else Icons.Default.StarBorder,
                 contentDescription = null,
-                tint = if (filled) Color(0xFFFBBF24) else Color(0x33FFFFFF),
+                tint = if (filled) AccentVault else Color.White.copy(alpha = 0.2f),
                 modifier = Modifier
                     .size(16.dp)
                     .then(if (onChange != null) Modifier.clickable { onChange(if (value == i) 0 else i) } else Modifier),
@@ -85,10 +84,7 @@ private fun buildShareUrl(stack: MapStackEntity, pins: List<MapPinEntity>): Stri
     }
     val payload = """{"name":${escapeJson(stack.name)},"color":${escapeJson(stack.color)},"pins":[$pinsJson]}"""
     val compressed = LZString.compressToEncodedURIComponent(payload)
-    val firstPin = pins.firstOrNull()
-    val lat = firstPin?.lat ?: 0.0
-    val lng = firstPin?.lng ?: 0.0
-    return "https://www.google.com/maps/search/?api=1&query=$lat,$lng#myspace-pins?d=$compressed"
+    return "https://myspace.app/map?d=$compressed"
 }
 
 private fun escapeJson(s: String): String = "\"${s.replace("\\", "\\\\").replace("\"", "\\\"")}\""
@@ -148,7 +144,7 @@ fun MapPinsScreen(db: AppDatabase) {
                         "No map stacks yet",
                         fontSize = 17.sp,
                         fontWeight = FontWeight.Medium,
-                        color = Color(0x66FFFFFF),
+                        color = Color.White.copy(alpha = 0.4f),
                     )
                     Spacer(Modifier.height(6.dp))
                     Text("Tap + to create a stack", fontSize = 13.sp, color = Color(0x44FFFFFF))
@@ -215,7 +211,7 @@ fun MapPinsScreen(db: AppDatabase) {
                         shape = RoundedCornerShape(12.dp),
                         colors = mapsFieldColors(),
                     )
-                    Text("Color", fontSize = 13.sp, color = Color(0x88FFFFFF))
+                    Text("Color", fontSize = 13.sp, color = Color.White.copy(alpha = 0.53f))
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         stackColorOptions.take(4).forEach { hex ->
                             MapColorDot(hex = hex, selected = newStackColor == hex, onClick = { newStackColor = hex })
@@ -227,7 +223,7 @@ fun MapPinsScreen(db: AppDatabase) {
                         }
                     }
                     Spacer(Modifier.height(4.dp))
-                    Text("Icon", fontSize = 13.sp, color = Color(0x88FFFFFF))
+                    Text("Icon", fontSize = 13.sp, color = Color.White.copy(alpha = 0.53f))
                     PinIconPicker(
                         selected = newStackIcon,
                         onSelect = { newStackIcon = it },
@@ -258,7 +254,7 @@ fun MapPinsScreen(db: AppDatabase) {
             },
             dismissButton = {
                 TextButton(onClick = { showAddStack = false }) {
-                    Text("Cancel", color = Color(0x88FFFFFF))
+                    Text("Cancel", color = Color.White.copy(alpha = 0.53f))
                 }
             },
         )
@@ -300,7 +296,7 @@ private fun MapStackCard(
                 Text(
                     "$pinCount pin${if (pinCount != 1) "s" else ""}",
                     fontSize = 12.sp,
-                    color = Color(0x88FFFFFF),
+                    color = Color.White.copy(alpha = 0.53f),
                 )
             }
             Icon(Icons.Default.ChevronRight, null, tint = Color(0x44FFFFFF), modifier = Modifier.size(20.dp))
@@ -322,7 +318,7 @@ private fun MapPinsStackView(
 ) {
     val scope = rememberCoroutineScope()
     val accent = parseStackColor(stack.color)
-    val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
 
     var pins by remember { mutableStateOf<List<MapPinEntity>>(emptyList()) }
 
@@ -377,12 +373,11 @@ private fun MapPinsStackView(
                     Text(
                         "${pins.size} pin${if (pins.size != 1) "s" else ""}",
                         fontSize = 12.sp,
-                        color = Color(0x66FFFFFF),
+                        color = Color.White.copy(alpha = 0.4f),
                     )
                     IconButton(onClick = {
                         val url = buildShareUrl(stack, pins)
-                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        clipboard.setPrimaryClip(ClipData.newPlainText("My SPACE share link", url))
+                        clipboardManager.setText(AnnotatedString(url))
                     }) {
                         Icon(Icons.Default.Share, "Share", tint = accent.copy(alpha = 0.8f), modifier = Modifier.size(20.dp))
                     }
@@ -403,7 +398,7 @@ private fun MapPinsStackView(
                                 modifier = Modifier.size(44.dp),
                             )
                             Spacer(Modifier.height(12.dp))
-                            Text("No pins yet", fontSize = 16.sp, color = Color(0x66FFFFFF))
+                            Text("No pins yet", fontSize = 16.sp, color = Color.White.copy(alpha = 0.4f))
                             Spacer(Modifier.height(4.dp))
                             Text("Tap + to add a pin", fontSize = 13.sp, color = Color(0x44FFFFFF))
                         }
@@ -523,7 +518,7 @@ private fun MapPinsStackView(
                     }
 
                     // Priority selector
-                    Text("Priority", fontSize = 13.sp, color = Color(0x88FFFFFF))
+                    Text("Priority", fontSize = 13.sp, color = Color.White.copy(alpha = 0.53f))
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         PIN_PRIORITIES.forEach { p ->
                             FilterChip(
@@ -545,7 +540,7 @@ private fun MapPinsStackView(
                     }
 
                     // Rating
-                    Text("Rating", fontSize = 13.sp, color = Color(0x88FFFFFF))
+                    Text("Rating", fontSize = 13.sp, color = Color.White.copy(alpha = 0.53f))
                     StarRating(value = newRating, onChange = { newRating = it })
                     OutlinedTextField(
                         value = newReviewNote,
@@ -589,7 +584,7 @@ private fun MapPinsStackView(
             },
             dismissButton = {
                 TextButton(onClick = { showAddPin = false }) {
-                    Text("Cancel", color = Color(0x88FFFFFF))
+                    Text("Cancel", color = Color.White.copy(alpha = 0.53f))
                 }
             },
         )
@@ -635,7 +630,7 @@ private fun PinRow(
             Text(
                 "${"%.5f".format(pin.lat)}, ${"%.5f".format(pin.lng)}",
                 fontSize = 11.sp,
-                color = Color(0x66FFFFFF),
+                color = Color.White.copy(alpha = 0.4f),
                 fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
             )
 
@@ -676,7 +671,7 @@ private fun PinRow(
                 Text(
                     "\"${pin.reviewNote}\"",
                     fontSize = 11.sp,
-                    color = Color(0x66FFFFFF),
+                    color = Color.White.copy(alpha = 0.4f),
                     fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
                     lineHeight = 15.sp,
                 )
@@ -722,5 +717,5 @@ private fun mapsFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedTextColor = Color.White,
     unfocusedTextColor = Color.White,
     focusedLabelColor = AccentMaps,
-    unfocusedLabelColor = Color(0x88FFFFFF),
+    unfocusedLabelColor = Color.White.copy(alpha = 0.53f),
 )
