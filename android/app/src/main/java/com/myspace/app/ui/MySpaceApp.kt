@@ -1,5 +1,7 @@
 package com.myspace.app.ui
 
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -26,8 +28,11 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
 import com.myspace.app.data.AppDatabase
 import com.myspace.app.ui.screens.*
 import com.myspace.app.ui.theme.*
@@ -177,6 +182,82 @@ private fun PagerIndicator(
     }
 }
 
+// ── Lock screen ────────────────────────────────────────────────────────────
+
+@Composable
+private fun LockScreen(onUnlock: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BgDeep),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(24.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Default.Lock,
+                contentDescription = "Locked",
+                tint = AccentVault,
+                modifier = Modifier.size(64.dp),
+            )
+            Text(
+                text = "My SPACE is locked",
+                color = Color.White,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = "Tap below to unlock",
+                color = Color.White.copy(alpha = 0.5f),
+                fontSize = 14.sp,
+                textAlign = TextAlign.Center,
+            )
+            Button(
+                onClick = onUnlock,
+                colors = ButtonDefaults.buttonColors(containerColor = AccentVault),
+            ) {
+                Icon(Icons.Default.LockOpen, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Unlock")
+            }
+        }
+    }
+}
+
+private fun showBiometricPrompt(
+    activity: FragmentActivity,
+    onSuccess: () -> Unit,
+    onFallback: () -> Unit,
+) {
+    val biometricManager = BiometricManager.from(activity)
+    if (biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_WEAK)
+        != BiometricManager.BIOMETRIC_SUCCESS
+    ) {
+        onFallback()
+        return
+    }
+    val executor = ContextCompat.getMainExecutor(activity)
+    val prompt = BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {
+        override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+            onSuccess()
+        }
+        override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+            // user cancelled or no hardware — fall back to tap-to-unlock
+            onFallback()
+        }
+        override fun onAuthenticationFailed() { /* retry handled by system UI */ }
+    })
+    prompt.authenticate(
+        BiometricPrompt.PromptInfo.Builder()
+            .setTitle("Unlock My SPACE")
+            .setSubtitle("Confirm your identity to continue")
+            .setNegativeButtonText("Cancel")
+            .build()
+    )
+}
+
 // ── App root ───────────────────────────────────────────────────────────────
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
@@ -185,6 +266,9 @@ fun MySpaceApp() {
     val context = LocalContext.current
     val db = remember { AppDatabase.get(context) }
     val scope = rememberCoroutineScope()
+    val prefs = remember { context.getSharedPreferences("myspace_settings", android.content.Context.MODE_PRIVATE) }
+
+    var isLocked by remember { mutableStateOf(false) }
 
     val pagerState = rememberPagerState(initialPage = 0) { allScreens.size }
 
@@ -296,11 +380,31 @@ fun MySpaceApp() {
                     Screen.Settings  -> SettingsScreen(
                         context = context,
                         onLockNow = {
+                            isLocked = true
                             scope.launch { pagerState.animateScrollToPage(0) }
                         },
                     )
                 }
             }
         }
+    }
+
+    // Lock overlay — rendered above the scaffold so no content is visible
+    if (isLocked) {
+        LockScreen(
+            onUnlock = {
+                val biometricEnabled = prefs.getBoolean("biometric_enabled", false)
+                val activity = context as? FragmentActivity
+                if (biometricEnabled && activity != null) {
+                    showBiometricPrompt(
+                        activity = activity,
+                        onSuccess = { isLocked = false },
+                        onFallback = { isLocked = false },
+                    )
+                } else {
+                    isLocked = false
+                }
+            },
+        )
     }
 }
