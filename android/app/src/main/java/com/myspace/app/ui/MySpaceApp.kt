@@ -16,6 +16,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.lifecycle.Lifecycle
@@ -147,40 +150,52 @@ private fun drawShield(scope: DrawScope) {
     }
 }
 
-// ── Pill/dot page indicator ────────────────────────────────────────────────
+// ── Icon tab bar ───────────────────────────────────────────────────────────
 
 @Composable
-private fun PagerIndicator(
-    pageCount: Int,
+private fun AppNavBar(
+    screens: List<Screen>,
     currentPage: Int,
-    accentColor: Color,
     onPageSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
+    NavigationBar(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
-        verticalAlignment = Alignment.CenterVertically,
+        containerColor = Color.Transparent,
+        tonalElevation = 0.dp,
     ) {
-        repeat(pageCount) { index ->
+        screens.forEach { screen ->
+            val index = screens.indexOf(screen)
             val selected = index == currentPage
-            val dotWidth by animateDpAsState(
-                targetValue = if (selected) 24.dp else 6.dp,
-                animationSpec = tween(250),
-                label = "dot_width_$index",
+            val iconColor by animateColorAsState(
+                targetValue = if (selected) screen.accent else Color(0x55FFFFFF),
+                animationSpec = tween(200),
+                label = "nav_color_$index",
             )
-            val dotColor by animateColorAsState(
-                targetValue = if (selected) accentColor else Color(0x33FFFFFF),
-                animationSpec = tween(250),
-                label = "dot_color_$index",
-            )
-            Box(
-                modifier = Modifier
-                    .height(6.dp)
-                    .width(dotWidth)
-                    .clip(RoundedCornerShape(3.dp))
-                    .background(dotColor)
-                    .clickable { onPageSelected(index) },
+            NavigationBarItem(
+                selected = selected,
+                onClick = { onPageSelected(index) },
+                icon = {
+                    Icon(
+                        imageVector = screen.icon,
+                        contentDescription = screen.label,
+                        tint = iconColor,
+                        modifier = Modifier.size(22.dp),
+                    )
+                },
+                label = {
+                    Text(
+                        text = screen.label,
+                        fontSize = 9.sp,
+                        color = iconColor,
+                        maxLines = 1,
+                    )
+                },
+                colors = NavigationBarItemDefaults.colors(
+                    indicatorColor = screen.accent.copy(alpha = 0.15f),
+                    selectedIconColor = screen.accent,
+                    unselectedIconColor = Color(0x55FFFFFF),
+                ),
             )
         }
     }
@@ -358,19 +373,14 @@ fun MySpaceApp() {
                             end = Offset(size.width, 0f),
                             strokeWidth = 1.dp.toPx(),
                         )
-                    }
-                    .navigationBarsPadding(),
+                    },
             ) {
-                PagerIndicator(
-                    pageCount = allScreens.size,
+                AppNavBar(
+                    screens = allScreens,
                     currentPage = pagerState.currentPage,
-                    accentColor = currentScreen.accent,
                     onPageSelected = { page ->
                         scope.launch { pagerState.animateScrollToPage(page) }
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 14.dp),
                 )
             }
         },
