@@ -6,7 +6,6 @@ import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import javax.crypto.AEADBadTagException
-import android.util.Base64
 
 @RunWith(AndroidJUnit4::class)
 class CryptoManagerTest {

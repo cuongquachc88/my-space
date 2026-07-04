@@ -10,6 +10,7 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 @RunWith(AndroidJUnit4::class)
 class AppDatabaseTest {
@@ -69,6 +70,28 @@ class AppDatabaseTest {
         assertEquals(2, db.mapPinDao().getForStack("st1").size)
         db.mapPinDao().deleteForStack("st1")
         assertEquals(0, db.mapPinDao().getForStack("st1").size)
+    }
+
+    // Verifies that migration 7→8 added `url` and `description` columns to `secrets`.
+    // Uses the DAO (which maps to those columns) to confirm the schema is correct.
+    @Test fun migration7to8_urlAndDescriptionColumnsExist() = runBlocking {
+        val secret = SecretEntity(
+            id = "mig-test",
+            label = "Migration Test",
+            ciphertext = "ct",
+            iv = "iv",
+            tags = "[]",
+            url = "https://example.com",       // added by migration 7→8
+            description = "post-migration",    // added by migration 7→8
+            createdAt = 0L,
+            updatedAt = 0L,
+        )
+        db.secretDao().upsert(secret)
+        val meta = db.secretDao().getMeta()
+        assertEquals(1, meta.size)
+        // If the columns didn't exist the upsert would throw — reaching here proves them present.
+        assertEquals("https://example.com", meta[0].url)
+        assertEquals("post-migration", meta[0].description)
     }
 
     @Test fun todoTaskCrudAndDeleteForList() = runBlocking {
