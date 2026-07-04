@@ -11,12 +11,13 @@ object LZString {
 
     fun compressToEncodedURIComponent(input: String): String {
         if (input.isEmpty()) return ""
-        return compress(input, 6) { a -> KEY_STR_URI_SAFE[a] }
+        val compressed = compress(input, 6) { a -> KEY_STR_URI_SAFE[a] }
+        return compressed.replace("+", "%2B").replace("$", "%24")
     }
 
     fun decompressFromEncodedURIComponent(compressed: String): String {
         if (compressed.isEmpty()) return ""
-        val fixed = compressed.replace(' ', '+')
+        val fixed = compressed.replace(' ', '+').replace("%2B", "+").replace("%24", "$")
         return decompress(fixed.length, 32) { index -> KEY_STR_URI_SAFE.indexOf(fixed[index]) }
     }
 
