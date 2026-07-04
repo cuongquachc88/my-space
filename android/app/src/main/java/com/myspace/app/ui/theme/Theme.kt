@@ -5,34 +5,39 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-// Surfaces — 4-level elevation ladder
-val BgDeep        = Color(0xFF08090A)   // near-black canvas (Linear)
-val BgSurface     = Color(0xFF0F1011)   // cards, nav bar (Raycast surface-card)
-val BgElevated    = Color(0xFF161718)   // elevated modals, inputs
-val BgOverlay     = Color(0xFF1E1F21)   // dropdowns, tooltips
-val BgCardBorder  = Color(0xFF242728)   // 1dp hairline borders
+// ── Futuristic Tech palette (dark teal base, lime accent) ─────────────────
 
-// Accents — dark-tuned, slightly desaturated from current
-val AccentNotes   = Color(0xFF7C7FEB)   // indigo (was 818CF8)
-val AccentVault   = Color(0xFFF5A623)   // amber (was FBBF24)
-val AccentGen     = Color(0xFFB39DDB)   // violet (was C4B5FD)
-val AccentSubs    = Color(0xFF4CAF82)   // emerald (was 34D399)
-val AccentReport  = Color(0xFFE879A0)   // pink (was F472B6)
-val AccentTodo    = Color(0xFF57C1FF)   // sky (was 38BDF8)
-val AccentMaps    = Color(0xFFFF8A50)   // orange (was FB923C)
-val AccentSync    = Color(0xFF64B5F6)   // blue (was 60A5FA)
+// Surfaces
+val BgDeep        = Color(0xFF111F1F)   // dark teal canvas
+val BgSurface     = Color(0xFF1A2E2E)   // card background
+val BgElevated    = Color(0xFF1F3535)   // elevated panels, inputs
+val BgOverlay     = Color(0xFF243C3C)   // dropdowns, nav bar
+val BgCardBorder  = Color(0xFF2D4A4A)   // hairline borders
+
+// Primary accent — lime/neon green (the hero color in the reference)
+val AccentLime    = Color(0xFFB4E645)   // lime neon — primary CTA, selected states
+
+// Per-screen accent colors (kept for feature identity, shifted warmer)
+val AccentNotes   = Color(0xFF818CF8)   // indigo
+val AccentVault   = Color(0xFFFBBF24)   // amber
+val AccentGen     = Color(0xFFC4B5FD)   // violet
+val AccentSubs    = Color(0xFF34D399)   // emerald
+val AccentReport  = Color(0xFFF472B6)   // pink
+val AccentTodo    = Color(0xFF38BDF8)   // sky
+val AccentMaps    = Color(0xFFFB923C)   // orange
+val AccentSync    = Color(0xFF60A5FA)   // blue
 
 // Text
-val TextPrimary   = Color(0xFFE5E5E5)   // avoid pure white eye strain
-val TextSecondary = Color(0xFF9C9C9D)   // muted labels
-val TextDisabled  = Color(0xFF6A6B6C)   // disabled
+val TextPrimary   = Color(0xFFFFFFFF)   // pure white — works on dark teal
+val TextSecondary = Color(0xFFABC4C4)   // muted teal-white
+val TextDisabled  = Color(0xFF5F8080)   // faded
 
-// Glass (kept for selective use only — not system-wide)
-val GlassBg     = Color(0x0DFFFFFF)   // 5% white
-val GlassBorder = Color(0x14FFFFFF)   // 8% white
+// Legacy aliases (used in screens)
+val GlassBg     = Color(0x14FFFFFF)
+val GlassBorder = Color(0x20FFFFFF)
 
 private val DarkColors = darkColorScheme(
-    primary          = AccentNotes,
+    primary          = AccentLime,
     secondary        = AccentSubs,
     tertiary         = AccentVault,
     background       = BgDeep,

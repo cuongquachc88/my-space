@@ -162,10 +162,10 @@ private fun AppNavBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 10.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .background(BgElevated)
-            .padding(horizontal = 4.dp, vertical = 6.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .clip(RoundedCornerShape(32.dp))
+            .background(BgOverlay)
+            .padding(horizontal = 6.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -173,22 +173,22 @@ private fun AppNavBar(
             val index = screens.indexOf(screen)
             val selected = index == currentPage
             val iconColor by animateColorAsState(
-                targetValue = if (selected) screen.accent else TextDisabled,
+                targetValue = if (selected) BgDeep else TextSecondary,
                 animationSpec = tween(200),
                 label = "nav_color_$index",
             )
             val bgColor by animateColorAsState(
-                targetValue = if (selected) screen.accent.copy(alpha = 0.18f) else Color.Transparent,
+                targetValue = if (selected) AccentLime else Color.Transparent,
                 animationSpec = tween(200),
                 label = "nav_bg_$index",
             )
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(14.dp))
+                    .clip(RoundedCornerShape(22.dp))
                     .background(bgColor)
                     .clickable { onPageSelected(index) }
-                    .padding(vertical = 8.dp),
+                    .padding(vertical = 9.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -320,7 +320,7 @@ fun MySpaceApp() {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(BgDeep)
+                    .background(BgSurface)
                     .statusBarsPadding(),
             ) {
                 Row(
@@ -344,18 +344,18 @@ fun MySpaceApp() {
                             color = TextPrimary,
                         )
                     }
-                    // Current screen name pill
+                    // Current screen name pill — lime accent
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(currentScreen.accent.copy(alpha = 0.15f))
-                            .padding(horizontal = 12.dp, vertical = 5.dp),
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(AccentLime)
+                            .padding(horizontal = 14.dp, vertical = 6.dp),
                     ) {
                         Text(
                             text = currentScreen.label,
                             fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = currentScreen.accent,
+                            fontWeight = FontWeight.Bold,
+                            color = BgDeep,
                         )
                     }
                 }
