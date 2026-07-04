@@ -32,6 +32,8 @@ KEYSTORE_ABS="$(cd "$(dirname "$KEYSTORE_PATH")" && pwd)/$(basename "$KEYSTORE_P
 cleanup() { rm -f "$PROPS_FILE"; }
 trap cleanup EXIT
 
+# Create owner-only before writing secrets (prevents other users reading it during the build window)
+( umask 077 && : > "$PROPS_FILE" )
 cat > "$PROPS_FILE" <<EOF
 storeFile=$KEYSTORE_ABS
 storePassword=$STORE_PASSWORD
