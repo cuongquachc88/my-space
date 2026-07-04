@@ -232,7 +232,7 @@ fun ReportsScreen(db: AppDatabase, onBack: (() -> Unit)? = null) {
             }
             items(inactiveSubs, key = { "inactive_${it.id}" }) { sub ->
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = BgCard.copy(alpha = 0.5f)),
+                    colors = CardDefaults.cardColors(containerColor = BgSurface.copy(alpha = 0.5f)),
                     shape  = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -295,7 +295,7 @@ private fun ReportBarChart(
     onSelectMonth: (YearMonth) -> Unit,
 ) {
     Card(
-        colors   = CardDefaults.cardColors(containerColor = BgCard),
+        colors   = CardDefaults.cardColors(containerColor = BgSurface),
         shape    = RoundedCornerShape(16.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -438,7 +438,7 @@ private fun SubReportCard(
     val hasBill  = bill != null
 
     Card(
-        colors   = CardDefaults.cardColors(containerColor = BgCard),
+        colors   = CardDefaults.cardColors(containerColor = BgSurface),
         shape    = RoundedCornerShape(14.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -666,8 +666,8 @@ private fun BillEditorSheet(
 private fun reportFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedBorderColor     = AccentReport.copy(alpha = 0.7f),
     unfocusedBorderColor   = BgCardBorder,
-    focusedContainerColor  = BgCard,
-    unfocusedContainerColor = BgCard,
+    focusedContainerColor  = BgSurface,
+    unfocusedContainerColor = BgSurface,
     focusedTextColor       = Color.White,
     unfocusedTextColor     = Color.White,
     focusedLabelColor      = AccentReport,

@@ -5,36 +5,45 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-val BgDeep        = Color(0xFF0A0E17)
-val BgCard        = Color(0xFF131929)  // glass base: dark navy with slight blue tint
-val BgCardBorder  = Color(0xFF1E2A3A)
-val GlassBg       = Color(0x1AFFFFFF)  // white 10% — glass panel
-val GlassBorder   = Color(0x26FFFFFF)  // white 15% — glass border
-val AccentNotes   = Color(0xFF818CF8)  // indigo-400 — slightly lighter for dark bg
-val AccentVault   = Color(0xFFFBBF24)  // amber-400
-val AccentSync    = Color(0xFF60A5FA)  // blue-400
-val AccentGen     = Color(0xFFC4B5FD)  // violet-300
-val AccentSubs    = Color(0xFF34D399)  // emerald-400
-val AccentReport  = Color(0xFFF472B6)  // pink-400
-val AccentTodo    = Color(0xFF38BDF8)  // sky-400
-val AccentMaps    = Color(0xFFFB923C)  // orange-400
-val TextPrimary   = Color(0xF0FFFFFF)
-val TextSecondary = Color(0xAAFFFFFF)
-val TextMuted     = Color(0x66FFFFFF)
+// Surfaces — 4-level elevation ladder
+val BgDeep        = Color(0xFF08090A)   // near-black canvas (Linear)
+val BgSurface     = Color(0xFF0F1011)   // cards, nav bar (Raycast surface-card)
+val BgElevated    = Color(0xFF161718)   // elevated modals, inputs
+val BgOverlay     = Color(0xFF1E1F21)   // dropdowns, tooltips
+val BgCardBorder  = Color(0xFF242728)   // 1dp hairline borders
+
+// Accents — dark-tuned, slightly desaturated from current
+val AccentNotes   = Color(0xFF7C7FEB)   // indigo (was 818CF8)
+val AccentVault   = Color(0xFFF5A623)   // amber (was FBBF24)
+val AccentGen     = Color(0xFFB39DDB)   // violet (was C4B5FD)
+val AccentSubs    = Color(0xFF4CAF82)   // emerald (was 34D399)
+val AccentReport  = Color(0xFFE879A0)   // pink (was F472B6)
+val AccentTodo    = Color(0xFF57C1FF)   // sky (was 38BDF8)
+val AccentMaps    = Color(0xFFFF8A50)   // orange (was FB923C)
+val AccentSync    = Color(0xFF64B5F6)   // blue (was 60A5FA)
+
+// Text
+val TextPrimary   = Color(0xFFE5E5E5)   // avoid pure white eye strain
+val TextSecondary = Color(0xFF9C9C9D)   // muted labels
+val TextDisabled  = Color(0xFF6A6B6C)   // disabled
+
+// Glass (kept for selective use only — not system-wide)
+val GlassBg     = Color(0x0DFFFFFF)   // 5% white
+val GlassBorder = Color(0x14FFFFFF)   // 8% white
 
 private val DarkColors = darkColorScheme(
     primary          = AccentNotes,
     secondary        = AccentSubs,
     tertiary         = AccentVault,
     background       = BgDeep,
-    surface          = BgCard,
-    surfaceVariant   = Color(0xFF1A2234),
+    surface          = BgSurface,
+    surfaceVariant   = BgElevated,
     onBackground     = TextPrimary,
     onSurface        = TextPrimary,
     onSurfaceVariant = TextSecondary,
-    outline          = GlassBorder,
-    outlineVariant   = BgCardBorder,
-    error            = Color(0xFFFC8181),
+    outline          = BgCardBorder,
+    outlineVariant   = BgOverlay,
+    error            = Color(0xFFFF6161),
     onError          = Color(0xFF1A0A0A),
 )
 

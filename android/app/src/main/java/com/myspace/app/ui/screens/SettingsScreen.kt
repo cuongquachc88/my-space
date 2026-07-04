@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.sp
 import com.myspace.app.BuildConfig
 import com.myspace.app.ui.theme.AccentSync
 import com.myspace.app.ui.theme.AccentVault
-import com.myspace.app.ui.theme.BgCard
+import com.myspace.app.ui.theme.BgSurface
 import com.myspace.app.ui.theme.BgCardBorder
 
 private const val PREFS_NAME = "myspace_settings"
@@ -57,7 +57,7 @@ fun SettingsScreen(context: Context, onLockNow: () -> Unit) {
     ) {
         // ── Security ─────────────────────────────────────────────────────────
         Card(
-            colors = CardDefaults.cardColors(containerColor = BgCard),
+            colors = CardDefaults.cardColors(containerColor = BgSurface),
             shape = RoundedCornerShape(14.dp),
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -100,7 +100,7 @@ fun SettingsScreen(context: Context, onLockNow: () -> Unit) {
 
         // ── Auto-lock ─────────────────────────────────────────────────────────
         Card(
-            colors = CardDefaults.cardColors(containerColor = BgCard),
+            colors = CardDefaults.cardColors(containerColor = BgSurface),
             shape = RoundedCornerShape(14.dp),
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -138,7 +138,7 @@ fun SettingsScreen(context: Context, onLockNow: () -> Unit) {
 
         // ── Lock Now ─────────────────────────────────────────────────────────
         Card(
-            colors = CardDefaults.cardColors(containerColor = BgCard),
+            colors = CardDefaults.cardColors(containerColor = BgSurface),
             shape = RoundedCornerShape(14.dp),
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -169,7 +169,7 @@ fun SettingsScreen(context: Context, onLockNow: () -> Unit) {
 
         // ── About ─────────────────────────────────────────────────────────────
         Card(
-            colors = CardDefaults.cardColors(containerColor = BgCard),
+            colors = CardDefaults.cardColors(containerColor = BgSurface),
             shape = RoundedCornerShape(14.dp),
             modifier = Modifier.fillMaxWidth(),
         ) {

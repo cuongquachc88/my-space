@@ -94,13 +94,13 @@ fun SpaceLogo(modifier: Modifier = Modifier) {
                 fontWeight = FontWeight.Bold,
                 fontSize = 19.sp,
                 letterSpacing = (-0.5).sp,
-                color = Color.White,
+                color = TextPrimary,
                 lineHeight = 22.sp,
             )
             Text(
                 text = "Private vault",
                 fontSize = 12.sp,
-                color = Color(0x77FFFFFF),
+                color = TextSecondary,
                 letterSpacing = 0.2.sp,
                 lineHeight = 14.sp,
             )
@@ -150,7 +150,7 @@ private fun drawShield(scope: DrawScope) {
     }
 }
 
-// ── Icon tab bar ───────────────────────────────────────────────────────────
+// ── Floating pill nav bar ──────────────────────────────────────────────────
 
 @Composable
 private fun AppNavBar(
@@ -159,44 +159,45 @@ private fun AppNavBar(
     onPageSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    NavigationBar(
-        modifier = modifier,
-        containerColor = Color.Transparent,
-        tonalElevation = 0.dp,
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 10.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(BgElevated)
+            .padding(horizontal = 4.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         screens.forEach { screen ->
             val index = screens.indexOf(screen)
             val selected = index == currentPage
             val iconColor by animateColorAsState(
-                targetValue = if (selected) screen.accent else Color(0x55FFFFFF),
+                targetValue = if (selected) screen.accent else TextDisabled,
                 animationSpec = tween(200),
                 label = "nav_color_$index",
             )
-            NavigationBarItem(
-                selected = selected,
-                onClick = { onPageSelected(index) },
-                icon = {
-                    Icon(
-                        imageVector = screen.icon,
-                        contentDescription = screen.label,
-                        tint = iconColor,
-                        modifier = Modifier.size(22.dp),
-                    )
-                },
-                label = {
-                    Text(
-                        text = screen.label,
-                        fontSize = 9.sp,
-                        color = iconColor,
-                        maxLines = 1,
-                    )
-                },
-                colors = NavigationBarItemDefaults.colors(
-                    indicatorColor = screen.accent.copy(alpha = 0.15f),
-                    selectedIconColor = screen.accent,
-                    unselectedIconColor = Color(0x55FFFFFF),
-                ),
+            val bgColor by animateColorAsState(
+                targetValue = if (selected) screen.accent.copy(alpha = 0.18f) else Color.Transparent,
+                animationSpec = tween(200),
+                label = "nav_bg_$index",
             )
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(bgColor)
+                    .clickable { onPageSelected(index) }
+                    .padding(vertical = 8.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = screen.icon,
+                    contentDescription = screen.label,
+                    tint = iconColor,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
         }
     }
 }
@@ -208,7 +209,7 @@ private fun LockScreen(onUnlock: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(BgDeep),
+            .background(BgSurface),
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -297,8 +298,8 @@ fun MySpaceApp() {
                 Lifecycle.Event.ON_START -> {
                     val biometricEnabled = prefs.getBoolean("biometric_enabled", false)
                     val autoLockMs = prefs.getLong("auto_lock_ms", 15 * 60 * 1000L)
-                    val elapsed = SystemClock.elapsedRealtime() - backgroundedAt
-                    if (biometricEnabled || (autoLockMs > 0L && elapsed > autoLockMs)) {
+                    val elapsed = if (backgroundedAt > 0L) SystemClock.elapsedRealtime() - backgroundedAt else 0L
+                    if (biometricEnabled || (backgroundedAt > 0L && autoLockMs > 0L && elapsed > autoLockMs)) {
                         isLocked = true
                     }
                 }
@@ -313,62 +314,68 @@ fun MySpaceApp() {
 
     val currentScreen = allScreens[pagerState.currentPage]
 
-    val glowColor by animateColorAsState(
-        targetValue = currentScreen.accent.copy(alpha = 0.10f),
-        animationSpec = tween(400),
-        label = "glow",
-    )
-
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            Box(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xCC0A0E17))
-                    .drawBehind {
-                        drawLine(
-                            color = Color(0x20FFFFFF),
-                            start = Offset(0f, size.height),
-                            end = Offset(size.width, size.height),
-                            strokeWidth = 1.dp.toPx(),
-                        )
-                    },
+                    .background(BgDeep)
+                    .statusBarsPadding(),
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                        .padding(horizontal = 20.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    SpaceLogo()
+                    // Compact logo — just shield icon + "My SPACE"
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Box(modifier = Modifier.size(28.dp).drawBehind { drawShield(this) })
+                        Text(
+                            text = "My SPACE",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 16.sp,
+                            letterSpacing = (-0.3).sp,
+                            color = TextPrimary,
+                        )
+                    }
+                    // Current screen name pill
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
+                            .clip(RoundedCornerShape(8.dp))
                             .background(currentScreen.accent.copy(alpha = 0.15f))
                             .padding(horizontal = 12.dp, vertical = 5.dp),
                     ) {
                         Text(
                             text = currentScreen.label,
-                            fontSize = 13.sp,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = currentScreen.accent,
-                            letterSpacing = 0.2.sp,
                         )
                     }
                 }
+                // Bottom divider
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(BgCardBorder),
+                )
             }
         },
         bottomBar = {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xCC0A0E17))
+                    .background(BgSurface)
                     .drawBehind {
                         drawLine(
-                            color = Color(0x20FFFFFF),
+                            color = BgCardBorder,
                             start = Offset(0f, 0f),
                             end = Offset(size.width, 0f),
                             strokeWidth = 1.dp.toPx(),
@@ -392,8 +399,11 @@ fun MySpaceApp() {
                 .drawBehind {
                     drawRect(
                         brush = Brush.verticalGradient(
-                            colors = listOf(glowColor, Color.Transparent),
-                            endY = size.height * 0.30f,
+                            colors = listOf(
+                                currentScreen.accent.copy(alpha = 0.06f),
+                                Color.Transparent,
+                            ),
+                            endY = size.height * 0.25f,
                         ),
                     )
                 },

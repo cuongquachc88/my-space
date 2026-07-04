@@ -35,7 +35,7 @@ import com.myspace.app.data.AppDatabase
 import com.myspace.app.data.SubscriptionEntity
 import com.myspace.app.ui.theme.AccentReport
 import com.myspace.app.ui.theme.AccentSubs
-import com.myspace.app.ui.theme.BgCard
+import com.myspace.app.ui.theme.BgSurface
 import com.myspace.app.ui.theme.BgCardBorder
 import com.myspace.app.util.FROM_USD
 import com.myspace.app.util.monthlyEquivalentUSD
@@ -223,7 +223,7 @@ private fun SubCard(
 
     Card(
         onClick = onClick,
-        colors  = CardDefaults.cardColors(containerColor = if (sub.active) BgCard else BgCard.copy(alpha = 0.5f)),
+        colors  = CardDefaults.cardColors(containerColor = if (sub.active) BgSurface else BgSurface.copy(alpha = 0.5f)),
         shape   = RoundedCornerShape(14.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -385,7 +385,7 @@ private fun SubEditorSheet(
                     modifier = Modifier
                         .size(64.dp)
                         .clip(RoundedCornerShape(14.dp))
-                        .background(BgCard)
+                        .background(BgSurface)
                         .border(1.dp, if (logoUri.isNotBlank()) AccentSubs.copy(0.5f) else BgCardBorder, RoundedCornerShape(14.dp))
                         .clickable { imagePicker.launch("image/*") },
                     contentAlignment = Alignment.Center,
@@ -529,8 +529,8 @@ private fun SubEditorSheet(
 private fun subsFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedBorderColor    = AccentSubs.copy(alpha = 0.7f),
     unfocusedBorderColor  = BgCardBorder,
-    focusedContainerColor = BgCard,
-    unfocusedContainerColor = BgCard,
+    focusedContainerColor = BgSurface,
+    unfocusedContainerColor = BgSurface,
     focusedTextColor      = Color.White,
     unfocusedTextColor    = Color.White,
     focusedLabelColor     = AccentSubs,

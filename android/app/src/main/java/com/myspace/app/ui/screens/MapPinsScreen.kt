@@ -29,7 +29,7 @@ import com.myspace.app.ui.components.PinIconCanvas
 import com.myspace.app.ui.components.PinIconPicker
 import com.myspace.app.ui.theme.AccentMaps
 import com.myspace.app.ui.theme.AccentVault
-import com.myspace.app.ui.theme.BgCard
+import com.myspace.app.ui.theme.BgSurface
 import com.myspace.app.ui.theme.BgCardBorder
 import com.myspace.app.util.LZString
 import kotlinx.coroutines.launch
@@ -273,7 +273,7 @@ private fun MapStackCard(
     val accent = parseStackColor(stack.color)
     Card(
         onClick = onClick,
-        colors = CardDefaults.cardColors(containerColor = BgCard),
+        colors = CardDefaults.cardColors(containerColor = BgSurface),
         shape = RoundedCornerShape(14.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -600,7 +600,7 @@ private fun PinRow(
     onDelete: () -> Unit,
 ) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = BgCard),
+        colors = CardDefaults.cardColors(containerColor = BgSurface),
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -712,8 +712,8 @@ private fun MapColorDot(hex: String, selected: Boolean, onClick: () -> Unit) {
 private fun mapsFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedBorderColor = AccentMaps.copy(alpha = 0.7f),
     unfocusedBorderColor = BgCardBorder,
-    focusedContainerColor = BgCard,
-    unfocusedContainerColor = BgCard,
+    focusedContainerColor = BgSurface,
+    unfocusedContainerColor = BgSurface,
     focusedTextColor = Color.White,
     unfocusedTextColor = Color.White,
     focusedLabelColor = AccentMaps,

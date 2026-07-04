@@ -23,7 +23,7 @@ import com.myspace.app.data.AppDatabase
 import com.myspace.app.data.TodoListEntity
 import com.myspace.app.data.TodoTaskEntity
 import com.myspace.app.ui.theme.AccentTodo
-import com.myspace.app.ui.theme.BgCard
+import com.myspace.app.ui.theme.BgSurface
 import com.myspace.app.ui.theme.BgCardBorder
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -232,7 +232,7 @@ private fun TodoListCard(
     val accent = parseHexColor(list.color)
     Card(
         onClick = onClick,
-        colors = CardDefaults.cardColors(containerColor = BgCard),
+        colors = CardDefaults.cardColors(containerColor = BgSurface),
         shape = RoundedCornerShape(14.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -586,7 +586,7 @@ private fun TaskRow(
 ) {
     val dimAlpha = if (task.done) 0.4f else 1f
     Card(
-        colors = CardDefaults.cardColors(containerColor = BgCard.copy(alpha = if (task.done) 0.5f else 1f)),
+        colors = CardDefaults.cardColors(containerColor = BgSurface.copy(alpha = if (task.done) 0.5f else 1f)),
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -693,8 +693,8 @@ private fun ColorDot(hex: String, selected: Boolean, onClick: () -> Unit) {
 private fun todoFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedBorderColor = AccentTodo.copy(alpha = 0.7f),
     unfocusedBorderColor = BgCardBorder,
-    focusedContainerColor = BgCard,
-    unfocusedContainerColor = BgCard,
+    focusedContainerColor = BgSurface,
+    unfocusedContainerColor = BgSurface,
     focusedTextColor = Color.White,
     unfocusedTextColor = Color.White,
     focusedLabelColor = AccentTodo,

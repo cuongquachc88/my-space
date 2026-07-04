@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.sp
 import com.myspace.app.data.AppDatabase
 import com.myspace.app.sync.DriveRepository
 import com.myspace.app.ui.theme.AccentSync
-import com.myspace.app.ui.theme.BgCard
+import com.myspace.app.ui.theme.BgSurface
 import com.myspace.app.ui.theme.BgCardBorder
 import kotlinx.coroutines.launch
 
@@ -62,7 +62,7 @@ fun SyncScreen(db: AppDatabase, context: Context) {
     ) {
         // Status card
         Card(
-            colors = CardDefaults.cardColors(containerColor = BgCard),
+            colors = CardDefaults.cardColors(containerColor = BgSurface),
             shape  = RoundedCornerShape(14.dp),
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -166,7 +166,7 @@ fun SyncScreen(db: AppDatabase, context: Context) {
         // Log console
         if (logs.isNotEmpty()) {
             Card(
-                colors = CardDefaults.cardColors(containerColor = BgCard),
+                colors = CardDefaults.cardColors(containerColor = BgSurface),
                 shape  = RoundedCornerShape(14.dp),
                 modifier = Modifier.fillMaxWidth(),
             ) {

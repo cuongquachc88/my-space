@@ -28,7 +28,7 @@ import coil.request.ImageRequest
 import com.myspace.app.data.AppDatabase
 import com.myspace.app.data.NoteEntity
 import com.myspace.app.ui.theme.AccentNotes
-import com.myspace.app.ui.theme.BgCard
+import com.myspace.app.ui.theme.BgSurface
 import com.myspace.app.ui.theme.BgCardBorder
 import kotlinx.coroutines.launch
 import org.json.JSONArray
@@ -74,8 +74,8 @@ fun NotesScreen(db: AppDatabase) {
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = AccentNotes.copy(alpha = 0.6f),
                     unfocusedBorderColor = BgCardBorder,
-                    focusedContainerColor = BgCard,
-                    unfocusedContainerColor = BgCard,
+                    focusedContainerColor = BgSurface,
+                    unfocusedContainerColor = BgSurface,
                     focusedTextColor = Color.White,
                     unfocusedTextColor = Color.White,
                 ),
@@ -104,7 +104,7 @@ fun NotesScreen(db: AppDatabase) {
                                 editorImages  = jsonToUris(note.imageUris)
                                 showEditor = true
                             },
-                            colors = CardDefaults.cardColors(containerColor = BgCard),
+                            colors = CardDefaults.cardColors(containerColor = BgSurface),
                             shape = RoundedCornerShape(14.dp),
                             modifier = Modifier.fillMaxWidth(),
                         ) {

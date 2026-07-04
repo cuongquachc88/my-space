@@ -22,7 +22,7 @@ import com.myspace.app.data.AppDatabase
 import com.myspace.app.data.SecretEntity
 import com.myspace.app.data.SecretMeta
 import com.myspace.app.ui.theme.AccentVault
-import com.myspace.app.ui.theme.BgCard
+import com.myspace.app.ui.theme.BgSurface
 import com.myspace.app.ui.theme.BgCardBorder
 import com.myspace.app.util.TagUtils
 import kotlinx.coroutines.launch
@@ -134,8 +134,8 @@ fun VaultScreen(db: AppDatabase) {
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = AccentVault.copy(alpha = 0.5f),
                     unfocusedBorderColor = BgCardBorder,
-                    focusedContainerColor = BgCard,
-                    unfocusedContainerColor = BgCard,
+                    focusedContainerColor = BgSurface,
+                    unfocusedContainerColor = BgSurface,
                     focusedTextColor = Color.White,
                     unfocusedTextColor = Color.White,
                 ),
@@ -190,7 +190,7 @@ fun VaultScreen(db: AppDatabase) {
                     items(secrets, key = { it.id }) { meta ->
                         val value = revealed[meta.id]
                         Card(
-                            colors = CardDefaults.cardColors(containerColor = BgCard),
+                            colors = CardDefaults.cardColors(containerColor = BgSurface),
                             shape = RoundedCornerShape(14.dp),
                         ) {
                             Column(
@@ -357,8 +357,8 @@ fun VaultScreen(db: AppDatabase) {
 private fun vaultFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedBorderColor = AccentVault.copy(alpha = 0.7f),
     unfocusedBorderColor = BgCardBorder,
-    focusedContainerColor = BgCard,
-    unfocusedContainerColor = BgCard,
+    focusedContainerColor = BgSurface,
+    unfocusedContainerColor = BgSurface,
     focusedTextColor = Color.White,
     unfocusedTextColor = Color.White,
     focusedLabelColor = AccentVault,

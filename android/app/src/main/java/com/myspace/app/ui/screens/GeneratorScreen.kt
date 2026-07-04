@@ -19,7 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.myspace.app.ui.theme.AccentGen
-import com.myspace.app.ui.theme.BgCard
+import com.myspace.app.ui.theme.BgSurface
 import com.myspace.app.ui.theme.BgCardBorder
 
 private val LOWER   = "abcdefghijklmnopqrstuvwxyz"
@@ -56,7 +56,7 @@ fun GeneratorScreen() {
     ) {
         // Password display card
         Card(
-            colors = CardDefaults.cardColors(containerColor = BgCard),
+            colors = CardDefaults.cardColors(containerColor = BgSurface),
             shape  = RoundedCornerShape(14.dp),
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -100,7 +100,7 @@ fun GeneratorScreen() {
 
         // Length slider
         Card(
-            colors = CardDefaults.cardColors(containerColor = BgCard),
+            colors = CardDefaults.cardColors(containerColor = BgSurface),
             shape  = RoundedCornerShape(14.dp),
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -131,7 +131,7 @@ fun GeneratorScreen() {
 
         // Options card
         Card(
-            colors = CardDefaults.cardColors(containerColor = BgCard),
+            colors = CardDefaults.cardColors(containerColor = BgSurface),
             shape  = RoundedCornerShape(14.dp),
             modifier = Modifier.fillMaxWidth(),
         ) {
