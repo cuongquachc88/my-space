@@ -33,10 +33,16 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.myspace.app.data.AppDatabase
 import com.myspace.app.data.SubscriptionEntity
+import androidx.compose.foundation.BorderStroke
+import com.myspace.app.ui.theme.AccentLime
 import com.myspace.app.ui.theme.AccentReport
 import com.myspace.app.ui.theme.AccentSubs
+import com.myspace.app.ui.theme.BgDeep
 import com.myspace.app.ui.theme.BgSurface
 import com.myspace.app.ui.theme.BgCardBorder
+import com.myspace.app.ui.theme.TextPrimary
+import com.myspace.app.ui.theme.TextSecondary
+import com.myspace.app.ui.theme.TextDisabled
 import com.myspace.app.util.FROM_USD
 import com.myspace.app.util.monthlyEquivalentUSD
 import kotlinx.coroutines.launch
@@ -81,8 +87,25 @@ fun SubscriptionsScreen(db: AppDatabase) {
             contentPadding = PaddingValues(bottom = 88.dp),
         ) {
             item {
-                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column {
+                        Text("Subscriptions", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TextPrimary, letterSpacing = (-0.5).sp)
+                        Text("${activeSubs.size} active", fontSize = 13.sp, color = TextSecondary)
+                    }
+                    Box(
+                        modifier = Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(AccentSubs.copy(0.15f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(Icons.Default.CreditCard, null, tint = AccentSubs, modifier = Modifier.size(24.dp))
+                    }
+                }
+            }
 
+            item {
                 // ── Monthly total card ──────────────────────────────────────
                 Card(
                     colors = CardDefaults.cardColors(containerColor = AccentSubs.copy(alpha = 0.08f)),
@@ -97,8 +120,8 @@ fun SubscriptionsScreen(db: AppDatabase) {
                             Text("Recurring / month", fontSize = 12.sp, color = AccentSubs.copy(alpha = 0.7f))
                             Text(
                                 "~${"%.2f".format(totalDisplay)} $displayCurrency",
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.Bold,
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.Black,
                                 color = AccentSubs,
                             )
                         }
@@ -224,72 +247,83 @@ private fun SubCard(
     Card(
         onClick = onClick,
         colors  = CardDefaults.cardColors(containerColor = if (sub.active) BgSurface else BgSurface.copy(alpha = 0.5f)),
-        shape   = RoundedCornerShape(14.dp),
+        shape   = RoundedCornerShape(16.dp),
+        border  = BorderStroke(1.dp, BgCardBorder),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Row(
-            Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (sub.logoUri.isNotBlank()) {
-                AsyncImage(
-                    model = ImageRequest.Builder(context).data(Uri.parse(sub.logoUri)).crossfade(true).build(),
-                    contentDescription = sub.name,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)),
-                )
-            } else {
-                Box(
-                    Modifier
-                        .size(44.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(AccentSubs.copy(alpha = 0.15f * dimAlpha)),
-                    contentAlignment = Alignment.Center,
-                ) {
+        Row(Modifier.fillMaxWidth()) {
+            // Left accent bar
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp))
+                    .background(if (sub.active) AccentSubs else AccentSubs.copy(alpha = 0.3f)),
+            )
+            Row(
+                Modifier.weight(1f).padding(horizontal = 14.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (sub.logoUri.isNotBlank()) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(context).data(Uri.parse(sub.logoUri)).crossfade(true).build(),
+                        contentDescription = sub.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)),
+                    )
+                } else {
+                    Box(
+                        Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(AccentSubs.copy(alpha = 0.15f * dimAlpha)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            sub.name.take(1).uppercase(),
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = AccentSubs.copy(alpha = dimAlpha),
+                        )
+                    }
+                }
+
+                Spacer(Modifier.width(12.dp))
+
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(sub.name, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color.White.copy(alpha = dimAlpha))
                     Text(
-                        sub.name.take(1).uppercase(),
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = AccentSubs.copy(alpha = dimAlpha),
+                        "${sub.amount} ${sub.currency} / ${sub.cycle}",
+                        fontSize = 12.sp,
+                        color = Color(0x88FFFFFF).copy(alpha = dimAlpha),
                     )
                 }
-            }
 
-            Spacer(Modifier.width(12.dp))
-
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(sub.name, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color.White.copy(alpha = dimAlpha))
-                Text(
-                    "${sub.amount} ${sub.currency} / ${sub.cycle}",
-                    fontSize = 12.sp,
-                    color = Color(0x88FFFFFF).copy(alpha = dimAlpha),
-                )
-            }
-
-            if (sub.active) {
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        "~${"%.2f".format(monthly)}",
-                        fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = AccentSubs,
-                    )
-                    Text("$displayCurrency/mo", fontSize = 11.sp, color = AccentSubs.copy(alpha = 0.5f))
+                if (sub.active) {
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            "~${"%.2f".format(monthly)}",
+                            fontSize = 18.sp, fontWeight = FontWeight.Bold, color = AccentSubs,
+                        )
+                        Text("$displayCurrency/mo", fontSize = 11.sp, color = AccentSubs.copy(alpha = 0.5f))
+                    }
+                } else {
+                    Text("Inactive", fontSize = 11.sp, color = Color(0x44FFFFFF))
                 }
-            } else {
-                Text("Inactive", fontSize = 11.sp, color = Color(0x44FFFFFF))
-            }
 
-            // Active toggle
-            IconButton(onClick = onToggleActive, modifier = Modifier.size(32.dp)) {
-                Icon(
-                    if (sub.active) Icons.Default.PauseCircle else Icons.Default.PlayCircle,
-                    "Toggle active",
-                    tint = if (sub.active) AccentSubs.copy(0.5f) else Color(0x55FFFFFF),
-                    modifier = Modifier.size(18.dp),
-                )
-            }
+                // Active toggle
+                IconButton(onClick = onToggleActive, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        if (sub.active) Icons.Default.PauseCircle else Icons.Default.PlayCircle,
+                        "Toggle active",
+                        tint = if (sub.active) AccentSubs.copy(0.5f) else Color(0x55FFFFFF),
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
 
-            IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Delete, "Delete", tint = Color(0x44FFFFFF), modifier = Modifier.size(16.dp))
+                IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.Default.Delete, "Delete", tint = Color(0x44FFFFFF), modifier = Modifier.size(16.dp))
+                }
             }
         }
     }

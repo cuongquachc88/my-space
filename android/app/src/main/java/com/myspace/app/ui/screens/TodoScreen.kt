@@ -26,9 +26,12 @@ import androidx.compose.foundation.BorderStroke
 import com.myspace.app.ui.theme.AccentLime
 import com.myspace.app.ui.theme.AccentTodo
 import com.myspace.app.ui.theme.BgDeep
+import com.myspace.app.ui.theme.BgElevated
 import com.myspace.app.ui.theme.BgSurface
 import com.myspace.app.ui.theme.BgCardBorder
+import com.myspace.app.ui.theme.TextPrimary
 import com.myspace.app.ui.theme.TextSecondary
+import com.myspace.app.ui.theme.TextDisabled
 import kotlinx.coroutines.launch
 import java.util.UUID
 
@@ -124,6 +127,24 @@ fun TodoScreen(db: AppDatabase) {
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 contentPadding = PaddingValues(top = 8.dp, bottom = 88.dp),
             ) {
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Column {
+                            Text("To-Do", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TextPrimary, letterSpacing = (-0.5).sp)
+                            Text("${lists.size} lists", fontSize = 13.sp, color = TextSecondary)
+                        }
+                        Box(
+                            modifier = Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(AccentTodo.copy(0.15f)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(Icons.Default.CheckBox, null, tint = AccentTodo, modifier = Modifier.size(24.dp))
+                        }
+                    }
+                }
                 items(lists, key = { it.id }) { list ->
                     val pending = taskCounts[list.id] ?: 0
                     TodoListCard(
@@ -153,7 +174,11 @@ fun TodoScreen(db: AppDatabase) {
             containerColor = AccentLime,
             shape = RoundedCornerShape(20.dp),
         ) {
-            Icon(Icons.Default.Add, "New list", tint = BgDeep, modifier = Modifier.size(24.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 6.dp)) {
+                Icon(Icons.Default.Add, null, tint = BgDeep, modifier = Modifier.size(22.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("New list", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = BgDeep)
+            }
         }
     }
 
@@ -233,7 +258,7 @@ private fun TodoListCard(
     onClick: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    val accent = parseHexColor(list.color)
+    val listColor = parseHexColor(list.color)
     Card(
         onClick = onClick,
         colors = CardDefaults.cardColors(containerColor = BgSurface),
@@ -241,44 +266,33 @@ private fun TodoListCard(
         border = BorderStroke(1.dp, BgCardBorder),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Row(
-            Modifier.padding(horizontal = 0.dp, vertical = 0.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // Left accent bar
+        Column {
+            // Colored top bar
             Box(
                 modifier = Modifier
-                    .width(4.dp)
-                    .height(64.dp)
-                    .background(accent),
+                    .fillMaxWidth()
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                    .background(listColor),
             )
             Row(
-                Modifier
-                    .weight(1f)
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-            Box(
-                modifier = Modifier
-                    .size(14.dp)
-                    .clip(CircleShape)
-                    .background(accent),
-            )
-            Spacer(Modifier.width(14.dp))
-            Column(Modifier.weight(1f)) {
-                Text(list.name, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
-                Text(
-                    if (pendingCount == 0) "All done" else "$pendingCount pending",
-                    fontSize = 12.sp,
-                    color = if (pendingCount == 0) Color(0xFF34D399).copy(alpha = 0.7f) else Color(0x88FFFFFF),
-                )
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(list.name, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = TextPrimary, letterSpacing = (-0.3).sp)
+                    Text(
+                        "$pendingCount pending tasks",
+                        fontSize = 13.sp,
+                        color = TextSecondary,
+                    )
+                }
+                IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.Default.Delete, "Delete", tint = TextDisabled, modifier = Modifier.size(16.dp))
+                }
+                Icon(Icons.Default.ChevronRight, null, tint = TextDisabled, modifier = Modifier.size(20.dp))
             }
-            Icon(Icons.Default.ChevronRight, null, tint = Color(0x44FFFFFF), modifier = Modifier.size(20.dp))
-            IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Delete, "Delete", tint = Color(0x44FFFFFF), modifier = Modifier.size(16.dp))
-            }
-            } // end inner Row
-        } // end outer Row
+        }
     }
 }
 
@@ -450,7 +464,11 @@ private fun TodoTasksView(
             containerColor = AccentLime,
             shape = RoundedCornerShape(20.dp),
         ) {
-            Icon(Icons.Default.Add, "New task", tint = BgDeep, modifier = Modifier.size(24.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 6.dp)) {
+                Icon(Icons.Default.Add, null, tint = BgDeep, modifier = Modifier.size(22.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("New task", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = BgDeep)
+            }
         }
     }
 
