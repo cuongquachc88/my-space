@@ -22,9 +22,13 @@ import androidx.compose.ui.unit.sp
 import com.myspace.app.data.AppDatabase
 import com.myspace.app.data.TodoListEntity
 import com.myspace.app.data.TodoTaskEntity
+import androidx.compose.foundation.BorderStroke
+import com.myspace.app.ui.theme.AccentLime
 import com.myspace.app.ui.theme.AccentTodo
+import com.myspace.app.ui.theme.BgDeep
 import com.myspace.app.ui.theme.BgSurface
 import com.myspace.app.ui.theme.BgCardBorder
+import com.myspace.app.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
 import java.util.UUID
 
@@ -99,17 +103,17 @@ fun TodoScreen(db: AppDatabase) {
                         Icons.Default.CheckBox,
                         null,
                         tint = AccentTodo.copy(alpha = 0.25f),
-                        modifier = Modifier.size(48.dp),
+                        modifier = Modifier.size(56.dp),
                     )
                     Spacer(Modifier.height(12.dp))
                     Text(
                         "No to-do lists yet",
                         fontSize = 17.sp,
                         fontWeight = FontWeight.Medium,
-                        color = Color(0x66FFFFFF),
+                        color = TextSecondary,
                     )
                     Spacer(Modifier.height(6.dp))
-                    Text("Tap + to create a list", fontSize = 13.sp, color = Color(0x44FFFFFF))
+                    Text("Tap + to create a list", fontSize = 13.sp, color = TextSecondary.copy(alpha = 0.6f))
                 }
             }
         } else {
@@ -146,10 +150,10 @@ fun TodoScreen(db: AppDatabase) {
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(20.dp),
-            containerColor = AccentTodo,
-            shape = RoundedCornerShape(16.dp),
+            containerColor = AccentLime,
+            shape = RoundedCornerShape(20.dp),
         ) {
-            Icon(Icons.Default.Add, "New list", tint = Color.White, modifier = Modifier.size(24.dp))
+            Icon(Icons.Default.Add, "New list", tint = BgDeep, modifier = Modifier.size(24.dp))
         }
     }
 
@@ -233,13 +237,27 @@ private fun TodoListCard(
     Card(
         onClick = onClick,
         colors = CardDefaults.cardColors(containerColor = BgSurface),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, BgCardBorder),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
-            Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            Modifier.padding(horizontal = 0.dp, vertical = 0.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            // Left accent bar
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .height(64.dp)
+                    .background(accent),
+            )
+            Row(
+                Modifier
+                    .weight(1f)
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
             Box(
                 modifier = Modifier
                     .size(14.dp)
@@ -259,7 +277,8 @@ private fun TodoListCard(
             IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
                 Icon(Icons.Default.Delete, "Delete", tint = Color(0x44FFFFFF), modifier = Modifier.size(16.dp))
             }
-        }
+            } // end inner Row
+        } // end outer Row
     }
 }
 
@@ -428,10 +447,10 @@ private fun TodoTasksView(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(20.dp),
-            containerColor = accent,
-            shape = RoundedCornerShape(16.dp),
+            containerColor = AccentLime,
+            shape = RoundedCornerShape(20.dp),
         ) {
-            Icon(Icons.Default.Add, "New task", tint = Color.White, modifier = Modifier.size(24.dp))
+            Icon(Icons.Default.Add, "New task", tint = BgDeep, modifier = Modifier.size(24.dp))
         }
     }
 
@@ -587,7 +606,8 @@ private fun TaskRow(
     val dimAlpha = if (task.done) 0.4f else 1f
     Card(
         colors = CardDefaults.cardColors(containerColor = BgSurface.copy(alpha = if (task.done) 0.5f else 1f)),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, BgCardBorder),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(

@@ -1,5 +1,7 @@
 package com.myspace.app.ui.screens
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -11,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -21,9 +24,13 @@ import com.myspace.app.crypto.CryptoManager
 import com.myspace.app.data.AppDatabase
 import com.myspace.app.data.SecretEntity
 import com.myspace.app.data.SecretMeta
+import com.myspace.app.ui.theme.AccentLime
 import com.myspace.app.ui.theme.AccentVault
+import com.myspace.app.ui.theme.BgDeep
+import com.myspace.app.ui.theme.BgElevated
 import com.myspace.app.ui.theme.BgSurface
 import com.myspace.app.ui.theme.BgCardBorder
+import com.myspace.app.ui.theme.TextSecondary
 import com.myspace.app.util.TagUtils
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -130,12 +137,12 @@ fun VaultScreen(db: AppDatabase) {
                 placeholder = { Text("Search secrets…", fontSize = 13.sp, color = Color(0x55FFFFFF)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(50.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = AccentVault.copy(alpha = 0.5f),
                     unfocusedBorderColor = BgCardBorder,
-                    focusedContainerColor = BgSurface,
-                    unfocusedContainerColor = BgSurface,
+                    focusedContainerColor = BgElevated,
+                    unfocusedContainerColor = BgElevated,
                     focusedTextColor = Color.White,
                     unfocusedTextColor = Color.White,
                 ),
@@ -178,11 +185,11 @@ fun VaultScreen(db: AppDatabase) {
             if (secrets.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.Lock, null, tint = AccentVault.copy(alpha = 0.3f), modifier = Modifier.size(48.dp))
+                        Icon(Icons.Default.Lock, null, tint = AccentVault.copy(alpha = 0.3f), modifier = Modifier.size(56.dp))
                         Spacer(Modifier.height(12.dp))
-                        Text("Vault is empty", fontSize = 17.sp, fontWeight = FontWeight.Medium, color = Color(0x66FFFFFF))
+                        Text("Vault is empty", fontSize = 17.sp, fontWeight = FontWeight.Medium, color = TextSecondary)
                         Spacer(Modifier.height(6.dp))
-                        Text("Tap + to add a secret", fontSize = 13.sp, color = Color(0x44FFFFFF))
+                        Text("Tap + to add a secret", fontSize = 13.sp, color = TextSecondary.copy(alpha = 0.6f))
                     }
                 }
             } else {
@@ -191,13 +198,24 @@ fun VaultScreen(db: AppDatabase) {
                         val value = revealed[meta.id]
                         Card(
                             colors = CardDefaults.cardColors(containerColor = BgSurface),
-                            shape = RoundedCornerShape(14.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            border = BorderStroke(1.dp, BgCardBorder),
                         ) {
                             Column(
                                 Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
                                 verticalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(AccentVault.copy(alpha = 0.15f)),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(Icons.Default.Lock, null, tint = AccentVault, modifier = Modifier.size(20.dp))
+                                    }
+                                    Spacer(Modifier.width(12.dp))
                                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                         Text(meta.label, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
                                         Text(
@@ -249,10 +267,10 @@ fun VaultScreen(db: AppDatabase) {
         FloatingActionButton(
             onClick = { openAdd() },
             modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp),
-            containerColor = AccentVault,
-            shape = RoundedCornerShape(16.dp),
+            containerColor = AccentLime,
+            shape = RoundedCornerShape(20.dp),
         ) {
-            Icon(Icons.Default.Add, "Add secret", tint = Color.White, modifier = Modifier.size(24.dp))
+            Icon(Icons.Default.Add, "Add secret", tint = BgDeep, modifier = Modifier.size(24.dp))
         }
     }
 

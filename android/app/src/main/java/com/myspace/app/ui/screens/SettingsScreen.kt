@@ -19,10 +19,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.myspace.app.BuildConfig
+import androidx.compose.foundation.BorderStroke
+import com.myspace.app.ui.theme.AccentLime
 import com.myspace.app.ui.theme.AccentSync
 import com.myspace.app.ui.theme.AccentVault
 import com.myspace.app.ui.theme.BgSurface
 import com.myspace.app.ui.theme.BgCardBorder
+import com.myspace.app.ui.theme.TextSecondary
 
 private const val PREFS_NAME = "myspace_settings"
 private const val KEY_AUTOLOCK_MS = "auto_lock_ms"
@@ -58,7 +61,8 @@ fun SettingsScreen(context: Context, onLockNow: () -> Unit) {
         // ── Security ─────────────────────────────────────────────────────────
         Card(
             colors = CardDefaults.cardColors(containerColor = BgSurface),
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(16.dp),
+            border = BorderStroke(1.dp, BgCardBorder),
             modifier = Modifier.fillMaxWidth(),
         ) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -67,7 +71,7 @@ fun SettingsScreen(context: Context, onLockNow: () -> Unit) {
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp,
-                    color = Color(0x66FFFFFF),
+                    color = TextSecondary,
                 )
                 if (biometricAvailable) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -101,7 +105,8 @@ fun SettingsScreen(context: Context, onLockNow: () -> Unit) {
         // ── Auto-lock ─────────────────────────────────────────────────────────
         Card(
             colors = CardDefaults.cardColors(containerColor = BgSurface),
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(16.dp),
+            border = BorderStroke(1.dp, BgCardBorder),
             modifier = Modifier.fillMaxWidth(),
         ) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -110,7 +115,7 @@ fun SettingsScreen(context: Context, onLockNow: () -> Unit) {
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp,
-                    color = Color(0x66FFFFFF),
+                    color = TextSecondary,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     AUTO_LOCK_OPTIONS.forEach { (label, ms) ->
@@ -123,8 +128,8 @@ fun SettingsScreen(context: Context, onLockNow: () -> Unit) {
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (selected) AccentSync.copy(alpha = 0.2f) else BgCardBorder,
-                                contentColor = if (selected) AccentSync else Color(0x88FFFFFF),
+                                containerColor = if (selected) AccentLime.copy(alpha = 0.2f) else BgCardBorder,
+                                contentColor = if (selected) AccentLime else TextSecondary,
                             ),
                             contentPadding = PaddingValues(horizontal = 4.dp, vertical = 10.dp),
                             elevation = ButtonDefaults.buttonElevation(0.dp),
@@ -139,7 +144,8 @@ fun SettingsScreen(context: Context, onLockNow: () -> Unit) {
         // ── Lock Now ─────────────────────────────────────────────────────────
         Card(
             colors = CardDefaults.cardColors(containerColor = BgSurface),
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(16.dp),
+            border = BorderStroke(1.dp, BgCardBorder),
             modifier = Modifier.fillMaxWidth(),
         ) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -148,15 +154,15 @@ fun SettingsScreen(context: Context, onLockNow: () -> Unit) {
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp,
-                    color = Color(0x66FFFFFF),
+                    color = TextSecondary,
                 )
                 Button(
                     onClick = onLockNow,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = AccentVault.copy(alpha = 0.15f),
-                        contentColor = AccentVault,
+                        containerColor = AccentLime.copy(alpha = 0.15f),
+                        contentColor = AccentLime,
                     ),
                     elevation = ButtonDefaults.buttonElevation(0.dp),
                 ) {
@@ -170,7 +176,8 @@ fun SettingsScreen(context: Context, onLockNow: () -> Unit) {
         // ── About ─────────────────────────────────────────────────────────────
         Card(
             colors = CardDefaults.cardColors(containerColor = BgSurface),
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(16.dp),
+            border = BorderStroke(1.dp, BgCardBorder),
             modifier = Modifier.fillMaxWidth(),
         ) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -179,7 +186,7 @@ fun SettingsScreen(context: Context, onLockNow: () -> Unit) {
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp,
-                    color = Color(0x66FFFFFF),
+                    color = TextSecondary,
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Version", fontSize = 14.sp, color = Color.White, modifier = Modifier.weight(1f))

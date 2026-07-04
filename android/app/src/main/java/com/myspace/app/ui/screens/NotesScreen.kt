@@ -27,9 +27,14 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.myspace.app.data.AppDatabase
 import com.myspace.app.data.NoteEntity
+import androidx.compose.foundation.BorderStroke
+import com.myspace.app.ui.theme.AccentLime
 import com.myspace.app.ui.theme.AccentNotes
+import com.myspace.app.ui.theme.BgDeep
+import com.myspace.app.ui.theme.BgElevated
 import com.myspace.app.ui.theme.BgSurface
 import com.myspace.app.ui.theme.BgCardBorder
+import com.myspace.app.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import java.util.UUID
@@ -70,12 +75,15 @@ fun NotesScreen(db: AppDatabase) {
                 placeholder = { Text("Search notes…", fontSize = 15.sp, color = Color(0x55FFFFFF)) },
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 16.dp),
                 singleLine = true,
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(50.dp),
+                leadingIcon = {
+                    Icon(Icons.Default.Search, null, tint = Color(0x55FFFFFF), modifier = Modifier.size(18.dp))
+                },
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = AccentNotes.copy(alpha = 0.6f),
+                    focusedBorderColor = AccentNotes.copy(alpha = 0.5f),
                     unfocusedBorderColor = BgCardBorder,
-                    focusedContainerColor = BgSurface,
-                    unfocusedContainerColor = BgSurface,
+                    focusedContainerColor = BgElevated,
+                    unfocusedContainerColor = BgElevated,
                     focusedTextColor = Color.White,
                     unfocusedTextColor = Color.White,
                 ),
@@ -85,11 +93,11 @@ fun NotesScreen(db: AppDatabase) {
             if (notes.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.Note, null, tint = AccentNotes.copy(alpha = 0.25f), modifier = Modifier.size(48.dp))
+                        Icon(Icons.Default.Note, null, tint = AccentNotes.copy(alpha = 0.3f), modifier = Modifier.size(56.dp))
                         Spacer(Modifier.height(12.dp))
-                        Text("No notes yet", fontSize = 17.sp, fontWeight = FontWeight.Medium, color = Color(0x66FFFFFF))
+                        Text("No notes yet", fontSize = 17.sp, fontWeight = FontWeight.Medium, color = TextSecondary)
                         Spacer(Modifier.height(6.dp))
-                        Text("Tap + to create your first note", fontSize = 13.sp, color = Color(0x44FFFFFF))
+                        Text("Tap + to create your first note", fontSize = 13.sp, color = TextSecondary.copy(alpha = 0.6f))
                     }
                 }
             } else {
@@ -105,11 +113,22 @@ fun NotesScreen(db: AppDatabase) {
                                 showEditor = true
                             },
                             colors = CardDefaults.cardColors(containerColor = BgSurface),
-                            shape = RoundedCornerShape(14.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            border = BorderStroke(1.dp, BgCardBorder),
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(AccentNotes.copy(alpha = 0.15f)),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(Icons.Default.Note, null, tint = AccentNotes, modifier = Modifier.size(20.dp))
+                                    }
+                                    Spacer(Modifier.width(12.dp))
                                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                         Text(note.title, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
                                         if (note.content.isNotBlank()) {
@@ -152,10 +171,10 @@ fun NotesScreen(db: AppDatabase) {
                 showEditor = true
             },
             modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp),
-            containerColor = AccentNotes,
-            shape = RoundedCornerShape(16.dp),
+            containerColor = AccentLime,
+            shape = RoundedCornerShape(20.dp),
         ) {
-            Icon(Icons.Default.Add, "New note", tint = Color.White, modifier = Modifier.size(24.dp))
+            Icon(Icons.Default.Add, "New note", tint = BgDeep, modifier = Modifier.size(24.dp))
         }
     }
 
