@@ -35,6 +35,8 @@ import com.myspace.app.ui.theme.BgElevated
 import com.myspace.app.ui.theme.BgSurface
 import com.myspace.app.ui.theme.BgCardBorder
 import com.myspace.app.ui.theme.TextSecondary
+import com.myspace.app.ui.theme.TextPrimary
+import com.myspace.app.ui.theme.TextDisabled
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import java.util.UUID
@@ -69,11 +71,29 @@ fun NotesScreen(db: AppDatabase) {
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column {
+                    Text("Notes", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TextPrimary, letterSpacing = (-0.5).sp)
+                    Text("${notes.size} notes", fontSize = 13.sp, color = TextSecondary)
+                }
+                Box(
+                    modifier = Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(AccentNotes.copy(0.15f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Default.Note, null, tint = AccentNotes, modifier = Modifier.size(24.dp))
+                }
+            }
+
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it; reload() },
                 placeholder = { Text("Search notes…", fontSize = 15.sp, color = Color(0x55FFFFFF)) },
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 16.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = 0.dp, bottom = 12.dp),
                 singleLine = true,
                 shape = RoundedCornerShape(50.dp),
                 leadingIcon = {
@@ -117,43 +137,43 @@ fun NotesScreen(db: AppDatabase) {
                             border = BorderStroke(1.dp, BgCardBorder),
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(40.dp)
-                                            .clip(RoundedCornerShape(10.dp))
-                                            .background(AccentNotes.copy(alpha = 0.15f)),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        Icon(Icons.Default.Note, null, tint = AccentNotes, modifier = Modifier.size(20.dp))
-                                    }
-                                    Spacer(Modifier.width(12.dp))
-                                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        Text(note.title, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
-                                        if (note.content.isNotBlank()) {
-                                            Text(note.content.take(100), fontSize = 13.sp, color = Color(0x88FFFFFF), lineHeight = 18.sp)
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                // Left accent bar
+                                Box(
+                                    modifier = Modifier
+                                        .width(4.dp)
+                                        .fillMaxHeight()
+                                        .clip(RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp))
+                                        .background(AccentNotes),
+                                )
+                                Column(Modifier.weight(1f).padding(horizontal = 14.dp, vertical = 14.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            Text(note.title, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = TextPrimary, letterSpacing = (-0.3).sp)
+                                            if (note.content.isNotBlank()) {
+                                                Text(note.content.take(80), fontSize = 13.sp, color = TextSecondary, lineHeight = 19.sp, maxLines = 2)
+                                            }
+                                        }
+                                        IconButton(onClick = {
+                                            scope.launch { db.noteDao().delete(note.id); reload() }
+                                        }, modifier = Modifier.size(32.dp)) {
+                                            Icon(Icons.Default.Delete, "Delete", tint = TextDisabled, modifier = Modifier.size(17.dp))
                                         }
                                     }
-                                    IconButton(onClick = {
-                                        scope.launch { db.noteDao().delete(note.id); reload() }
-                                    }, modifier = Modifier.size(32.dp)) {
-                                        Icon(Icons.Default.Delete, "Delete", tint = Color(0x55FFFFFF), modifier = Modifier.size(17.dp))
-                                    }
-                                }
-                                // Image strip
-                                if (images.isNotEmpty()) {
-                                    Spacer(Modifier.height(10.dp))
-                                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        items(images) { uri ->
-                                            AsyncImage(
-                                                model = ImageRequest.Builder(context).data(Uri.parse(uri)).crossfade(true).build(),
-                                                contentDescription = null,
-                                                contentScale = ContentScale.Crop,
-                                                modifier = Modifier
-                                                    .size(72.dp)
-                                                    .clip(RoundedCornerShape(10.dp)),
-                                            )
+                                    // Image strip
+                                    if (images.isNotEmpty()) {
+                                        Spacer(Modifier.height(10.dp))
+                                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            items(images) { uri ->
+                                                AsyncImage(
+                                                    model = ImageRequest.Builder(context).data(Uri.parse(uri)).crossfade(true).build(),
+                                                    contentDescription = null,
+                                                    contentScale = ContentScale.Crop,
+                                                    modifier = Modifier
+                                                        .size(72.dp)
+                                                        .clip(RoundedCornerShape(10.dp)),
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -174,7 +194,11 @@ fun NotesScreen(db: AppDatabase) {
             containerColor = AccentLime,
             shape = RoundedCornerShape(20.dp),
         ) {
-            Icon(Icons.Default.Add, "New note", tint = BgDeep, modifier = Modifier.size(24.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 6.dp)) {
+                Icon(Icons.Default.Add, "New note", tint = BgDeep, modifier = Modifier.size(22.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("New note", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = BgDeep)
+            }
         }
     }
 

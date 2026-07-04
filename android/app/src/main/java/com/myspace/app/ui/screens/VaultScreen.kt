@@ -31,6 +31,7 @@ import com.myspace.app.ui.theme.BgElevated
 import com.myspace.app.ui.theme.BgSurface
 import com.myspace.app.ui.theme.BgCardBorder
 import com.myspace.app.ui.theme.TextSecondary
+import com.myspace.app.ui.theme.TextPrimary
 import com.myspace.app.util.TagUtils
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -128,7 +129,23 @@ fun VaultScreen(db: AppDatabase) {
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-            Spacer(Modifier.height(8.dp))
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column {
+                    Text("Vault", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = TextPrimary, letterSpacing = (-0.5).sp)
+                    Text("${secrets.size} secrets", fontSize = 13.sp, color = TextSecondary)
+                }
+                Box(
+                    modifier = Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(AccentVault.copy(0.15f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Default.Lock, null, tint = AccentVault, modifier = Modifier.size(24.dp))
+                }
+            }
 
             // Search bar
             OutlinedTextField(
@@ -201,61 +218,70 @@ fun VaultScreen(db: AppDatabase) {
                             shape = RoundedCornerShape(16.dp),
                             border = BorderStroke(1.dp, BgCardBorder),
                         ) {
-                            Column(
-                                Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                                verticalArrangement = Arrangement.spacedBy(6.dp),
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(40.dp)
-                                            .clip(RoundedCornerShape(10.dp))
-                                            .background(AccentVault.copy(alpha = 0.15f)),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        Icon(Icons.Default.Lock, null, tint = AccentVault, modifier = Modifier.size(20.dp))
-                                    }
-                                    Spacer(Modifier.width(12.dp))
-                                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        Text(meta.label, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
-                                        Text(
-                                            if (value != null) value else "••••••••••••",
-                                            fontSize = 14.sp,
-                                            color = if (value != null) AccentVault else Color(0x55FFFFFF),
-                                            letterSpacing = if (value != null) 0.sp else 2.sp,
-                                        )
-                                    }
-                                    IconButton(onClick = {
-                                        scope.launch {
-                                            if (value != null) {
-                                                revealed = revealed - meta.id
-                                            } else {
-                                                val row = db.secretDao().getById(meta.id)
-                                                if (row != null) revealed = revealed + (meta.id to CryptoManager.decrypt(row.ciphertext, row.iv))
-                                            }
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                Box(
+                                    modifier = Modifier
+                                        .width(4.dp)
+                                        .fillMaxHeight()
+                                        .clip(RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp))
+                                        .background(AccentVault),
+                                )
+                                Column(
+                                    Modifier.weight(1f).padding(horizontal = 16.dp, vertical = 14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .clip(RoundedCornerShape(10.dp))
+                                                .background(AccentVault.copy(alpha = 0.15f)),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            Icon(Icons.Default.Lock, null, tint = AccentVault, modifier = Modifier.size(20.dp))
                                         }
-                                    }) {
-                                        Icon(
-                                            if (value != null) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                            "Toggle",
-                                            tint = AccentVault.copy(alpha = 0.7f),
-                                            modifier = Modifier.size(20.dp),
-                                        )
+                                        Spacer(Modifier.width(12.dp))
+                                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            Text(meta.label, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = TextPrimary, letterSpacing = (-0.3).sp)
+                                            Text(
+                                                if (value != null) value else "••••••••••••",
+                                                fontSize = 14.sp,
+                                                color = if (value != null) AccentVault else Color(0x55FFFFFF),
+                                                letterSpacing = if (value != null) 0.sp else 2.sp,
+                                            )
+                                        }
+                                        IconButton(onClick = {
+                                            scope.launch {
+                                                if (value != null) {
+                                                    revealed = revealed - meta.id
+                                                } else {
+                                                    val row = db.secretDao().getById(meta.id)
+                                                    if (row != null) revealed = revealed + (meta.id to CryptoManager.decrypt(row.ciphertext, row.iv))
+                                                }
+                                            }
+                                        }) {
+                                            Icon(
+                                                if (value != null) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                                "Toggle",
+                                                tint = AccentVault.copy(alpha = 0.7f),
+                                                modifier = Modifier.size(20.dp),
+                                            )
+                                        }
+                                        IconButton(onClick = { openEdit(meta) }) {
+                                            Icon(Icons.Default.Edit, "Edit", tint = Color(0x88FFFFFF), modifier = Modifier.size(20.dp))
+                                        }
+                                        IconButton(onClick = {
+                                            scope.launch { db.secretDao().delete(meta.id); reload() }
+                                        }) {
+                                            Icon(Icons.Default.Delete, "Delete", tint = Color(0x88FFFFFF), modifier = Modifier.size(20.dp))
+                                        }
                                     }
-                                    IconButton(onClick = { openEdit(meta) }) {
-                                        Icon(Icons.Default.Edit, "Edit", tint = Color(0x88FFFFFF), modifier = Modifier.size(20.dp))
+                                    if (meta.url.isNotBlank()) {
+                                        Text(meta.url, fontSize = 11.sp, color = Color(0x66FFFFFF), maxLines = 1)
                                     }
-                                    IconButton(onClick = {
-                                        scope.launch { db.secretDao().delete(meta.id); reload() }
-                                    }) {
-                                        Icon(Icons.Default.Delete, "Delete", tint = Color(0x88FFFFFF), modifier = Modifier.size(20.dp))
+                                    if (meta.description.isNotBlank()) {
+                                        Text(meta.description, fontSize = 11.sp, color = Color(0x55FFFFFF), maxLines = 2)
                                     }
-                                }
-                                if (meta.url.isNotBlank()) {
-                                    Text(meta.url, fontSize = 11.sp, color = Color(0x66FFFFFF), maxLines = 1)
-                                }
-                                if (meta.description.isNotBlank()) {
-                                    Text(meta.description, fontSize = 11.sp, color = Color(0x55FFFFFF), maxLines = 2)
                                 }
                             }
                         }
@@ -270,7 +296,11 @@ fun VaultScreen(db: AppDatabase) {
             containerColor = AccentLime,
             shape = RoundedCornerShape(20.dp),
         ) {
-            Icon(Icons.Default.Add, "Add secret", tint = BgDeep, modifier = Modifier.size(24.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 6.dp)) {
+                Icon(Icons.Default.Add, "New secret", tint = BgDeep, modifier = Modifier.size(22.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("New secret", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = BgDeep)
+            }
         }
     }
 
