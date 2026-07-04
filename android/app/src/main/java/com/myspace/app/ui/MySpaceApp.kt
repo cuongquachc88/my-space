@@ -372,15 +372,8 @@ fun MySpaceApp() {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(BgSurface)
-                    .drawBehind {
-                        drawLine(
-                            color = BgCardBorder,
-                            start = Offset(0f, 0f),
-                            end = Offset(size.width, 0f),
-                            strokeWidth = 1.dp.toPx(),
-                        )
-                    },
+                    .background(BgDeep)
+                    .navigationBarsPadding(),
             ) {
                 AppNavBar(
                     screens = allScreens,
@@ -400,10 +393,11 @@ fun MySpaceApp() {
                     drawRect(
                         brush = Brush.verticalGradient(
                             colors = listOf(
-                                currentScreen.accent.copy(alpha = 0.06f),
+                                currentScreen.accent.copy(alpha = 0.10f),
+                                currentScreen.accent.copy(alpha = 0.02f),
                                 Color.Transparent,
                             ),
-                            endY = size.height * 0.25f,
+                            endY = size.height * 0.35f,
                         ),
                     )
                 },
