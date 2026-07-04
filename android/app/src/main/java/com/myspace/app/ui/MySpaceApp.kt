@@ -48,6 +48,7 @@ sealed class Screen(
     object Todo      : Screen("todo",    "To-Do",     Icons.Default.CheckBox,    AccentTodo)
     object MapPins   : Screen("maps",    "Map Pins",  Icons.Default.LocationOn,  AccentMaps)
     object Sync      : Screen("sync",    "Sync",      Icons.Default.Sync,        AccentSync)
+    object Settings  : Screen("settings","Settings",  Icons.Default.Settings,    AccentSync)
 }
 
 val allScreens = listOf(
@@ -58,6 +59,7 @@ val allScreens = listOf(
     Screen.Todo,
     Screen.MapPins,
     Screen.Sync,
+    Screen.Settings,
 )
 
 // ── Logo composable ────────────────────────────────────────────────────────
@@ -291,6 +293,12 @@ fun MySpaceApp() {
                     Screen.Todo      -> TodoScreen(db)
                     Screen.MapPins   -> MapPinsScreen(db)
                     Screen.Sync      -> SyncScreen(db, context)
+                    Screen.Settings  -> SettingsScreen(
+                        context = context,
+                        onLockNow = {
+                            scope.launch { pagerState.animateScrollToPage(0) }
+                        },
+                    )
                 }
             }
         }
