@@ -15,6 +15,7 @@ android {
         targetSdk = 35
         versionCode = 4
         versionName = "0.3.2"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -61,4 +62,8 @@ dependencies {
     implementation(libs.androidx.splashscreen)
     implementation("androidx.biometric:biometric:1.2.0-alpha05")
     testImplementation(libs.junit)
+    testImplementation(libs.androidx.room.testing)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.rules)
 }
