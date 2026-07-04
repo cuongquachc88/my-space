@@ -2,6 +2,7 @@ package com.myspace.app.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -23,6 +24,7 @@ import com.myspace.app.data.SecretMeta
 import com.myspace.app.ui.theme.AccentVault
 import com.myspace.app.ui.theme.BgCard
 import com.myspace.app.ui.theme.BgCardBorder
+import com.myspace.app.util.TagUtils
 import kotlinx.coroutines.launch
 import java.util.UUID
 
@@ -43,7 +45,24 @@ fun VaultScreen(db: AppDatabase) {
     var formDesc by remember { mutableStateOf("") }
     var formVisible by remember { mutableStateOf(false) }
 
-    fun reload() { scope.launch { secrets = db.secretDao().getMeta() } }
+    var query by remember { mutableStateOf("") }
+    var activeTag by remember { mutableStateOf<String?>(null) }
+    var allTags by remember { mutableStateOf<List<String>>(emptyList()) }
+
+    fun reload() {
+        scope.launch {
+            val list = when {
+                activeTag != null -> db.secretDao().getMetaByTag("\"$activeTag\"")
+                query.isNotBlank() -> db.secretDao().searchMeta(query)
+                else -> db.secretDao().getMeta()
+            }
+            secrets = list
+            allTags = list
+                .flatMap { TagUtils.parseTags(it.tags) }
+                .distinct()
+                .sorted()
+        }
+    }
     LaunchedEffect(Unit) { reload() }
 
     fun openAdd() {
@@ -103,6 +122,58 @@ fun VaultScreen(db: AppDatabase) {
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
             Spacer(Modifier.height(8.dp))
+
+            // Search bar
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it; activeTag = null; reload() },
+                placeholder = { Text("Search secrets…", fontSize = 13.sp, color = Color(0x55FFFFFF)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AccentVault.copy(alpha = 0.5f),
+                    unfocusedBorderColor = BgCardBorder,
+                    focusedContainerColor = BgCard,
+                    unfocusedContainerColor = BgCard,
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                ),
+                leadingIcon = {
+                    Icon(Icons.Default.Search, null, tint = Color(0x55FFFFFF), modifier = Modifier.size(18.dp))
+                },
+                textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
+            )
+
+            // Tag filter chips
+            if (allTags.isNotEmpty()) {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    items(allTags) { tag ->
+                        FilterChip(
+                            selected = activeTag == tag,
+                            onClick = {
+                                activeTag = if (activeTag == tag) null else tag
+                                query = ""
+                                reload()
+                            },
+                            label = { Text("#$tag", fontSize = 11.sp) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = AccentVault.copy(alpha = 0.2f),
+                                selectedLabelColor = AccentVault,
+                            ),
+                            border = FilterChipDefaults.filterChipBorder(
+                                enabled = true,
+                                selected = activeTag == tag,
+                                selectedBorderColor = AccentVault.copy(0.5f),
+                                borderColor = BgCardBorder,
+                            ),
+                        )
+                    }
+                }
+            }
 
             if (secrets.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
