@@ -178,7 +178,7 @@ function PinRow({ pin, onDelete, onEdit }: { pin: MapPin; onDelete: () => void; 
           {pin.note && <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.4)' }}>{pin.note}</p>}
           {pin.review_note && <p className="text-[10px] italic" style={{ color: 'rgba(255,255,255,0.35)' }}>"{pin.review_note}"</p>}
           <div className="flex gap-2 justify-end mt-1">
-            <a href={mapsUrl} target="_blank" rel="noreferrer"
+            <a href={mapsUrl} target="_blank" rel="noopener noreferrer"
               className="text-[10px] px-2 py-1 rounded-[6px]"
               style={{ background: 'rgba(251,146,60,0.15)', color: '#fb923c' }}>Open Maps</a>
             <button onClick={() => { setEditing(true); setExpanded(false) }}

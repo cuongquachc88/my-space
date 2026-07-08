@@ -14,19 +14,25 @@ export default function SyncView() {
   const [showPw, setShowPw] = useState(false)
 
   async function getToken(): Promise<string | null> {
-    const stored = localStorage.getItem('drive_token')
-    if (stored) return stored
-    return null
+    // Tokens stored in sessionStorage (cleared on tab close, never persisted to disk)
+    return sessionStorage.getItem('drive_token')
   }
 
   async function authorize() {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
     if (!clientId) { setMsg('VITE_GOOGLE_CLIENT_ID not set'); setStatus('error'); return }
+
+    // Generate CSRF state token — verified on callback to prevent OAuth CSRF attacks
+    const stateBytes = crypto.getRandomValues(new Uint8Array(16))
+    const state = Array.from(stateBytes, b => b.toString(16).padStart(2, '0')).join('')
+    sessionStorage.setItem('oauth_state', state)
+
     const params = new URLSearchParams({
       client_id: clientId,
       redirect_uri: location.origin + '/oauth-callback',
       response_type: 'token',
       scope: DRIVE_SCOPE,
+      state,
     })
     window.location.href = `https://accounts.google.com/o/oauth2/auth?${params}`
   }

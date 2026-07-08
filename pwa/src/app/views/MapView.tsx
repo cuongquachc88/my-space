@@ -78,8 +78,17 @@ export default function MapView() {
   }
 
   function openMaps(p: MapPin) {
-    if (p.url) window.open(p.url, '_blank')
-    else window.open(`https://www.google.com/maps?q=${p.lat},${p.lng}`, '_blank')
+    const fallback = `https://www.google.com/maps?q=${p.lat},${p.lng}`
+    if (p.url) {
+      try {
+        const u = new URL(p.url)
+        if (u.protocol === 'http:' || u.protocol === 'https:') {
+          window.open(p.url, '_blank', 'noopener,noreferrer')
+          return
+        }
+      } catch { /* invalid URL — fall through to Google Maps */ }
+    }
+    window.open(fallback, '_blank', 'noopener,noreferrer')
   }
 
   if (editingPin !== null) {

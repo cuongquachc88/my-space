@@ -1,6 +1,13 @@
 import { useState } from 'react'
 import { getDb } from '../../db'
 import { lock } from '../../crypto'
+import DOMPurify from 'dompurify'
+
+function sanitizeText(s: unknown): string {
+  if (typeof s !== 'string') return ''
+  // Strip any HTML/script tags that could cause stored-XSS when rendered as markdown
+  return DOMPurify.sanitize(s, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] })
+}
 
 interface Props { onLogout: () => void }
 
@@ -55,7 +62,7 @@ export default function SettingsView({ onLogout }: Props) {
       if (Array.isArray(data.notes)) {
         for (const n of data.notes as { id: string; title: string; content: string; tags: string[]; image_data: string }[]) {
           await db.query('INSERT INTO notes (id,title,content,tags,image_data) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (id) DO NOTHING',
-            [n.id, n.title, n.content ?? '', n.tags ?? [], n.image_data ?? '[]'])
+            [n.id, sanitizeText(n.title), sanitizeText(n.content), n.tags ?? [], '[]'])
           count++
         }
       }
