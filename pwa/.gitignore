@@ -1,0 +1,18 @@
+node_modules
+dist
+.env
+*.local
+
+# Capacitor build outputs (generated from dist)
+android/app/src/main/assets/public
+ios/App/App/public
+
+# Gradle
+android/.gradle
+android/local.properties
+android/build
+android/app/build
+
+# CocoaPods
+ios/App/Pods
+ios/App/Podfile.lock
