@@ -40,8 +40,8 @@ export default function AppShell({ onLogout }: Props) {
           <div style={{
             background: 'linear-gradient(145deg, #6d5ce7 0%, #7c6af7 40%, #3b82f6 100%)',
             padding: '24px 20px 28px',
-            borderBottomLeftRadius: 28,
-            borderBottomRightRadius: 28,
+            borderTopLeftRadius: 28,
+            borderTopRightRadius: 28,
             position: 'relative',
             overflow: 'hidden',
             boxShadow: '0 8px 32px rgba(124,106,247,0.3)',
