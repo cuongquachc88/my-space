@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getDb } from '../../db'
-import { deriveKey, encryptWithKey, decryptWithKey, saveVerifyToken, unlock } from '../../crypto'
+import { deriveKey, encryptWithKey, decryptWithKey, encrypt, getKey } from '../../crypto'
 import { ACCENT } from '../../design/tokens'
 import ViewHeader from '../ViewHeader'
 import { IconSync } from '../../design/icons'
@@ -106,6 +106,15 @@ export function useSyncLogic() {
     if (!syncPw.trim()) { log('Enter your vault password', 'error'); setStatus('error'); return }
     const token = getStoredToken()
     if (!token) { log('Not connected — click Connect first', 'error'); setStatus('error'); return }
+
+    // Vault must be unlocked so we can re-encrypt secrets under the local key
+    let localKey: CryptoKey
+    try {
+      localKey = getKey()
+    } catch {
+      log('Unlock your vault before syncing', 'error'); setStatus('error'); return
+    }
+
     setStatus('busy'); log('Searching Drive for backup…')
     try {
       const fileId = await findFile(token)
@@ -113,48 +122,88 @@ export function useSyncLogic() {
       log('Downloading…')
       const raw = await downloadFile(token, fileId)
       const payload = JSON.parse(raw) as { ciphertext: string; iv: string; salt: number[] }
-      if (!payload.salt || !payload.ciphertext || !payload.iv) throw new Error('Backup is missing required fields (salt/ciphertext/iv). Push from the source device first.')
+      if (!payload.salt || !payload.ciphertext || !payload.iv) {
+        throw new Error('Backup is missing required fields (salt/ciphertext/iv). Push from the source device first.')
+      }
       log('Decrypting…')
-      const salt = Uint8Array.from(payload.salt)
-      const key = await deriveKey(syncPw, salt)
-      const plaintext = await decryptWithKey(payload.ciphertext, payload.iv, key)
+      const backupSalt = Uint8Array.from(payload.salt)
+      const backupKey = await deriveKey(syncPw, backupSalt)
+      const plaintext = await decryptWithKey(payload.ciphertext, payload.iv, backupKey)
       const data = JSON.parse(plaintext) as Record<string, unknown[]>
-      // Update vault salt + verify token to match the backup's key, then re-derive in-memory key
-      const saltB64 = btoa(Array.from(salt, c => String.fromCharCode(c)).join(''))
-      localStorage.setItem('myspace_vault_salt', saltB64)
-      localStorage.removeItem('myspace_vault_verify')
-      await unlock(syncPw, salt)
-      await saveVerifyToken(key)
+
+      // Detect same-device pull: if salts match, backupKey == localKey — skip re-encryption
+      const localSaltB64 = localStorage.getItem('myspace_vault_salt')
+      const localSalt = localSaltB64 ? Uint8Array.from(atob(localSaltB64), c => c.charCodeAt(0)) : null
+      const sameSalt = localSalt && backupSalt.length === localSalt.length &&
+        backupSalt.every((b, i) => b === localSalt[i])
+
       log('Merging…')
       const db = await getDb()
+
       if (data.notes) {
         for (const n of data.notes as { id: string; title: string; content: string; tags: string[]; image_data: string }[]) {
-          await db.query('INSERT INTO notes (id,title,content,tags,image_data) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (id) DO UPDATE SET title=EXCLUDED.title, content=EXCLUDED.content, tags=EXCLUDED.tags, image_data=EXCLUDED.image_data, updated_at=now()',
-            [n.id, n.title, n.content, n.tags, n.image_data])
+          await db.query(
+            'INSERT INTO notes (id,title,content,tags,image_data) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (id) DO UPDATE SET title=EXCLUDED.title, content=EXCLUDED.content, tags=EXCLUDED.tags, image_data=EXCLUDED.image_data, updated_at=now()',
+            [n.id, n.title, n.content, n.tags, n.image_data]
+          )
         }
         log(`Merged ${data.notes.length} notes`)
       }
+
       if (data.secrets) {
-        for (const s of data.secrets as { id: string; label: string; ciphertext: string; iv: string; tags: string[]; url: string; description: string }[]) {
-          await db.query('INSERT INTO secrets (id,label,ciphertext,iv,tags,url,description) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET label=EXCLUDED.label, ciphertext=EXCLUDED.ciphertext, iv=EXCLUDED.iv, tags=EXCLUDED.tags, url=EXCLUDED.url, description=EXCLUDED.description, updated_at=now()',
-            [s.id, s.label, s.ciphertext, s.iv, s.tags, s.url ?? '', s.description ?? ''])
+        const secrets = data.secrets as { id: string; label: string; ciphertext: string; iv: string; tags: string[]; url: string; description: string }[]
+        for (const s of secrets) {
+          let finalCt: string
+          let finalIv: string
+          if (sameSalt) {
+            // Same device: ciphertext is already under the local key
+            finalCt = s.ciphertext
+            finalIv = s.iv
+          } else {
+            // Cross-device: decrypt with backup key, re-encrypt with local key
+            const plainValue = await decryptWithKey(s.ciphertext, s.iv, backupKey)
+            const enc = await encryptWithKey(plainValue, localKey)
+            finalCt = enc.ciphertext
+            finalIv = enc.iv
+          }
+          await db.query(
+            'INSERT INTO secrets (id,label,ciphertext,iv,tags,url,description) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET label=EXCLUDED.label, ciphertext=EXCLUDED.ciphertext, iv=EXCLUDED.iv, tags=EXCLUDED.tags, url=EXCLUDED.url, description=EXCLUDED.description, updated_at=now()',
+            [s.id, s.label, finalCt, finalIv, s.tags, s.url ?? '', s.description ?? '']
+          )
         }
-        log(`Merged ${data.secrets.length} secrets`)
+        log(`Merged ${secrets.length} secrets`)
       }
+
       if (data.subscriptions) {
         for (const s of data.subscriptions as { id: string; name: string; amount: number; currency: string; cycle: string; start_date: string; notes: string; active: boolean; tags: string[] }[]) {
-          await db.query('INSERT INTO subscriptions (id,name,amount,currency,cycle,start_date,notes,active,tags) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, amount=EXCLUDED.amount, currency=EXCLUDED.currency, cycle=EXCLUDED.cycle, start_date=EXCLUDED.start_date, notes=EXCLUDED.notes, active=EXCLUDED.active, tags=EXCLUDED.tags, updated_at=now()',
-            [s.id, s.name, s.amount, s.currency, s.cycle, s.start_date, s.notes ?? '', s.active, s.tags])
+          await db.query(
+            'INSERT INTO subscriptions (id,name,amount,currency,cycle,start_date,notes,active,tags) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, amount=EXCLUDED.amount, currency=EXCLUDED.currency, cycle=EXCLUDED.cycle, start_date=EXCLUDED.start_date, notes=EXCLUDED.notes, active=EXCLUDED.active, tags=EXCLUDED.tags, updated_at=now()',
+            [s.id, s.name, s.amount, s.currency, s.cycle, s.start_date, s.notes ?? '', s.active, s.tags]
+          )
         }
         log(`Merged ${data.subscriptions.length} subscriptions`)
       }
+
       if (data.todo_tasks) {
         for (const t of data.todo_tasks as { id: string; list_id: string; title: string; done: boolean; priority: string; due_date: string; notes: string }[]) {
-          await db.query('INSERT INTO todo_tasks (id,list_id,title,done,priority,due_date,notes) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET title=EXCLUDED.title, done=EXCLUDED.done, priority=EXCLUDED.priority, due_date=EXCLUDED.due_date, notes=EXCLUDED.notes',
-            [t.id, t.list_id, t.title, t.done, t.priority, t.due_date, t.notes])
+          await db.query(
+            'INSERT INTO todo_tasks (id,list_id,title,done,priority,due_date,notes) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET title=EXCLUDED.title, done=EXCLUDED.done, priority=EXCLUDED.priority, due_date=EXCLUDED.due_date, notes=EXCLUDED.notes',
+            [t.id, t.list_id, t.title, t.done, t.priority, t.due_date, t.notes]
+          )
         }
         log(`Merged ${data.todo_tasks.length} tasks`)
       }
+
+      if (data.map_pins) {
+        for (const p of data.map_pins as { id: string; stack_id: string; label: string; lat: number; lng: number; url: string; note: string; priority: string; category: string; rating: number; review_note: string }[]) {
+          await db.query(
+            'INSERT INTO map_pins (id,stack_id,label,lat,lng,url,note,priority,category,rating,review_note) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ON CONFLICT (id) DO NOTHING',
+            [p.id, p.stack_id, p.label, p.lat, p.lng, p.url ?? '', p.note ?? '', p.priority ?? 'none', p.category ?? '', p.rating ?? 0, p.review_note ?? '']
+          )
+        }
+        log(`Merged ${(data.map_pins as unknown[]).length} pins`)
+      }
+
       log('Pull complete ✓', 'ok'); setStatus('ok')
     } catch (e) { log(String(e), 'error'); setStatus('error') }
   }
