@@ -4,7 +4,13 @@ import { App } from '@capacitor/app'
 
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata'
 const FILE_NAME = 'myspace-backup.json'
-const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token'
+
+// On web: proxy endpoint keeps client_secret server-side (Cloudflare Pages Function).
+// On native (Capacitor): call Google directly — mobile OAuth clients are public clients.
+function getTokenEndpoint(): string {
+  if (Capacitor.isNativePlatform()) return 'https://oauth2.googleapis.com/token'
+  return `${location.origin}/api/token`
+}
 
 function getClientId(): string {
   const id = import.meta.env.VITE_GOOGLE_CLIENT_ID
@@ -52,23 +58,35 @@ function makeAuthUrl(state: string, codeChallenge: string): string {
 async function exchangeCode(code: string): Promise<string> {
   const verifier = localStorage.getItem('oauth_verifier')
   if (!verifier) throw new Error('Missing code verifier')
-  const body: Record<string, string> = {
-    client_id: getClientId(),
-    redirect_uri: getRedirectUri(),
-    grant_type: 'authorization_code',
-    code,
-    code_verifier: verifier,
+  const endpoint = getTokenEndpoint()
+  const redirectUri = getRedirectUri()
+
+  let res: Response
+  if (Capacitor.isNativePlatform()) {
+    // Native: public client — no secret needed, send as form-encoded
+    res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: getClientId(),
+        redirect_uri: redirectUri,
+        grant_type: 'authorization_code',
+        code,
+        code_verifier: verifier,
+      }),
+    })
+  } else {
+    // Web: proxy endpoint holds client_secret server-side — send as JSON
+    res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, code_verifier: verifier, redirect_uri: redirectUri }),
+    })
   }
-  const secret = import.meta.env.VITE_GOOGLE_CLIENT_SECRET
-  if (secret) body.client_secret = secret
-  const res = await fetch(TOKEN_ENDPOINT, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams(body),
-  })
+
   if (!res.ok) {
-    const body = await res.text()
-    throw new Error(`Token exchange failed: ${res.status} — ${body}`)
+    const text = await res.text()
+    throw new Error(`Token exchange failed: ${res.status} — ${text}`)
   }
   const data = await res.json() as { access_token: string }
   return data.access_token
