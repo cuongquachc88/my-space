@@ -1,5 +1,10 @@
 apply plugin: 'com.android.application'
 
+// Load signing credentials from local.properties (never committed)
+def localProps = new Properties()
+def localPropsFile = rootProject.file('local.properties')
+if (localPropsFile.exists()) localProps.load(localPropsFile.newDataInputStream())
+
 android {
     namespace "com.myspace.app"
     compileSdk rootProject.ext.compileSdkVersion
@@ -16,8 +21,17 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            storeFile     file(localProps['MYSPACE_KEYSTORE_PATH'] ?: '/dev/null')
+            storePassword localProps['MYSPACE_KEYSTORE_PASSWORD'] ?: ''
+            keyAlias      localProps['MYSPACE_KEY_ALIAS'] ?: ''
+            keyPassword   localProps['MYSPACE_KEY_PASSWORD'] ?: ''
+        }
+    }
     buildTypes {
         release {
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
