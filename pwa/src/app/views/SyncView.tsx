@@ -132,9 +132,9 @@ export function useSyncLogic() {
         log(`Merged ${data.secrets.length} secrets`)
       }
       if (data.subscriptions) {
-        for (const s of data.subscriptions as { id: string; name: string; amount: number; currency: string; cycle: string; next_date: string; active: boolean; tags: string[] }[]) {
-          await db.query('INSERT INTO subscriptions (id,name,amount,currency,cycle,next_date,active,tags) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, amount=EXCLUDED.amount, currency=EXCLUDED.currency, cycle=EXCLUDED.cycle, next_date=EXCLUDED.next_date, active=EXCLUDED.active, tags=EXCLUDED.tags, updated_at=now()',
-            [s.id, s.name, s.amount, s.currency, s.cycle, s.next_date, s.active, s.tags])
+        for (const s of data.subscriptions as { id: string; name: string; amount: number; currency: string; cycle: string; start_date: string; notes: string; active: boolean; tags: string[] }[]) {
+          await db.query('INSERT INTO subscriptions (id,name,amount,currency,cycle,start_date,notes,active,tags) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, amount=EXCLUDED.amount, currency=EXCLUDED.currency, cycle=EXCLUDED.cycle, start_date=EXCLUDED.start_date, notes=EXCLUDED.notes, active=EXCLUDED.active, tags=EXCLUDED.tags, updated_at=now()',
+            [s.id, s.name, s.amount, s.currency, s.cycle, s.start_date, s.notes ?? '', s.active, s.tags])
         }
         log(`Merged ${data.subscriptions.length} subscriptions`)
       }
