@@ -49,7 +49,8 @@ export default function AppShell({ onLogout }: Props) {
         {/* Hero banner */}
         <div style={{
           background: 'linear-gradient(145deg, #6d5ce7 0%, #7c6af7 55%, #3b82f6 100%)',
-          padding: '21px 22px 43px',
+          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 21px)',
+          paddingBottom: 43, paddingLeft: 22, paddingRight: 22,
           overflow: 'hidden', position: 'relative',
         }}>
           <div style={{ position: 'absolute', top: -40, right: -30, width: 160, height: 160, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', pointerEvents: 'none' }} />

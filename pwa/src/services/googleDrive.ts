@@ -13,6 +13,11 @@ function getTokenEndpoint(): string {
 }
 
 function getClientId(): string {
+  // Android OAuth client (public client, allows custom scheme redirect)
+  if (Capacitor.isNativePlatform()) {
+    const androidId = import.meta.env.VITE_GOOGLE_ANDROID_CLIENT_ID
+    if (androidId) return androidId
+  }
   const id = import.meta.env.VITE_GOOGLE_CLIENT_ID
   if (!id) throw new Error('VITE_GOOGLE_CLIENT_ID not set')
   return id
