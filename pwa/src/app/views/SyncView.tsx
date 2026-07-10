@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getDb } from '../../db'
-import { deriveKey, encryptWithKey, decryptWithKey, unlock } from '../../crypto'
+import { getKey, deriveKey, encryptWithKey, decryptWithKey, isLocked } from '../../crypto'
 import { ACCENT } from '../../design/tokens'
 import ViewHeader from '../ViewHeader'
 import { IconSync } from '../../design/icons'
@@ -27,13 +27,16 @@ function StatusDot({ ok }: { ok: boolean }) {
   )
 }
 
+type SecretRow = { id: string; label: string; ciphertext: string; iv: string; tags: string[]; url: string; description: string }
+
 export function useSyncLogic() {
   const [status, setStatus] = useState<Status>('idle')
   const [logs, setLogs] = useState<{ time: string; msg: string; type: 'info' | 'ok' | 'error' }[]>([])
-  const [syncPw, setSyncPw] = useState('')
   const [connected, setConnected] = useState(() => !!getStoredToken())
+  // Cross-device pull: pending payload waiting for password confirmation
+  const [pendingPull, setPendingPull] = useState<{ ciphertext: string; iv: string; salt: number[] } | null>(null)
+  const [pullPassword, setPullPassword] = useState('')
 
-  // Pick up result from OAuth redirect flow on mount
   useEffect(() => {
     const error = localStorage.getItem('oauth_error')
     if (error) {
@@ -72,9 +75,9 @@ export function useSyncLogic() {
   }
 
   async function push() {
-    if (!syncPw.trim()) { log('Enter your vault password', 'error'); setStatus('error'); return }
     const token = getStoredToken()
     if (!token) { log('Not connected — click Connect first', 'error'); setStatus('error'); return }
+    if (isLocked()) { log('Unlock your vault before syncing', 'error'); setStatus('error'); return }
     setStatus('busy'); log('Exporting data…')
     try {
       const db = await getDb()
@@ -86,14 +89,12 @@ export function useSyncLogic() {
         db.query('SELECT * FROM map_pins'),
       ])
       log(`${notes.rows.length} notes, ${secrets.rows.length} secrets, ${todos.rows.length} todos`)
-      // Use vault salt + vault password — same format as Chrome extension
       const vaultSaltB64 = localStorage.getItem('myspace_vault_salt')
       if (!vaultSaltB64) { log('Vault not initialised — unlock first', 'error'); setStatus('error'); return }
       const vaultSalt = Uint8Array.from(atob(vaultSaltB64), c => c.charCodeAt(0))
-      const key = await deriveKey(syncPw, vaultSalt)
       const plaintext = JSON.stringify({ notes: notes.rows, secrets: secrets.rows, subscriptions: subs.rows, todo_tasks: todos.rows, map_pins: pins.rows })
       log('Encrypting…')
-      const { ciphertext, iv } = await encryptWithKey(plaintext, key)
+      const { ciphertext, iv } = await encryptWithKey(plaintext, getKey())
       const payload = JSON.stringify({ ciphertext, iv, salt: Array.from(vaultSalt) })
       log('Uploading to Drive…')
       const existingId = await findFile(token)
@@ -103,120 +104,151 @@ export function useSyncLogic() {
   }
 
   async function pull() {
-    if (!syncPw.trim()) { log('Enter your vault password', 'error'); setStatus('error'); return }
     const token = getStoredToken()
     if (!token) { log('Not connected — click Connect first', 'error'); setStatus('error'); return }
-
+    if (isLocked()) { log('Unlock your vault before syncing', 'error'); setStatus('error'); return }
     setStatus('busy'); log('Searching Drive for backup…')
     try {
       const fileId = await findFile(token)
       if (!fileId) { log('No backup found on Drive', 'error'); setStatus('error'); return }
       log('Downloading…')
       const raw = await downloadFile(token, fileId)
-      const payload = JSON.parse(raw) as { ciphertext: string; iv: string; salt: number[] }
-      if (!payload.salt || !payload.ciphertext || !payload.iv) {
-        throw new Error('Backup is missing required fields (salt/ciphertext/iv). Push from the source device first.')
+      const payload = JSON.parse(raw) as { ciphertext: string; iv: string; salt?: number[] }
+      if (!payload.ciphertext || !payload.iv) {
+        throw new Error('Backup is missing required fields. Push from the source device first.')
       }
-      log('Decrypting…')
-      const backupSalt = Uint8Array.from(payload.salt)
-      const backupKey = await deriveKey(syncPw, backupSalt)
-      const plaintext = await decryptWithKey(payload.ciphertext, payload.iv, backupKey)
-      const data = JSON.parse(plaintext) as Record<string, unknown[]>
 
-      // Derive local key from the typed password + local salt — no unlock required
+      const backupSalt = payload.salt ? Uint8Array.from(payload.salt) : null
       const localSaltB64 = localStorage.getItem('myspace_vault_salt')
-      if (!localSaltB64) { throw new Error('Vault not initialised on this device — unlock first to set a password') }
-      const localSalt = Uint8Array.from(atob(localSaltB64), c => c.charCodeAt(0))
-      const localKey = await deriveKey(syncPw, localSalt)
+      const localSalt = localSaltB64 ? Uint8Array.from(atob(localSaltB64), c => c.charCodeAt(0)) : null
 
-      // Same-device pull: if salts match, backupKey == localKey — skip per-secret re-encryption
-      const sameSalt = backupSalt.length === localSalt.length &&
-        backupSalt.every((b, i) => b === localSalt[i])
+      const saltsDiffer = backupSalt && localSalt &&
+        (backupSalt.length !== localSalt.length || backupSalt.some((b, i) => b !== localSalt[i]))
+      const noLocalSalt = backupSalt && !localSalt
 
-      log('Merging…')
-      const db = await getDb()
-
-      if (data.notes) {
-        for (const n of data.notes as { id: string; title: string; content: string; tags: string[]; image_data: string }[]) {
-          await db.query(
-            'INSERT INTO notes (id,title,content,tags,image_data) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (id) DO UPDATE SET title=EXCLUDED.title, content=EXCLUDED.content, tags=EXCLUDED.tags, image_data=EXCLUDED.image_data, updated_at=now()',
-            [n.id, n.title, n.content, n.tags, n.image_data]
-          )
-        }
-        log(`Merged ${data.notes.length} notes`)
+      if (saltsDiffer || noLocalSalt) {
+        // Cross-device: store payload and ask for password
+        setPendingPull({ ciphertext: payload.ciphertext, iv: payload.iv, salt: payload.salt! })
+        setStatus('idle')
+        log('Different device detected — enter your master password to decrypt', 'info')
+        return
       }
 
-      if (data.secrets) {
-        const secrets = data.secrets as { id: string; label: string; ciphertext: string; iv: string; tags: string[]; url: string; description: string }[]
-        for (const s of secrets) {
-          let finalCt: string
-          let finalIv: string
-          if (sameSalt) {
-            // Same device: ciphertext is already under the local key
-            finalCt = s.ciphertext
-            finalIv = s.iv
-          } else {
-            // Cross-device: decrypt with backup key, re-encrypt with local key
-            const plainValue = await decryptWithKey(s.ciphertext, s.iv, backupKey)
-            const enc = await encryptWithKey(plainValue, localKey)
-            finalCt = enc.ciphertext
-            finalIv = enc.iv
-          }
-          await db.query(
-            'INSERT INTO secrets (id,label,ciphertext,iv,tags,url,description) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET label=EXCLUDED.label, ciphertext=EXCLUDED.ciphertext, iv=EXCLUDED.iv, tags=EXCLUDED.tags, url=EXCLUDED.url, description=EXCLUDED.description, updated_at=now()',
-            [s.id, s.label, finalCt, finalIv, s.tags, s.url ?? '', s.description ?? '']
-          )
+      // Same-device: decrypt with current vault key
+      log('Decrypting…')
+      let plaintext: string
+      try {
+        plaintext = await decryptWithKey(payload.ciphertext, payload.iv, getKey())
+      } catch {
+        if (backupSalt) {
+          setPendingPull({ ciphertext: payload.ciphertext, iv: payload.iv, salt: payload.salt! })
+          setStatus('idle')
+          log('Could not decrypt — enter your master password to retry', 'info')
+          return
         }
-        log(`Merged ${secrets.length} secrets`)
+        throw new Error('Cannot decrypt: push from your original device first to embed the encryption key.')
       }
 
-      if (data.subscriptions) {
-        for (const s of data.subscriptions as { id: string; name: string; amount: number; currency: string; cycle: string; start_date: string; notes: string; active: boolean; tags: string[] }[]) {
-          await db.query(
-            'INSERT INTO subscriptions (id,name,amount,currency,cycle,start_date,notes,active,tags) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, amount=EXCLUDED.amount, currency=EXCLUDED.currency, cycle=EXCLUDED.cycle, start_date=EXCLUDED.start_date, notes=EXCLUDED.notes, active=EXCLUDED.active, tags=EXCLUDED.tags, updated_at=now()',
-            [s.id, s.name, s.amount, s.currency, s.cycle, s.start_date, s.notes ?? '', s.active, s.tags]
-          )
-        }
-        log(`Merged ${data.subscriptions.length} subscriptions`)
-      }
-
-      if (data.todo_tasks) {
-        for (const t of data.todo_tasks as { id: string; list_id: string; title: string; done: boolean; priority: string; due_date: string; notes: string }[]) {
-          await db.query(
-            'INSERT INTO todo_tasks (id,list_id,title,done,priority,due_date,notes) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET title=EXCLUDED.title, done=EXCLUDED.done, priority=EXCLUDED.priority, due_date=EXCLUDED.due_date, notes=EXCLUDED.notes',
-            [t.id, t.list_id, t.title, t.done, t.priority, t.due_date, t.notes]
-          )
-        }
-        log(`Merged ${data.todo_tasks.length} tasks`)
-      }
-
-      if (data.map_pins) {
-        const pins = data.map_pins as { id: string; stack_id: string; label: string; lat: number; lng: number; url: string; note: string; priority: string; category: string; rating: number; review_note: string }[]
-        for (const p of pins) {
-          await db.query(
-            'INSERT INTO map_pins (id,stack_id,label,lat,lng,url,note,priority,category,rating,review_note) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ON CONFLICT (id) DO NOTHING',
-            [p.id, p.stack_id, p.label, p.lat, p.lng, p.url ?? '', p.note ?? '', p.priority ?? 'none', p.category ?? '', p.rating ?? 0, p.review_note ?? '']
-          )
-        }
-        log(`Merged ${pins.length} pins`)
-      }
-
-      // Unlock the vault with the same password so reveal works immediately without a separate unlock step
-      try { await unlock(syncPw, localSalt) } catch { /* vault verify token may not exist yet on fresh install — ignore */ }
-
-      log('Pull complete ✓', 'ok'); setStatus('ok')
+      await finishImport(plaintext, null, null)
     } catch (e) { log(String(e), 'error'); setStatus('error') }
   }
 
-  return { status, logs, syncPw, setSyncPw, connected, log, connect, disconnect, push, pull, clearLogs: () => setLogs([]) }
+  async function confirmPull() {
+    if (!pullPassword.trim() || !pendingPull) return
+    setStatus('busy')
+    try {
+      const backupSalt = Uint8Array.from(pendingPull.salt)
+      const backupKey = await deriveKey(pullPassword, backupSalt)
+      log('Decrypting…')
+      let plaintext: string
+      try {
+        plaintext = await decryptWithKey(pendingPull.ciphertext, pendingPull.iv, backupKey)
+      } catch {
+        throw new Error('Wrong password — decryption failed')
+      }
+      setPendingPull(null)
+      setPullPassword('')
+      await finishImport(plaintext, backupKey, getKey())
+    } catch (e) { log(String(e), 'error'); setStatus('error') }
+  }
+
+  async function finishImport(plaintext: string, backupKey: CryptoKey | null, localKey: CryptoKey | null) {
+    const data = JSON.parse(plaintext) as Record<string, unknown[]>
+    log('Merging…')
+    const db = await getDb()
+
+    if (data.notes) {
+      for (const n of data.notes as { id: string; title: string; content: string; tags: string[]; image_data: string }[]) {
+        await db.query(
+          'INSERT INTO notes (id,title,content,tags,image_data) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (id) DO UPDATE SET title=EXCLUDED.title, content=EXCLUDED.content, tags=EXCLUDED.tags, image_data=EXCLUDED.image_data, updated_at=now()',
+          [n.id, n.title, n.content, n.tags, n.image_data]
+        )
+      }
+      log(`Merged ${data.notes.length} notes`)
+    }
+
+    if (data.secrets) {
+      const secrets = data.secrets as SecretRow[]
+      for (const s of secrets) {
+        let finalCt = s.ciphertext
+        let finalIv = s.iv
+        if (backupKey && localKey) {
+          // Cross-device: decrypt with backup key, re-encrypt with local vault key
+          const plainValue = await decryptWithKey(s.ciphertext, s.iv, backupKey)
+          const enc = await encryptWithKey(plainValue, localKey)
+          finalCt = enc.ciphertext
+          finalIv = enc.iv
+        }
+        await db.query(
+          'INSERT INTO secrets (id,label,ciphertext,iv,tags,url,description) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET label=EXCLUDED.label, ciphertext=EXCLUDED.ciphertext, iv=EXCLUDED.iv, tags=EXCLUDED.tags, url=EXCLUDED.url, description=EXCLUDED.description, updated_at=now()',
+          [s.id, s.label, finalCt, finalIv, s.tags, s.url ?? '', s.description ?? '']
+        )
+      }
+      log(`Merged ${secrets.length} secrets`)
+    }
+
+    if (data.subscriptions) {
+      for (const s of data.subscriptions as { id: string; name: string; amount: number; currency: string; cycle: string; start_date: string; notes: string; active: boolean; tags: string[] }[]) {
+        await db.query(
+          'INSERT INTO subscriptions (id,name,amount,currency,cycle,start_date,notes,active,tags) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, amount=EXCLUDED.amount, currency=EXCLUDED.currency, cycle=EXCLUDED.cycle, start_date=EXCLUDED.start_date, notes=EXCLUDED.notes, active=EXCLUDED.active, tags=EXCLUDED.tags, updated_at=now()',
+          [s.id, s.name, s.amount, s.currency, s.cycle, s.start_date, s.notes ?? '', s.active, s.tags]
+        )
+      }
+      log(`Merged ${data.subscriptions.length} subscriptions`)
+    }
+
+    if (data.todo_tasks) {
+      for (const t of data.todo_tasks as { id: string; list_id: string; title: string; done: boolean; priority: string; due_date: string; notes: string }[]) {
+        await db.query(
+          'INSERT INTO todo_tasks (id,list_id,title,done,priority,due_date,notes) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET title=EXCLUDED.title, done=EXCLUDED.done, priority=EXCLUDED.priority, due_date=EXCLUDED.due_date, notes=EXCLUDED.notes',
+          [t.id, t.list_id, t.title, t.done, t.priority, t.due_date, t.notes]
+        )
+      }
+      log(`Merged ${data.todo_tasks.length} tasks`)
+    }
+
+    if (data.map_pins) {
+      const pins = data.map_pins as { id: string; stack_id: string; label: string; lat: number; lng: number; url: string; note: string; priority: string; category: string; rating: number; review_note: string }[]
+      for (const p of pins) {
+        await db.query(
+          'INSERT INTO map_pins (id,stack_id,label,lat,lng,url,note,priority,category,rating,review_note) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ON CONFLICT (id) DO NOTHING',
+          [p.id, p.stack_id, p.label, p.lat, p.lng, p.url ?? '', p.note ?? '', p.priority ?? 'none', p.category ?? '', p.rating ?? 0, p.review_note ?? '']
+        )
+      }
+      log(`Merged ${pins.length} pins`)
+    }
+
+    log('Pull complete ✓', 'ok'); setStatus('ok')
+  }
+
+  return { status, logs, connected, pendingPull, pullPassword, setPullPassword, log, connect, disconnect, push, pull, confirmPull, cancelPull: () => { setPendingPull(null); setPullPassword('') }, clearLogs: () => setLogs([]) }
 }
 
 export default function SyncView() {
   const isDesktop = useIsDesktop()
   if (isDesktop) return <DesktopSyncView />
 
-  const { status, logs, syncPw, setSyncPw, connected, connect, disconnect, push, pull, clearLogs } = useSyncLogic()
-  const [showPw, setShowPw] = useState(false)
+  const { status, logs, connected, pendingPull, pullPassword, setPullPassword, connect, disconnect, push, pull, confirmPull, cancelPull, clearLogs } = useSyncLogic()
 
   const logColor = (type: 'info' | 'ok' | 'error') =>
     type === 'error' ? '#f87171' : type === 'ok' ? '#34d399' : 'rgba(255,255,255,0.7)'
@@ -255,37 +287,57 @@ export default function SyncView() {
           </div>
         </div>
         <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 11, color: '#94a3b8', lineHeight: 1.5, borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: 12 }}>
-          Data is encrypted with your vault password. Compatible with the Chrome extension — use the same password everywhere.
+          Data is encrypted with your vault password. Compatible with the Chrome extension.
         </div>
       </div>
 
       {/* Backup card */}
       <div style={{ background: 'rgba(255,255,255,0.55)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderRadius: 20, border: '1px solid rgba(255,255,255,0.6)', padding: 20 }}>
         <div style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 14, color: '#1a1a2e', marginBottom: 14 }}>Backup & Restore</div>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-          <input
-            value={syncPw} onChange={e => setSyncPw(e.target.value)}
-            type={showPw ? 'text' : 'password'}
-            placeholder="Vault password (same as unlock password)"
-            style={{ flex: 1, padding: '10px 14px', borderRadius: 12, border: '1.5px solid rgba(255,255,255,0.6)', background: 'rgba(255,255,255,0.5)', fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#1a1a2e', outline: 'none' }}
-          />
-          <button onClick={() => setShowPw(p => !p)} style={{
-            padding: '10px 16px', borderRadius: 12, border: '1.5px solid rgba(255,255,255,0.6)', background: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontFamily: 'Inter, sans-serif', fontSize: 13, fontWeight: 600, color: '#4a4a6a',
-          }}>{showPw ? 'Hide' : 'Show'}</button>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={push} disabled={status === 'busy'} style={{
-            flex: 1, padding: '11px 0', borderRadius: 100, border: 'none', cursor: status === 'busy' ? 'not-allowed' : 'pointer',
-            background: `linear-gradient(135deg, ${accent}, #ec4899)`,
-            color: '#fff', fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 13,
-            boxShadow: `0 4px 14px ${accent}40`, opacity: status === 'busy' ? 0.6 : 1,
-          }}>↑ Push to Drive</button>
-          <button onClick={pull} disabled={status === 'busy'} style={{
-            flex: 1, padding: '11px 0', borderRadius: 100, border: '1.5px solid rgba(255,255,255,0.7)', cursor: status === 'busy' ? 'not-allowed' : 'pointer',
-            background: 'rgba(255,255,255,0.5)', color: '#1a1a2e', fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 13,
-            opacity: status === 'busy' ? 0.6 : 1,
-          }}>↓ Pull from Drive</button>
-        </div>
+
+        {/* Cross-device password prompt */}
+        {pendingPull ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#7c6af7', lineHeight: 1.5 }}>
+              Different device detected — enter your master password to decrypt the backup.
+            </div>
+            <input
+              type="password"
+              autoFocus
+              value={pullPassword}
+              onChange={e => setPullPassword(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && confirmPull()}
+              placeholder="Master password"
+              style={{ padding: '10px 14px', borderRadius: 12, border: '1.5px solid rgba(124,106,247,0.4)', background: 'rgba(255,255,255,0.5)', fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#1a1a2e', outline: 'none' }}
+            />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={confirmPull} disabled={!pullPassword.trim() || status === 'busy'} style={{
+                flex: 1, padding: '11px 0', borderRadius: 100, border: 'none', cursor: 'pointer',
+                background: 'linear-gradient(135deg, #7c6af7, #6366f1)',
+                color: '#fff', fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 13,
+                opacity: !pullPassword.trim() || status === 'busy' ? 0.5 : 1,
+              }}>Decrypt & Import</button>
+              <button onClick={cancelPull} style={{
+                padding: '11px 16px', borderRadius: 100, border: '1.5px solid rgba(255,255,255,0.7)', cursor: 'pointer',
+                background: 'rgba(255,255,255,0.5)', color: '#4a4a6a', fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 13,
+              }}>Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={push} disabled={status === 'busy'} style={{
+              flex: 1, padding: '11px 0', borderRadius: 100, border: 'none', cursor: status === 'busy' ? 'not-allowed' : 'pointer',
+              background: `linear-gradient(135deg, ${accent}, #ec4899)`,
+              color: '#fff', fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 13,
+              boxShadow: `0 4px 14px ${accent}40`, opacity: status === 'busy' ? 0.6 : 1,
+            }}>↑ Push to Drive</button>
+            <button onClick={pull} disabled={status === 'busy'} style={{
+              flex: 1, padding: '11px 0', borderRadius: 100, border: '1.5px solid rgba(255,255,255,0.7)', cursor: status === 'busy' ? 'not-allowed' : 'pointer',
+              background: 'rgba(255,255,255,0.5)', color: '#1a1a2e', fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 13,
+              opacity: status === 'busy' ? 0.6 : 1,
+            }}>↓ Pull from Drive</button>
+          </div>
+        )}
       </div>
 
       {/* Console */}
