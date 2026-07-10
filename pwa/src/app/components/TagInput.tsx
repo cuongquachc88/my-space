@@ -1,4 +1,4 @@
-import { useState, KeyboardEvent } from 'react'
+import { useState, useRef, KeyboardEvent } from 'react'
 
 interface Props {
   tags: string[]
@@ -6,13 +6,15 @@ interface Props {
   placeholder?: string
 }
 
+const ACCENT = '#7c6af7'
+
 export default function TagInput({ tags, onChange, placeholder = 'Add tag…' }: Props) {
   const [input, setInput] = useState('')
-  const [editing, setEditing] = useState<string | null>(null)
-  const [editVal, setEditVal] = useState('')
+  const [focused, setFocused] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const add = () => {
-    const t = input.trim().toLowerCase()
+    const t = input.trim().toLowerCase().replace(/^#/, '')
     if (t && !tags.includes(t)) onChange([...tags, t])
     setInput('')
   }
@@ -22,81 +24,58 @@ export default function TagInput({ tags, onChange, placeholder = 'Add tag…' }:
     if (e.key === 'Backspace' && input === '' && tags.length > 0) onChange(tags.slice(0, -1))
   }
 
-  const startEdit = (t: string) => { setEditing(t); setEditVal(t) }
-
-  const commitEdit = (old: string) => {
-    const v = editVal.trim().toLowerCase()
-    if (v && v !== old && !tags.includes(v)) {
-      onChange(tags.map(t => t === old ? v : t))
-    }
-    setEditing(null)
-  }
-
-  const onEditKey = (e: KeyboardEvent<HTMLInputElement>, old: string) => {
-    if (e.key === 'Enter') { e.preventDefault(); commitEdit(old) }
-    if (e.key === 'Escape') setEditing(null)
-  }
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      {/* Tag list */}
-      {tags.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {tags.map(t => (
-            <div key={t} style={{
-              display: 'flex', alignItems: 'center', gap: 4,
-              background: 'rgba(124,106,247,0.1)',
-              border: '1px solid rgba(124,106,247,0.2)',
-              borderRadius: 100, padding: '4px 10px',
-            }}>
-              {editing === t ? (
-                <input
-                  autoFocus
-                  value={editVal}
-                  onChange={e => setEditVal(e.target.value)}
-                  onKeyDown={e => onEditKey(e, t)}
-                  onBlur={() => commitEdit(t)}
-                  style={{
-                    background: 'transparent', border: 'none', outline: 'none',
-                    fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#7c6af7',
-                    width: Math.max(editVal.length, 3) + 'ch',
-                  }}
-                />
-              ) : (
-                <span
-                  onClick={() => startEdit(t)}
-                  style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#7c6af7', cursor: 'text' }}>
-                  #{t}
-                </span>
-              )}
-              <button
-                onClick={() => onChange(tags.filter(x => x !== t))}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7c6af7', fontSize: 14, lineHeight: 1, opacity: 0.5, padding: 0 }}>
-                ×
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
+    <div
+      onClick={() => inputRef.current?.focus()}
+      style={{
+        display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6,
+        padding: '8px 12px',
+        background: focused ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.45)',
+        border: `1.5px solid ${focused ? `${ACCENT}50` : 'rgba(255,255,255,0.6)'}`,
+        borderRadius: 14,
+        cursor: 'text',
+        transition: 'background 150ms, border-color 150ms',
+        minHeight: 42,
+      }}
+    >
+      {/* Existing tags */}
+      {tags.map(t => (
+        <span key={t} style={{
+          display: 'inline-flex', alignItems: 'center', gap: 4,
+          background: `${ACCENT}14`,
+          border: `1px solid ${ACCENT}30`,
+          borderRadius: 100,
+          padding: '3px 8px 3px 9px',
+          fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 600,
+          color: ACCENT,
+          userSelect: 'none',
+        }}>
+          #{t}
+          <button
+            onMouseDown={e => { e.preventDefault(); onChange(tags.filter(x => x !== t)) }}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: ACCENT, opacity: 0.5, fontSize: 15, lineHeight: 1,
+              padding: '0 1px', display: 'flex', alignItems: 'center',
+            }}>×</button>
+        </span>
+      ))}
 
-      {/* Add input */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 8,
-        background: 'rgba(0,0,0,0.04)', borderRadius: 10, padding: '6px 10px',
-      }}>
-        <span style={{ fontSize: 12, color: '#8e8e93' }}>#</span>
-        <input
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={onKey}
-          onBlur={add}
-          placeholder={placeholder}
-          style={{
-            flex: 1, background: 'transparent', border: 'none', outline: 'none',
-            fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#1a1a2e',
-          }}
-        />
-      </div>
+      {/* Inline input */}
+      <input
+        ref={inputRef}
+        value={input}
+        onChange={e => setInput(e.target.value)}
+        onKeyDown={onKey}
+        onBlur={() => { add(); setFocused(false) }}
+        onFocus={() => setFocused(true)}
+        placeholder={tags.length === 0 ? placeholder : ''}
+        style={{
+          flex: 1, minWidth: 80,
+          background: 'transparent', border: 'none', outline: 'none',
+          fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#1a1a2e',
+        }}
+      />
     </div>
   )
 }

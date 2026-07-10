@@ -1,0 +1,49 @@
+<!doctype html>
+<html>
+<head><meta charset="UTF-8" /><title>Connecting…</title></head>
+<body style="background:#0f0f23;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:Inter,sans-serif;color:#fff">
+  <div style="text-align:center">
+    <div style="font-size:32px;margin-bottom:12px">🔐</div>
+    <div style="font-size:14px;opacity:0.6">Connecting to Google Drive…</div>
+  </div>
+  <script>
+    (function () {
+      const hash = new URLSearchParams(window.location.hash.slice(1))
+      const params = new URLSearchParams(window.location.search)
+      const token = hash.get('access_token')
+      const state = hash.get('state') || params.get('state')
+      const error = hash.get('error') || params.get('error')
+
+      if (error) {
+        if (window.opener) {
+          window.opener.postMessage({ type: 'OAUTH_ERROR', error }, window.location.origin)
+          window.close()
+        } else {
+          sessionStorage.setItem('oauth_error', error)
+          window.location.href = '/'
+        }
+        return
+      }
+
+      if (token) {
+        const stored = sessionStorage.getItem('oauth_state')
+        // Fail closed: reject if no in-progress auth OR state mismatch
+        if (!stored || stored !== state) {
+          const msg = { type: 'OAUTH_ERROR', error: 'state_mismatch' }
+          if (window.opener) { window.opener.postMessage(msg, window.location.origin); window.close() }
+          else { window.location.href = '/' }
+          return
+        }
+        // Only accept token via postMessage to popup — direct navigation is unexpected
+        if (window.opener) {
+          window.opener.postMessage({ type: 'OAUTH_TOKEN', token }, window.location.origin)
+          window.close()
+        } else {
+          // No opener means this wasn't opened by our popup flow — reject
+          window.location.href = '/'
+        }
+      }
+    })()
+  </script>
+</body>
+</html>

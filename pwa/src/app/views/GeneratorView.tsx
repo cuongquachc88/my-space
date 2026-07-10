@@ -99,7 +99,7 @@ export default function GeneratorView() {
         <BentoCell span="1">
           <GlassCard style={{ height: '100%' }}>
             <div style={{ padding: 16 }}>
-              <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e', marginBottom: 10 }}>History</div>
+              <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e', marginBottom: 10 }}>History</div>
               {history.length === 0 && <div style={{ color: '#94a3b8', fontSize: 13, fontFamily: 'Inter, sans-serif' }}>No history yet.</div>}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 300, overflowY: 'auto' }}>
                 {history.map((pw, i) => (

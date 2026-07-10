@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Terms of Service — My SPACE</title>
+  <meta name="description" content="Terms of Service for the My SPACE Chrome extension — local-first, encrypted personal vault." />
+  <meta name="author" content="cuongquachc88" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://cuongquachc88.github.io/my-space/terms-of-service.html" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1117;
+      --surface: rgba(255,255,255,0.04);
+      --border: rgba(255,255,255,0.07);
+      --border-hover: rgba(255,255,255,0.14);
+      --text: rgba(255,255,255,0.88);
+      --muted: rgba(255,255,255,0.38);
+      --faint: rgba(255,255,255,0.10);
+      --notes: #6366f1;
+      --vault: #f59e0b;
+      --sync: #3b82f6;
+      --gen: #a78bfa;
+      --subs: #34d399;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Noise */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 0; opacity: 0.5;
+    }
+
+    /* Grid */
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.016) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.016) 1px, transparent 1px);
+      background-size: 80px 80px;
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 48px; height: 64px;
+      background: rgba(13,17,23,0.75);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-left { display: flex; align-items: center; gap: 40px; }
+
+    .nav-logo {
+      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 17px;
+      letter-spacing: -0.02em; color: var(--text); text-decoration: none;
+      display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+    }
+
+    .nav-logo-icon {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, #6366f1, #a78bfa);
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .nav-links { display: flex; gap: 28px; list-style: none; }
+    .nav-links a {
+      font-size: 13px; color: var(--muted); text-decoration: none;
+      letter-spacing: 0.02em; transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+    .nav-links a.active {
+      color: var(--text);
+      position: relative;
+    }
+    .nav-links a.active::after {
+      content: '';
+      position: absolute; bottom: -4px; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, var(--notes), var(--gen));
+      border-radius: 1px;
+    }
+
+    .btn-ghost {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 16px; border-radius: 10px; background: var(--surface);
+      color: var(--muted); font-size: 13px; text-decoration: none;
+      border: 1px solid var(--border); transition: all 0.2s;
+    }
+    .btn-ghost:hover { color: var(--text); border-color: var(--border-hover); background: rgba(255,255,255,0.07); }
+
+    /* ── Page wrapper ── */
+    .page-wrapper {
+      position: relative; z-index: 1;
+      padding-top: 64px; /* nav height */
+      min-height: 100vh;
+    }
+
+    /* ── Breadcrumb ── */
+    .breadcrumb {
+      max-width: 1120px; margin: 0 auto;
+      padding: 20px 48px 0;
+    }
+    .breadcrumb a {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 13px; color: var(--muted); text-decoration: none;
+      font-family: 'DM Mono', monospace; letter-spacing: 0.02em;
+      transition: color 0.2s;
+    }
+    .breadcrumb a:hover { color: var(--text); }
+    .breadcrumb a svg { flex-shrink: 0; }
+
+    /* ── Layout ── */
+    .doc-layout {
+      max-width: 1120px; margin: 0 auto;
+      padding: 40px 48px 80px;
+      display: grid;
+      grid-template-columns: 250px 1fr;
+      gap: 48px;
+      align-items: start;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      position: sticky; top: 88px;
+    }
+
+    .sidebar-label {
+      font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--muted);
+      margin-bottom: 12px; padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .toc-list {
+      list-style: none;
+      display: flex; flex-direction: column; gap: 2px;
+    }
+
+    .toc-list a {
+      display: block;
+      font-size: 13px; color: var(--muted);
+      text-decoration: none; padding: 6px 10px;
+      border-radius: 7px; border-left: 2px solid transparent;
+      transition: all 0.2s;
+      line-height: 1.4;
+    }
+
+    .toc-list a:hover {
+      color: var(--text);
+      background: var(--surface);
+    }
+
+    .toc-list a.toc-active {
+      color: var(--text);
+      background: rgba(99,102,241,0.08);
+      border-left-color: var(--notes);
+    }
+
+    /* ── Content ── */
+    .doc-content { min-width: 0; }
+
+    .doc-header {
+      margin-bottom: 48px;
+      padding-bottom: 32px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .doc-title-row {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 16px; flex-wrap: wrap; margin-bottom: 12px;
+    }
+
+    .doc-title {
+      font-family: 'Syne', sans-serif; font-weight: 800;
+      font-size: clamp(28px, 4vw, 40px); letter-spacing: -0.03em;
+      line-height: 1.1;
+      background: linear-gradient(135deg, var(--text) 40%, rgba(255,255,255,0.5));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+
+    .date-badge {
+      display: inline-flex; align-items: center;
+      padding: 4px 12px; border-radius: 100px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-family: 'DM Mono', monospace; font-size: 11px;
+      color: var(--muted); letter-spacing: 0.05em;
+      white-space: nowrap; flex-shrink: 0; margin-top: 6px;
+    }
+
+    .doc-subtitle {
+      font-size: 15px; color: var(--muted); font-weight: 300; line-height: 1.6;
+    }
+
+    /* ── Section cards ── */
+    .doc-section {
+      margin-bottom: 24px;
+      scroll-margin-top: 96px;
+    }
+
+    .section-card {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      border-radius: 14px;
+      padding: 28px 32px;
+      transition: border-color 0.2s;
+    }
+
+    .section-card:hover {
+      border-color: var(--border-hover);
+    }
+
+    .section-card-legal {
+      border-color: rgba(255,255,255,0.05);
+      background: rgba(255,255,255,0.02);
+    }
+
+    .section-heading {
+      font-family: 'Syne', sans-serif; font-weight: 800;
+      font-size: 18px; letter-spacing: -0.02em;
+      color: var(--text); margin-bottom: 14px;
+      display: flex; align-items: center; gap: 12px;
+    }
+
+    .section-heading::before {
+      content: '';
+      display: block; flex-shrink: 0;
+      width: 3px; height: 20px; border-radius: 2px;
+      background: linear-gradient(180deg, var(--notes), var(--gen));
+    }
+
+    .section-body {
+      font-size: 14.5px; color: rgba(255,255,255,0.72);
+      line-height: 1.75;
+    }
+
+    .section-body p { margin-bottom: 10px; }
+    .section-body p:last-child { margin-bottom: 0; }
+
+    /* ── Warning callout ── */
+    .callout-warning {
+      display: flex; gap: 14px; align-items: flex-start;
+      margin-top: 18px;
+      padding: 16px 18px;
+      border-radius: 10px;
+      background: rgba(245,158,11,0.08);
+      border: 1px solid rgba(245,158,11,0.25);
+    }
+
+    .callout-icon {
+      flex-shrink: 0; width: 32px; height: 32px;
+      border-radius: 8px;
+      background: rgba(245,158,11,0.15);
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .callout-icon svg { display: block; }
+
+    .callout-body { flex: 1; min-width: 0; }
+
+    .callout-title {
+      font-family: 'DM Sans', sans-serif; font-weight: 500;
+      font-size: 13px; color: rgba(245,158,11,0.95);
+      margin-bottom: 4px;
+    }
+
+    .callout-text {
+      font-size: 13px; color: rgba(255,255,255,0.55); line-height: 1.5;
+    }
+
+    /* ── Legal boilerplate box ── */
+    .legal-box {
+      margin-top: 6px;
+      padding: 14px 18px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.025);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .legal-box .section-body {
+      color: rgba(255,255,255,0.42);
+      font-size: 13.5px;
+    }
+
+    /* ── Drive info chip ── */
+    .drive-chip {
+      display: inline-flex; align-items: center; gap: 8px;
+      margin-top: 14px;
+      padding: 8px 14px; border-radius: 8px;
+      background: rgba(59,130,246,0.07);
+      border: 1px solid rgba(59,130,246,0.2);
+      font-size: 12.5px; color: rgba(147,197,253,0.85);
+      font-family: 'DM Mono', monospace; letter-spacing: 0.02em;
+    }
+
+    .drive-chip-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--sync); box-shadow: 0 0 6px var(--sync);
+    }
+
+    /* ── Contact section ── */
+    .contact-card {
+      display: flex; align-items: center; gap: 16px;
+      margin-top: 6px;
+      padding: 18px 24px; border-radius: 12px;
+      background: rgba(99,102,241,0.06);
+      border: 1px solid rgba(99,102,241,0.18);
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .contact-card:hover {
+      background: rgba(99,102,241,0.1);
+      border-color: rgba(99,102,241,0.3);
+    }
+
+    .contact-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: rgba(99,102,241,0.15);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .contact-label { font-size: 11px; color: var(--muted); margin-bottom: 2px; font-family: 'DM Mono', monospace; letter-spacing: 0.06em; text-transform: uppercase; }
+    .contact-email { font-size: 14px; color: var(--text); font-weight: 500; }
+
+    .contact-arrow {
+      margin-left: auto; color: var(--muted);
+      transition: transform 0.2s, color 0.2s;
+    }
+    .contact-card:hover .contact-arrow { transform: translateX(3px); color: var(--notes); }
+
+    /* ── Section number chip ── */
+    .section-num {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 22px; height: 22px; border-radius: 6px;
+      background: rgba(99,102,241,0.12);
+      font-family: 'DM Mono', monospace; font-size: 10px;
+      color: rgba(167,139,250,0.8); font-weight: 500;
+      flex-shrink: 0; margin-left: auto;
+    }
+
+    /* ── Footer ── */
+    footer {
+      position: relative; z-index: 1;
+      border-top: 1px solid var(--border);
+      padding: 32px 0;
+    }
+
+    .footer-inner {
+      max-width: 1120px; margin: 0 auto;
+      padding: 0 48px;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 24px; flex-wrap: wrap;
+    }
+
+    .footer-logo {
+      font-family: 'Syne', sans-serif; font-weight: 800;
+      font-size: 15px; letter-spacing: -0.02em;
+      color: var(--muted);
+    }
+
+    .footer-links { display: flex; gap: 24px; list-style: none; flex-wrap: wrap; }
+    .footer-links a {
+      font-size: 12.5px; color: var(--muted); text-decoration: none;
+      transition: color 0.2s;
+    }
+    .footer-links a:hover { color: var(--text); }
+    .footer-links a.active { color: rgba(255,255,255,0.65); }
+
+    .footer-copy { font-size: 12px; color: rgba(255,255,255,0.22); }
+
+    /* ── Mobile ── */
+    @media (max-width: 768px) {
+      nav { padding: 0 20px; }
+      .nav-links { display: none; }
+
+      .breadcrumb { padding: 16px 20px 0; }
+
+      .doc-layout {
+        grid-template-columns: 1fr;
+        padding: 24px 20px 60px;
+        gap: 0;
+      }
+
+      .sidebar {
+        position: static;
+        margin-bottom: 32px;
+        padding-bottom: 24px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .section-card { padding: 20px 20px; }
+
+      .footer-inner { padding: 0 20px; flex-direction: column; align-items: flex-start; gap: 16px; }
+    }
+
+    @media (max-width: 480px) {
+      .doc-title-row { flex-direction: column; }
+      .date-badge { align-self: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <div class="nav-left">
+    <a href="index.html" class="nav-logo">
+      <div class="nav-logo-icon">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 1L2 3.5V8C2 11.5 5 14.5 8 15C11 14.5 14 11.5 14 8V3.5L8 1Z" fill="rgba(255,255,255,0.9)"/>
+        </svg>
+      </div>
+      My SPACE
+    </a>
+    <ul class="nav-links">
+      <li><a href="index.html#features">Features</a></li>
+      <li><a href="privacy-policy.html">Privacy</a></li>
+      <li><a href="terms-of-service.html" class="active">Terms</a></li>
+      <li><a href="developer-guide.html">Developer</a></li>
+      <li><a href="https://github.com/cuongquachc88/my-space" target="_blank" rel="noopener">GitHub</a></li>
+    </ul>
+  </div>
+  <a href="https://github.com/cuongquachc88/my-space" target="_blank" rel="noopener" class="btn-ghost">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+    </svg>
+    GitHub
+  </a>
+</nav>
+
+<div class="page-wrapper">
+
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <a href="index.html">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 12H5M5 12l7-7M5 12l7 7"/>
+      </svg>
+      Back to Home
+    </a>
+  </div>
+
+  <!-- Layout -->
+  <div class="doc-layout">
+
+    <!-- Sidebar TOC -->
+    <aside class="sidebar">
+      <div class="sidebar-label">On this page</div>
+      <ul class="toc-list" id="toc">
+        <li><a href="#acceptance" class="toc-active">Acceptance of Terms</a></li>
+        <li><a href="#description">Description of Service</a></li>
+        <li><a href="#your-data">Your Data</a></li>
+        <li><a href="#google-drive">Google Drive Sync</a></li>
+        <li><a href="#no-warranty">No Warranty</a></li>
+        <li><a href="#liability">Limitation of Liability</a></li>
+        <li><a href="#changes">Changes to Terms</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
+    </aside>
+
+    <!-- Main content -->
+    <main class="doc-content">
+
+      <!-- Page header -->
+      <header class="doc-header">
+        <div class="doc-title-row">
+          <h1 class="doc-title">Terms of Service</h1>
+          <span class="date-badge">Last updated: June 15, 2026</span>
+        </div>
+        <p class="doc-subtitle">These terms govern your use of the My SPACE Chrome extension. Please read them carefully before installing or using the extension.</p>
+      </header>
+
+      <!-- §1 Acceptance of Terms -->
+      <div class="doc-section" id="acceptance">
+        <div class="section-card">
+          <h2 class="section-heading">
+            Acceptance of Terms
+            <span class="section-num">01</span>
+          </h2>
+          <div class="section-body">
+            <p>By installing or using the My SPACE Chrome extension, you agree to these Terms of Service. If you do not agree, do not use the extension.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- §2 Description of Service -->
+      <div class="doc-section" id="description">
+        <div class="section-card">
+          <h2 class="section-heading">
+            Description of Service
+            <span class="section-num">02</span>
+          </h2>
+          <div class="section-body">
+            <p>My SPACE is a free, local-first Chrome extension for storing notes, secrets, and subscriptions. All data is stored on your device. An optional Google Drive sync feature allows encrypted backups to your personal Google account.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- §3 Your Data -->
+      <div class="doc-section" id="your-data">
+        <div class="section-card">
+          <h2 class="section-heading">
+            Your Data
+            <span class="section-num">03</span>
+          </h2>
+          <div class="section-body">
+            <p>You are solely responsible for the data you store in My SPACE. All vault data is encrypted on your device using your master password. If you lose your master password, your encrypted data cannot be recovered — there is no password reset mechanism.</p>
+          </div>
+          <div class="callout-warning">
+            <div class="callout-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(245,158,11,0.9)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </div>
+            <div class="callout-body">
+              <div class="callout-title">Important: Lost passwords cannot be recovered</div>
+              <div class="callout-text">My SPACE uses zero-knowledge encryption. There is no server, no recovery email, and no way to reset your master password. Store it somewhere safe.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- §4 Google Drive Sync -->
+      <div class="doc-section" id="google-drive">
+        <div class="section-card">
+          <h2 class="section-heading">
+            Google Drive Sync
+            <span class="section-num">04</span>
+          </h2>
+          <div class="section-body">
+            <p>Use of the Google Drive sync feature is subject to Google's Terms of Service. My SPACE only accesses the private <code style="font-family:'DM Mono',monospace;font-size:12.5px;background:rgba(255,255,255,0.07);padding:1px 6px;border-radius:4px;color:rgba(147,197,253,0.85);">appData</code> folder in your Google Drive, which is not visible to other apps or users.</p>
+          </div>
+          <div class="drive-chip">
+            <div class="drive-chip-dot"></div>
+            Scope: drive.appdata only &mdash; no access to your files
+          </div>
+        </div>
+      </div>
+
+      <!-- §5 No Warranty -->
+      <div class="doc-section" id="no-warranty">
+        <div class="section-card section-card-legal">
+          <h2 class="section-heading" style="--accent: var(--muted)">
+            No Warranty
+            <span class="section-num">05</span>
+          </h2>
+          <div class="legal-box">
+            <div class="section-body">
+              <p>My SPACE is provided "as is" without warranty of any kind. The developer makes no guarantees regarding availability, accuracy, or fitness for a particular purpose.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- §6 Limitation of Liability -->
+      <div class="doc-section" id="liability">
+        <div class="section-card section-card-legal">
+          <h2 class="section-heading">
+            Limitation of Liability
+            <span class="section-num">06</span>
+          </h2>
+          <div class="legal-box">
+            <div class="section-body">
+              <p>To the fullest extent permitted by law, the developer shall not be liable for any loss of data, loss of access, or other damages arising from the use or inability to use this extension.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- §7 Changes to Terms -->
+      <div class="doc-section" id="changes">
+        <div class="section-card">
+          <h2 class="section-heading">
+            Changes to Terms
+            <span class="section-num">07</span>
+          </h2>
+          <div class="section-body">
+            <p>These terms may be updated from time to time. Continued use of the extension after changes constitutes acceptance of the updated terms.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- §8 Contact -->
+      <div class="doc-section" id="contact">
+        <div class="section-card">
+          <h2 class="section-heading">
+            Contact
+            <span class="section-num">08</span>
+          </h2>
+          <div class="section-body">
+            <p>For questions about these Terms of Service, reach out directly:</p>
+          </div>
+          <a href="mailto:cuongquachc88@gmail.com" class="contact-card">
+            <div class="contact-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(99,102,241,0.9)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
+              </svg>
+            </div>
+            <div>
+              <div class="contact-label">Email</div>
+              <div class="contact-email">cuongquachc88@gmail.com</div>
+            </div>
+            <div class="contact-arrow">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M7 17L17 7M7 7h10v10"/>
+              </svg>
+            </div>
+          </a>
+        </div>
+      </div>
+
+    </main>
+  </div><!-- /.doc-layout -->
+
+</div><!-- /.page-wrapper -->
+
+<!-- Footer -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-logo">My SPACE</div>
+    <ul class="footer-links">
+      <li><a href="privacy-policy.html">Privacy Policy</a></li>
+      <li><a href="terms-of-service.html" class="active">Terms of Service</a></li>
+      <li><a href="developer-guide.html">Developer Guide</a></li>
+      <li><a href="autofill-plan.html">Autofill Plan</a></li>
+      <li><a href="https://github.com/cuongquachc88/my-space" target="_blank" rel="noopener">GitHub</a></li>
+    </ul>
+    <div class="footer-copy">© 2026 cuongquachc88</div>
+  </div>
+</footer>
+
+<script>
+  // ── TOC active section via IntersectionObserver ──
+  const sections = document.querySelectorAll('.doc-section[id]')
+  const tocLinks  = document.querySelectorAll('#toc a')
+
+  function setActive(id) {
+    tocLinks.forEach(a => {
+      a.classList.toggle('toc-active', a.getAttribute('href') === '#' + id)
+    })
+  }
+
+  // Pick the section whose top edge is nearest to 100px from viewport top
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        setActive(entry.target.id)
+      }
+    })
+  }, {
+    rootMargin: '-96px 0px -60% 0px',
+    threshold: 0
+  })
+
+  sections.forEach(s => observer.observe(s))
+
+  // Fallback: on scroll, find topmost visible section
+  window.addEventListener('scroll', () => {
+    let found = null
+    sections.forEach(s => {
+      const rect = s.getBoundingClientRect()
+      if (rect.top <= 120 && rect.bottom > 0) {
+        found = s.id
+      }
+    })
+    if (found) setActive(found)
+  }, { passive: true })
+</script>
+</body>
+</html>

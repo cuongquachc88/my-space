@@ -33,7 +33,7 @@ export default function SplashScreen({ onDone }: Props) {
           <IconAppShield size={48} />
         </div>
         <div style={{ textAlign: 'center', opacity: phase === 'in' ? 0 : 1, transition: 'opacity 400ms ease 300ms' }}>
-          <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 32, color: '#1a1a2e', letterSpacing: '-0.02em' }}>
+          <div style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 800, fontSize: 32, color: '#1a1a2e', letterSpacing: '-0.03em' }}>
             My <span style={{ color: '#7c6af7' }}>SPACE</span>
           </div>
           <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 15, color: '#4a4a6a', marginTop: 4 }}>

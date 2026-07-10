@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — My SPACE</title>
+  <meta name="description" content="My SPACE Privacy Policy — your data stays on your device. No servers, no tracking, no third parties. AES-GCM encryption, offline-first, open source." />
+  <meta name="author" content="cuongquachc88" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://cuongquachc88.github.io/my-space/privacy-policy.html" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1117;
+      --surface: rgba(255,255,255,0.04);
+      --border: rgba(255,255,255,0.07);
+      --border-hover: rgba(255,255,255,0.14);
+      --text: rgba(255,255,255,0.88);
+      --muted: rgba(255,255,255,0.38);
+      --faint: rgba(255,255,255,0.10);
+      --notes: #6366f1;
+      --vault: #f59e0b;
+      --sync: #3b82f6;
+      --gen: #a78bfa;
+      --subs: #34d399;
+      --nav-h: 64px;
+      --sidebar-w: 250px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Noise */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 0; opacity: 0.5;
+    }
+
+    /* Grid */
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.016) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.016) 1px, transparent 1px);
+      background-size: 80px 80px;
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+    /* ── Nav ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 48px; height: var(--nav-h);
+      background: rgba(13,17,23,0.75);
+      backdrop-filter: blur(24px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 17px;
+      letter-spacing: -0.02em; color: var(--text); text-decoration: none;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .nav-logo-icon {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, #6366f1, #a78bfa);
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .nav-links { display: flex; gap: 32px; list-style: none; }
+    .nav-links a {
+      font-size: 13px; color: var(--muted); text-decoration: none;
+      letter-spacing: 0.02em; transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+    .nav-links a.nav-current {
+      color: rgba(167,139,250,0.9);
+    }
+
+    .btn-ghost {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 18px; border-radius: 12px; background: var(--surface);
+      color: var(--muted); font-size: 13px; text-decoration: none;
+      border: 1px solid var(--border); transition: all 0.2s; white-space: nowrap;
+    }
+    .btn-ghost:hover { color: var(--text); border-color: var(--border-hover); background: rgba(255,255,255,0.07); }
+
+    /* ── Page wrapper ── */
+    .page-wrapper {
+      position: relative; z-index: 1;
+      max-width: 1200px; margin: 0 auto;
+      padding: calc(var(--nav-h) + 40px) 24px 80px;
+      display: grid;
+      grid-template-columns: var(--sidebar-w) 1fr;
+      gap: 60px;
+      align-items: start;
+    }
+
+    /* ── Breadcrumb ── */
+    .breadcrumb {
+      position: relative; z-index: 1;
+      max-width: 1200px; margin: 0 auto;
+      padding: calc(var(--nav-h) + 20px) 24px 0;
+      padding-bottom: 0;
+    }
+    .breadcrumb a {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: 'DM Mono', monospace; font-size: 12px;
+      color: var(--muted); text-decoration: none;
+      letter-spacing: 0.04em; transition: color 0.2s;
+    }
+    .breadcrumb a:hover { color: var(--text); }
+
+    /* ── Full layout wrapper (breadcrumb + page grid) ── */
+    .layout-root {
+      position: relative; z-index: 1;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      position: sticky;
+      top: calc(var(--nav-h) + 32px);
+      align-self: start;
+    }
+
+    .toc-label {
+      font-family: 'DM Mono', monospace; font-size: 10px;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 14px;
+    }
+
+    .toc-list { list-style: none; display: flex; flex-direction: column; gap: 2px; }
+    .toc-list a {
+      display: block; font-size: 13px; color: var(--muted);
+      text-decoration: none; padding: 7px 12px; border-radius: 8px;
+      border: 1px solid transparent;
+      transition: color 0.2s, background 0.2s, border-color 0.2s;
+      letter-spacing: 0.01em;
+    }
+    .toc-list a:hover { color: var(--text); background: var(--surface); }
+    .toc-list a.toc-active {
+      color: rgba(167,139,250,0.95);
+      background: rgba(99,102,241,0.08);
+      border-color: rgba(99,102,241,0.18);
+    }
+
+    .toc-divider {
+      height: 1px; background: var(--border);
+      margin: 16px 0;
+    }
+
+    .toc-back {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: 'DM Mono', monospace; font-size: 11px;
+      color: var(--muted); text-decoration: none; letter-spacing: 0.04em;
+      padding: 7px 12px; border-radius: 8px; transition: color 0.2s, background 0.2s;
+    }
+    .toc-back:hover { color: var(--text); background: var(--surface); }
+
+    /* ── Mobile TOC toggle ── */
+    .toc-toggle-bar {
+      display: none;
+      align-items: center; justify-content: space-between;
+      padding: 12px 16px; border-radius: 10px;
+      border: 1px solid var(--border); background: var(--surface);
+      cursor: pointer; margin-bottom: 24px;
+      font-size: 13px; color: var(--muted);
+      user-select: none;
+    }
+    .toc-toggle-bar span { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.06em; }
+    .toc-toggle-icon { transition: transform 0.2s; }
+    .toc-toggle-bar.open .toc-toggle-icon { transform: rotate(180deg); }
+
+    .toc-mobile-drawer {
+      display: none;
+      flex-direction: column; gap: 2px;
+      padding: 8px 0; margin-bottom: 24px;
+    }
+    .toc-mobile-drawer.open { display: flex; }
+    .toc-mobile-drawer a {
+      font-size: 13px; color: var(--muted);
+      text-decoration: none; padding: 8px 16px; border-radius: 8px;
+      transition: color 0.2s, background 0.2s;
+    }
+    .toc-mobile-drawer a:hover { color: var(--text); background: var(--surface); }
+    .toc-mobile-drawer a.toc-active { color: rgba(167,139,250,0.95); background: rgba(99,102,241,0.08); }
+
+    /* ── Content ── */
+    .content { min-width: 0; }
+
+    .page-header { margin-bottom: 48px; }
+
+    .page-eyebrow {
+      font-family: 'DM Mono', monospace; font-size: 11px;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 12px;
+    }
+
+    .page-title {
+      font-family: 'Syne', sans-serif; font-weight: 800;
+      font-size: clamp(32px, 4vw, 52px); letter-spacing: -0.03em;
+      line-height: 1.1; color: var(--text); margin-bottom: 20px;
+    }
+    .page-title span {
+      background: linear-gradient(135deg, #6366f1 0%, #a78bfa 50%, #3b82f6 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+
+    .page-meta {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    }
+
+    .last-updated-badge {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 5px 14px; border-radius: 100px;
+      border: 1px solid rgba(99,102,241,0.25);
+      background: rgba(99,102,241,0.07);
+      font-family: 'DM Mono', monospace; font-size: 11px;
+      color: rgba(167,139,250,0.85); letter-spacing: 0.04em;
+    }
+    .last-updated-dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--gen); box-shadow: 0 0 6px var(--gen);
+    }
+
+    /* ── Policy sections ── */
+    .policy-sections { display: flex; flex-direction: column; gap: 32px; }
+
+    .policy-section {
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      overflow: hidden;
+      transition: border-color 0.25s;
+    }
+    .policy-section:hover { border-color: var(--border-hover); }
+
+    .section-inner { padding: 32px 36px; }
+
+    .section-heading {
+      display: flex; align-items: center; gap: 14px;
+      margin-bottom: 16px;
+    }
+    .section-accent {
+      width: 3px; height: 28px; border-radius: 2px;
+      background: var(--notes); flex-shrink: 0;
+    }
+    .section-h2 {
+      font-family: 'Syne', sans-serif; font-weight: 700;
+      font-size: 20px; letter-spacing: -0.02em; color: var(--text);
+    }
+
+    .section-body {
+      font-size: 15px; font-weight: 300; color: rgba(255,255,255,0.72);
+      line-height: 1.75;
+    }
+    .section-body p + p { margin-top: 12px; }
+    .section-body strong { color: var(--text); font-weight: 500; }
+    .section-body a { color: rgba(167,139,250,0.85); text-decoration: none; border-bottom: 1px solid rgba(167,139,250,0.25); transition: border-color 0.2s, color 0.2s; }
+    .section-body a:hover { color: rgba(167,139,250,1); border-color: rgba(167,139,250,0.6); }
+    .section-body code {
+      font-family: 'DM Mono', monospace; font-size: 13px;
+      color: rgba(167,139,250,0.9); background: rgba(99,102,241,0.1);
+      padding: 2px 7px; border-radius: 5px;
+      border: 1px solid rgba(99,102,241,0.15);
+    }
+
+    /* ── Crypto callout ── */
+    .crypto-callout {
+      margin-top: 24px;
+      border-radius: 12px;
+      border: 1px solid rgba(99,102,241,0.22);
+      background: rgba(99,102,241,0.05);
+      padding: 24px 28px;
+      position: relative; overflow: hidden;
+    }
+    .crypto-callout::before {
+      content: '';
+      position: absolute; top: -60px; right: -60px;
+      width: 180px; height: 180px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(99,102,241,0.15), transparent 70%);
+      pointer-events: none;
+    }
+
+    .crypto-pill-row {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .crypto-pill {
+      font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500;
+      color: rgba(167,139,250,0.95);
+      padding: 5px 14px; border-radius: 100px;
+      border: 1px solid rgba(99,102,241,0.3);
+      background: rgba(99,102,241,0.1);
+      letter-spacing: 0.04em;
+    }
+    .crypto-pill-sep {
+      font-family: 'DM Mono', monospace; font-size: 12px;
+      color: rgba(255,255,255,0.18);
+    }
+
+    .crypto-specs {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 8px;
+    }
+    .crypto-spec {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 9px 13px; border-radius: 8px;
+      background: rgba(255,255,255,0.035);
+      border: 1px solid rgba(255,255,255,0.055);
+      transition: background 0.2s;
+    }
+    .crypto-spec:hover { background: rgba(255,255,255,0.06); }
+    .spec-key {
+      font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted);
+    }
+    .spec-val {
+      font-family: 'DM Mono', monospace; font-size: 11px;
+      color: rgba(167,139,250,0.85);
+    }
+
+    /* ── Drive callout ── */
+    .drive-callout {
+      margin-top: 20px;
+      border-radius: 12px;
+      border: 1px solid rgba(59,130,246,0.18);
+      background: rgba(59,130,246,0.04);
+      padding: 18px 22px;
+      display: flex; align-items: flex-start; gap: 14px;
+    }
+    .drive-callout-icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: rgba(59,130,246,0.12);
+      border: 1px solid rgba(59,130,246,0.2);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .drive-callout-body {
+      font-family: 'DM Mono', monospace; font-size: 12px;
+      color: rgba(147,197,253,0.8); line-height: 1.6;
+    }
+    .drive-callout-body strong { color: rgba(147,197,253,1); font-weight: 500; }
+
+    /* ── Permission list ── */
+    .perm-list { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+    .perm-item {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 12px 16px; border-radius: 10px;
+      border: 1px solid var(--border); background: rgba(255,255,255,0.025);
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .perm-item:hover { border-color: var(--border-hover); background: rgba(255,255,255,0.04); }
+    .perm-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--subs); box-shadow: 0 0 6px var(--subs);
+      flex-shrink: 0; margin-top: 7px;
+    }
+    .perm-text { font-size: 14px; color: rgba(255,255,255,0.65); line-height: 1.6; }
+    .perm-text strong { color: var(--text); font-weight: 500; }
+
+    /* ── No-data badge row ── */
+    .no-data-row {
+      display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px;
+    }
+    .no-data-badge {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 7px 14px; border-radius: 100px;
+      font-family: 'DM Mono', monospace; font-size: 11px;
+      letter-spacing: 0.04em;
+    }
+    .no-data-badge.red {
+      border: 1px solid rgba(239,68,68,0.2);
+      background: rgba(239,68,68,0.06);
+      color: rgba(252,165,165,0.85);
+    }
+    .no-data-badge.amber {
+      border: 1px solid rgba(245,158,11,0.2);
+      background: rgba(245,158,11,0.06);
+      color: rgba(253,211,77,0.85);
+    }
+    .no-data-badge.green {
+      border: 1px solid rgba(52,211,153,0.2);
+      background: rgba(52,211,153,0.06);
+      color: rgba(110,231,183,0.85);
+    }
+    .badge-x { font-size: 12px; font-weight: 700; }
+
+    /* ── Contact card ── */
+    .contact-card {
+      margin-top: 20px;
+      display: inline-flex; align-items: center; gap: 14px;
+      padding: 16px 22px; border-radius: 12px;
+      border: 1px solid var(--border); background: rgba(255,255,255,0.03);
+      text-decoration: none; transition: border-color 0.2s, background 0.2s;
+    }
+    .contact-card:hover {
+      border-color: rgba(99,102,241,0.3);
+      background: rgba(99,102,241,0.05);
+    }
+    .contact-icon {
+      width: 36px; height: 36px; border-radius: 9px;
+      background: rgba(99,102,241,0.12);
+      border: 1px solid rgba(99,102,241,0.2);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .contact-label { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+    .contact-email {
+      font-family: 'DM Mono', monospace; font-size: 13px;
+      color: rgba(167,139,250,0.9);
+    }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 40px 0;
+      position: relative; z-index: 1;
+    }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+    .footer-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 20px;
+    }
+    .footer-logo {
+      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 15px;
+      color: var(--muted); letter-spacing: -0.02em;
+    }
+    .footer-links { display: flex; gap: 24px; list-style: none; flex-wrap: wrap; }
+    .footer-links a {
+      font-size: 13px; color: var(--muted); text-decoration: none; transition: color 0.2s;
+    }
+    .footer-links a:hover { color: var(--text); }
+    .footer-links a.footer-current { color: rgba(167,139,250,0.8); }
+    .footer-copy {
+      font-size: 12px; color: rgba(255,255,255,0.18); font-family: 'DM Mono', monospace;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      nav { padding: 0 20px; }
+      .nav-links { display: none; }
+
+      .layout-root { padding-top: var(--nav-h); }
+      .breadcrumb { padding-top: calc(var(--nav-h) + 16px); }
+
+      .page-wrapper {
+        grid-template-columns: 1fr;
+        gap: 0;
+        padding-top: 24px;
+      }
+
+      .sidebar { position: static; }
+      .toc-label { display: none; }
+      .toc-list { display: none; }
+      .toc-divider { display: none; }
+      .toc-back { display: none; }
+      .toc-toggle-bar { display: flex; }
+
+      .section-inner { padding: 24px 20px; }
+
+      .crypto-specs { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 480px) {
+      .page-title { font-size: 28px; }
+      .no-data-row { gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-icon">
+      <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+        <path d="M10 1.5L3 4.5v5c0 4 3.1 7.5 7 8.5 3.9-1 7-4.5 7-8.5v-5L10 1.5z"
+          fill="rgba(255,255,255,0.2)" stroke="white" stroke-width="1.4" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    My SPACE
+  </a>
+  <ul class="nav-links">
+    <li><a href="index.html#features">Features</a></li>
+    <li><a href="privacy-policy.html" class="nav-current">Privacy</a></li>
+    <li><a href="terms-of-service.html">Terms</a></li>
+    <li><a href="developer-guide.html">Developer</a></li>
+    <li><a href="https://github.com/cuongquachc88/my-space">GitHub</a></li>
+  </ul>
+  <a href="https://github.com/cuongquachc88/my-space" class="btn-ghost">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+    </svg>
+    GitHub
+  </a>
+</nav>
+
+<div class="layout-root">
+
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <a href="index.html">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Back to Home
+    </a>
+  </div>
+
+  <!-- Two-column layout -->
+  <div class="page-wrapper">
+
+    <!-- Sidebar TOC -->
+    <aside class="sidebar">
+      <p class="toc-label">On this page</p>
+
+      <!-- Mobile toggle -->
+      <div class="toc-toggle-bar" id="tocToggle" role="button" tabindex="0" aria-expanded="false" aria-controls="tocDrawer">
+        <span>On this page</span>
+        <svg class="toc-toggle-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="toc-mobile-drawer" id="tocDrawer" role="list">
+        <a href="#data-collection" role="listitem">Data Collection</a>
+        <a href="#encryption" role="listitem">Encryption</a>
+        <a href="#google-drive-sync" role="listitem">Google Drive Sync</a>
+        <a href="#permissions" role="listitem">Permissions</a>
+        <a href="#third-parties" role="listitem">Third Parties</a>
+        <a href="#contact" role="listitem">Contact</a>
+      </div>
+
+      <!-- Desktop TOC -->
+      <ul class="toc-list" role="list">
+        <li><a href="#data-collection" class="toc-active" role="listitem">Data Collection</a></li>
+        <li><a href="#encryption" role="listitem">Encryption</a></li>
+        <li><a href="#google-drive-sync" role="listitem">Google Drive Sync</a></li>
+        <li><a href="#permissions" role="listitem">Permissions</a></li>
+        <li><a href="#third-parties" role="listitem">Third Parties</a></li>
+        <li><a href="#contact" role="listitem">Contact</a></li>
+      </ul>
+
+      <div class="toc-divider"></div>
+      <a href="index.html" class="toc-back">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        Back to Home
+      </a>
+    </aside>
+
+    <!-- Main content -->
+    <main class="content" id="main">
+
+      <div class="page-header">
+        <p class="page-eyebrow">Legal &amp; Privacy</p>
+        <h1 class="page-title">Privacy <span>Policy</span></h1>
+        <div class="page-meta">
+          <div class="last-updated-badge">
+            <div class="last-updated-dot"></div>
+            Last updated: June 10, 2026
+          </div>
+        </div>
+      </div>
+
+      <div class="policy-sections">
+
+        <!-- Data Collection -->
+        <div class="policy-section" id="data-collection">
+          <div class="section-inner">
+            <div class="section-heading">
+              <div class="section-accent"></div>
+              <h2 class="section-h2">Data Collection</h2>
+            </div>
+            <div class="section-body">
+              <p>My SPACE does not collect, transmit, or share any personal data. All data you enter — notes, secrets, subscriptions, to-do items, and map pins — is stored exclusively on your local device using Chrome's built-in storage APIs.</p>
+              <p>No information is sent to any server operated by the extension developer, now or in the future. There are no accounts to create and no sign-up forms to complete.</p>
+            </div>
+            <div class="no-data-row">
+              <div class="no-data-badge red"><span class="badge-x">&#10005;</span> No analytics</div>
+              <div class="no-data-badge red"><span class="badge-x">&#10005;</span> No tracking</div>
+              <div class="no-data-badge red"><span class="badge-x">&#10005;</span> No accounts</div>
+              <div class="no-data-badge green">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+                Local-only storage
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Encryption -->
+        <div class="policy-section" id="encryption">
+          <div class="section-inner">
+            <div class="section-heading">
+              <div class="section-accent"></div>
+              <h2 class="section-h2">Encryption</h2>
+            </div>
+            <div class="section-body">
+              <p>All vault data is encrypted on-device using the Web Crypto API (<code>AES-GCM</code>) with your master passphrase before being stored. Your passphrase never leaves your device.</p>
+              <p>Encryption keys are derived via <code>PBKDF2</code> with <code>SHA-256</code> and a unique random salt per installation. Each individual secret uses its own random initialisation vector so no two ciphertexts are identical, even for identical plaintext.</p>
+              <p>The derived key exists only in memory for the duration of your session and is immediately wiped when you lock the vault.</p>
+            </div>
+
+            <!-- Crypto callout -->
+            <div class="crypto-callout">
+              <div class="crypto-pill-row">
+                <span class="crypto-pill">AES-GCM</span>
+                <span class="crypto-pill-sep">&#183;</span>
+                <span class="crypto-pill">PBKDF2</span>
+                <span class="crypto-pill-sep">&#183;</span>
+                <span class="crypto-pill">Zero servers</span>
+              </div>
+              <div class="crypto-specs">
+                <div class="crypto-spec">
+                  <span class="spec-key">Algorithm</span>
+                  <span class="spec-val">AES-GCM 256-bit</span>
+                </div>
+                <div class="crypto-spec">
+                  <span class="spec-key">Key derivation</span>
+                  <span class="spec-val">PBKDF2 · SHA-256</span>
+                </div>
+                <div class="crypto-spec">
+                  <span class="spec-key">IV</span>
+                  <span class="spec-val">Random per secret</span>
+                </div>
+                <div class="crypto-spec">
+                  <span class="spec-key">Web API</span>
+                  <span class="spec-val">Web Crypto (native)</span>
+                </div>
+                <div class="crypto-spec">
+                  <span class="spec-key">Key storage</span>
+                  <span class="spec-val">Memory only</span>
+                </div>
+                <div class="crypto-spec">
+                  <span class="spec-key">Server access</span>
+                  <span class="spec-val">None</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Google Drive Sync -->
+        <div class="policy-section" id="google-drive-sync">
+          <div class="section-inner">
+            <div class="section-heading">
+              <div class="section-accent" style="background: var(--sync);"></div>
+              <h2 class="section-h2">Google Drive Sync <span style="font-size:13px;font-weight:400;color:var(--muted);margin-left:8px;font-family:'DM Mono',monospace;">(Optional)</span></h2>
+            </div>
+            <div class="section-body">
+              <p>If you choose to enable Google Drive sync, your data is encrypted locally before upload. The ciphertext that reaches Google Drive is opaque — Google cannot read it, and neither can the extension developer.</p>
+              <p>The extension only requests access to Google Drive's private <code>appData</code> folder. This folder is isolated and not visible to other apps, other users, or anyone browsing your Drive. You may revoke this access at any time from your <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">Google Account permissions page</a>.</p>
+              <p>No data is sent to any server operated by the extension developer at any point during the sync process.</p>
+            </div>
+            <div class="drive-callout">
+              <div class="drive-callout-icon">
+                <svg width="16" height="16" viewBox="0 0 87.3 78" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M6.1 66.3l14.7-25.5 14.7 25.5z" fill="#0066DA" opacity="0.85"/>
+                  <path d="M43.6 0L28.9 25.5h29.4z" fill="#00AC47" opacity="0.85"/>
+                  <path d="M72.6 40.8L57.9 15.3 43.6 40.8h29z" fill="#EA4335" opacity="0.85"/>
+                  <path d="M6.1 66.3h59l-14.5-25.5H20.8z" fill="#00832D" opacity="0.7"/>
+                  <path d="M43.6 0L28.9 25.5H6.1L20.8 0z" fill="#2684FC" opacity="0.85"/>
+                  <path d="M72.6 40.8H43.6L58.3 15.3l14.3 25.5z" fill="#FFBA00" opacity="0.85"/>
+                </svg>
+              </div>
+              <div class="drive-callout-body">
+                <strong>appData folder only.</strong> My SPACE never reads, writes, or lists any files outside its dedicated private appData scope. Your existing Drive files are fully untouched.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Permissions -->
+        <div class="policy-section" id="permissions">
+          <div class="section-inner">
+            <div class="section-heading">
+              <div class="section-accent" style="background: var(--vault);"></div>
+              <h2 class="section-h2">Permissions</h2>
+            </div>
+            <div class="section-body">
+              <p>Permissions requested by this extension are used solely to provide its core functionality. No permission is used for tracking, analytics, or advertising purposes.</p>
+            </div>
+            <ul class="perm-list">
+              <li class="perm-item">
+                <div class="perm-dot"></div>
+                <div class="perm-text"><strong>storage</strong> — Persists your notes, vault, to-dos, subscriptions, and map pins locally in Chrome's storage API.</div>
+              </li>
+              <li class="perm-item">
+                <div class="perm-dot"></div>
+                <div class="perm-text"><strong>sidePanel</strong> — Renders the extension UI as a persistent side panel without requiring a dedicated browser tab.</div>
+              </li>
+              <li class="perm-item">
+                <div class="perm-dot"></div>
+                <div class="perm-text"><strong>identity</strong> — Used exclusively to authenticate with Google OAuth when you opt in to Drive sync. No other identity data is accessed.</div>
+              </li>
+              <li class="perm-item">
+                <div class="perm-dot"></div>
+                <div class="perm-text"><strong>activeTab / scripting</strong> — Enables the floating "Pin to My SPACE" button on map pages and the save-prompt on login forms. Only triggered on the active tab, only when you interact with the extension.</div>
+              </li>
+              <li class="perm-item">
+                <div class="perm-dot"></div>
+                <div class="perm-text"><strong>alarms</strong> — Schedules local reminders for subscription renewal dates. No network calls are made.</div>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Third Parties -->
+        <div class="policy-section" id="third-parties">
+          <div class="section-inner">
+            <div class="section-heading">
+              <div class="section-accent" style="background: var(--subs);"></div>
+              <h2 class="section-h2">Third Parties</h2>
+            </div>
+            <div class="section-body">
+              <p>This extension does not use any analytics, crash reporting, or advertising services. No data is shared with third parties under any circumstances.</p>
+              <p>The only external service My SPACE communicates with is Google Drive, and only when you explicitly enable sync. That communication is limited to your private <code>appData</code> folder and carries exclusively encrypted data that the extension developer cannot read.</p>
+            </div>
+            <div class="no-data-row">
+              <div class="no-data-badge red"><span class="badge-x">&#10005;</span> No analytics SDKs</div>
+              <div class="no-data-badge red"><span class="badge-x">&#10005;</span> No crash reporters</div>
+              <div class="no-data-badge red"><span class="badge-x">&#10005;</span> No ad networks</div>
+              <div class="no-data-badge amber">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+                Google Drive (optional, encrypted)
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Contact -->
+        <div class="policy-section" id="contact">
+          <div class="section-inner">
+            <div class="section-heading">
+              <div class="section-accent" style="background: var(--gen);"></div>
+              <h2 class="section-h2">Contact</h2>
+            </div>
+            <div class="section-body">
+              <p>For questions or concerns about this privacy policy, please reach out directly.</p>
+            </div>
+            <a href="mailto:cuongquachc88@gmail.com" class="contact-card">
+              <div class="contact-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(167,139,250,0.8)" stroke-width="1.8">
+                  <rect x="2" y="4" width="20" height="16" rx="3"/>
+                  <path d="M2 7l10 7 10-7"/>
+                </svg>
+              </div>
+              <div>
+                <div class="contact-label">Email</div>
+                <div class="contact-email">cuongquachc88@gmail.com</div>
+              </div>
+            </a>
+          </div>
+        </div>
+
+      </div><!-- /policy-sections -->
+    </main>
+  </div><!-- /page-wrapper -->
+</div><!-- /layout-root -->
+
+<!-- Footer -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-logo">My SPACE</div>
+      <ul class="footer-links">
+        <li><a href="privacy-policy.html" class="footer-current">Privacy Policy</a></li>
+        <li><a href="terms-of-service.html">Terms of Service</a></li>
+        <li><a href="developer-guide.html">Developer Guide</a></li>
+        <li><a href="autofill-plan.html">Autofill Plan</a></li>
+        <li><a href="https://github.com/cuongquachc88/my-space">GitHub</a></li>
+      </ul>
+      <div class="footer-copy">&#169; 2026 cuongquachc88</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // ── TOC active highlighting via IntersectionObserver ──
+  (function () {
+    const sections = document.querySelectorAll('.policy-section[id]');
+    const allTocLinks = document.querySelectorAll('.toc-list a, .toc-mobile-drawer a');
+
+    function setActive(id) {
+      allTocLinks.forEach(function (a) {
+        const href = a.getAttribute('href');
+        if (href === '#' + id) {
+          a.classList.add('toc-active');
+        } else {
+          a.classList.remove('toc-active');
+        }
+      });
+    }
+
+    // Track which sections are visible and highlight the topmost
+    const visible = new Set();
+
+    const obs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          visible.add(entry.target.id);
+        } else {
+          visible.delete(entry.target.id);
+        }
+      });
+
+      // Pick the first section in document order that is visible
+      let activeId = null;
+      sections.forEach(function (sec) {
+        if (!activeId && visible.has(sec.id)) {
+          activeId = sec.id;
+        }
+      });
+      if (activeId) setActive(activeId);
+    }, {
+      rootMargin: '-64px 0px -40% 0px',
+      threshold: 0
+    });
+
+    sections.forEach(function (sec) { obs.observe(sec); });
+  })();
+
+  // ── Mobile TOC drawer toggle ──
+  (function () {
+    var toggle = document.getElementById('tocToggle');
+    var drawer = document.getElementById('tocDrawer');
+    if (!toggle || !drawer) return;
+
+    toggle.addEventListener('click', function () {
+      var open = drawer.classList.toggle('open');
+      toggle.classList.toggle('open', open);
+      toggle.setAttribute('aria-expanded', String(open));
+    });
+
+    // Close drawer when a link inside is clicked
+    drawer.querySelectorAll('a').forEach(function (a) {
+      a.addEventListener('click', function () {
+        drawer.classList.remove('open');
+        toggle.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+      });
+    });
+  })();
+</script>
+</body>
+</html>

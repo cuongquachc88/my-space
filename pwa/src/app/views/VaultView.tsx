@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { getDb } from '../../db'
 import { encrypt, decrypt } from '../../crypto'
 import { ACCENT } from '../../design/tokens'
@@ -7,19 +8,24 @@ import GlassInput from '../../design/GlassInput'
 import PillButton from '../../design/PillButton'
 import { BentoGrid, BentoCell } from '../../design/BentoGrid'
 import ViewHeader from '../ViewHeader'
-import { IconVault } from '../../design/icons'
+import { IconVault, IconTrash } from '../../design/icons'
 import TagInput from '../components/TagInput'
+import SwipeToDelete from '../../design/SwipeToDelete'
+import { useIsDesktop } from '../useIsDesktop'
+import DesktopVaultView from './desktop/DesktopVaultView'
 
 interface SecretMeta { id: string; label: string; tags: string[]; url: string; description: string; updated_at: string }
 
 const accent = ACCENT.vault
 
 export default function VaultView() {
+  const isDesktop = useIsDesktop()
+  if (isDesktop) return <DesktopVaultView />
   const [secrets, setSecrets] = useState<SecretMeta[]>([])
   const [query, setQuery] = useState('')
   const [activeTag, setActiveTag] = useState<string | null>(null)
   const [allTags, setAllTags] = useState<string[]>([])
-  const [editing, setEditing] = useState<SecretMeta & { value?: string } | null>(null)
+  const [editing, setEditing] = useState<SecretMeta | null>(null)
   const [editLabel, setEditLabel] = useState('')
   const [editValue, setEditValue] = useState('')
   const [editTags, setEditTags] = useState<string[]>([])
@@ -29,6 +35,7 @@ export default function VaultView() {
   const [revealValue, setRevealValue] = useState('')
   const [saving, setSaving] = useState(false)
   const [showAdd, setShowAdd] = useState(false)
+  const [detailVisible, setDetailVisible] = useState(false)
 
   const load = useCallback(async () => {
     const db = await getDb()
@@ -47,11 +54,22 @@ export default function VaultView() {
   useEffect(() => { load() }, [load])
 
   function startNew() {
-    setEditing(null); setEditLabel(''); setEditValue(''); setEditTags([]); setEditUrl(''); setEditDesc(''); setShowAdd(true)
+    setEditing(null)
+    setEditLabel(''); setEditValue(''); setEditTags([]); setEditUrl(''); setEditDesc('')
+    setShowAdd(true)
+    setTimeout(() => setDetailVisible(true), 10)
   }
 
   function startEdit(s: SecretMeta) {
-    setEditing(s); setEditLabel(s.label); setEditValue(''); setEditTags(s.tags ?? []); setEditUrl(s.url ?? ''); setEditDesc(s.description ?? ''); setShowAdd(true)
+    setEditing(s)
+    setEditLabel(s.label); setEditValue(''); setEditTags(s.tags ?? []); setEditUrl(s.url ?? ''); setEditDesc(s.description ?? '')
+    setShowAdd(true)
+    setTimeout(() => setDetailVisible(true), 10)
+  }
+
+  function goBack() {
+    setDetailVisible(false)
+    setTimeout(() => setShowAdd(false), 560)
   }
 
   async function saveSecret() {
@@ -74,7 +92,8 @@ export default function VaultView() {
         await db.query('INSERT INTO secrets (label,ciphertext,iv,tags,url,description) VALUES ($1,$2,$3,$4,$5,$6)',
           [editLabel, ciphertext, iv, editTags, editUrl, editDesc])
       }
-      setShowAdd(false); setEditing(null); await load()
+      await load()
+      goBack()
     } catch (e) { console.error('[vault] save failed:', e) }
     finally { setSaving(false) }
   }
@@ -96,6 +115,7 @@ export default function VaultView() {
       const db = await getDb()
       await db.query('DELETE FROM secrets WHERE id=$1', [id])
       if (revealId === id) { setRevealId(null); setRevealValue('') }
+      if (editing?.id === id) goBack()
       await load()
     } catch (e) { console.error('[vault] deleteSecret failed:', e) }
   }
@@ -108,38 +128,12 @@ export default function VaultView() {
         action="+ Add" onAction={startNew}
       />
       <BentoGrid>
-        <BentoCell span="2">
-          <GlassCard style={{ height: '100%' }}>
-            <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <GlassInput value={query} onChange={v => { setQuery(v) }} placeholder="Search secrets…" />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 340, overflowY: 'auto' }}>
-                {secrets.length === 0 && <div style={{ textAlign: 'center', color: '#4a4a6a', padding: 24, fontFamily: 'Inter, sans-serif', fontSize: 14 }}>No secrets yet.</div>}
-                {secrets.map(s => (
-                  <div key={s.id} style={{ padding: '10px 12px', borderRadius: 12, background: 'rgba(255,255,255,0.4)', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e' }}>{s.label}</span>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <PillButton variant="secondary" accent={accent} onClick={() => reveal(s)}>{revealId === s.id ? 'Hide' : 'Reveal'}</PillButton>
-                        <PillButton variant="ghost" onClick={() => startEdit(s)}>Edit</PillButton>
-                        <PillButton variant="ghost" onClick={() => deleteSecret(s.id)}>Delete</PillButton>
-                      </div>
-                    </div>
-                    {revealId === s.id && (
-                      <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, background: `${accent}15`, borderRadius: 8, padding: '6px 10px', color: '#1a1a2e', wordBreak: 'break-all' }}>{revealValue}</div>
-                    )}
-                    {s.url && <div style={{ fontSize: 12, color: '#4a4a6a' }}>{s.url}</div>}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </GlassCard>
-        </BentoCell>
-
-        <BentoCell span="1">
-          <GlassCard style={{ height: '100%' }}>
-            <div style={{ padding: 16 }}>
-              <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e', marginBottom: 10 }}>Tags</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        {/* Tags on top */}
+        {allTags.length > 0 && (
+          <BentoCell span="full">
+            <GlassCard>
+              <div style={{ padding: '12px 16px', display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+                <span style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 11, color: '#8e8e93', letterSpacing: '0.06em', textTransform: 'uppercase', marginRight: 4 }}>Tags</span>
                 {allTags.map(tag => (
                   <button key={tag} onClick={() => setActiveTag(activeTag === tag ? null : tag)}
                     style={{ padding: '4px 10px', borderRadius: 100, border: 'none', cursor: 'pointer', fontSize: 12, fontFamily: 'Inter, sans-serif', background: activeTag === tag ? accent : `${accent}18`, color: activeTag === tag ? 'white' : accent }}>
@@ -147,31 +141,104 @@ export default function VaultView() {
                   </button>
                 ))}
               </div>
-            </div>
-          </GlassCard>
-        </BentoCell>
-
-        {showAdd && (
-          <BentoCell span="full">
-            <GlassCard accentBar accent={accent}>
-              <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 18, color: '#1a1a2e' }}>
-                  {editing ? 'Edit Secret' : 'New Secret'}
-                </div>
-                <GlassInput value={editLabel} onChange={setEditLabel} placeholder="Label (e.g. Gmail password)" />
-                <GlassInput value={editValue} onChange={setEditValue} placeholder={editing ? "New value (leave blank to keep existing)" : "Secret value"} type="password" />
-                <GlassInput value={editUrl} onChange={setEditUrl} placeholder="URL (optional)" />
-                <GlassInput value={editDesc} onChange={setEditDesc} placeholder="Description (optional)" />
-                <TagInput tags={editTags} onChange={setEditTags} />
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <PillButton onClick={saveSecret} accent={accent} disabled={saving}>{saving ? 'Saving…' : 'Save'}</PillButton>
-                  <PillButton variant="ghost" onClick={() => setShowAdd(false)}>Cancel</PillButton>
-                </div>
-              </div>
             </GlassCard>
           </BentoCell>
         )}
+
+        <BentoCell span="full">
+          <GlassCard>
+            <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <GlassInput value={query} onChange={v => setQuery(v)} placeholder="Search secrets…" />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {secrets.length === 0 && (
+                  <div style={{ textAlign: 'center', color: '#4a4a6a', padding: 24, fontFamily: 'Inter, sans-serif', fontSize: 14 }}>No secrets yet.</div>
+                )}
+                {secrets.map(s => (
+                  <SwipeToDelete key={s.id} onDelete={() => deleteSecret(s.id)}>
+                    <div style={{ padding: '10px 12px', borderRadius: 12, background: 'rgba(255,255,255,0.4)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e' }}>{s.label}</span>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <PillButton variant="secondary" accent={accent} onClick={() => reveal(s)}>{revealId === s.id ? 'Hide' : 'Reveal'}</PillButton>
+                          <PillButton variant="ghost" onClick={() => startEdit(s)}>Edit</PillButton>
+                        </div>
+                      </div>
+                      {revealId === s.id && (
+                        <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, background: `${accent}15`, borderRadius: 8, padding: '6px 10px', color: '#1a1a2e', wordBreak: 'break-all' }}>{revealValue}</div>
+                      )}
+                      {s.url && <div style={{ fontSize: 12, color: '#4a4a6a' }}>{s.url}</div>}
+                      {(s.tags ?? []).length > 0 && (
+                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                          {(s.tags ?? []).map(t => (
+                            <span key={t} style={{ fontSize: 11, fontFamily: 'Inter, sans-serif', color: accent, background: `${accent}14`, borderRadius: 100, padding: '2px 7px' }}>#{t}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </SwipeToDelete>
+                ))}
+              </div>
+            </div>
+          </GlassCard>
+        </BentoCell>
       </BentoGrid>
+
+      {/* ── Detail screen — portal to body ── */}
+      {showAdd && createPortal(
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 500,
+          background: 'linear-gradient(160deg, #f0f2ff 0%, #e8eeff 50%, #dde3ff 100%)',
+          overflowY: 'auto',
+          transform: detailVisible ? 'translateX(0)' : 'translateX(100%)',
+          transition: 'transform 550ms cubic-bezier(0.22,1,0.36,1)',
+        }}>
+          {/* Hero header */}
+          <div style={{ background: `linear-gradient(145deg, ${accent} 0%, #6366f1 60%, #818cf8 100%)`, paddingBottom: 24, position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', width: 180, height: 180, borderRadius: '50%', background: 'rgba(255,255,255,0.07)', top: -60, right: -40, pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', width: 100, height: 100, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', bottom: -20, left: 20, pointerEvents: 'none' }} />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'calc(env(safe-area-inset-top) + 14px) 20px 10px', position: 'relative' }}>
+              <button onClick={goBack} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif', fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.92)', padding: 0 }}>
+                <svg width="8" height="13" viewBox="0 0 8 13" fill="none">
+                  <path d="M7 1L1.5 6.5L7 12" stroke="rgba(255,255,255,0.92)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Vault
+              </button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={saveSecret} disabled={saving} style={{
+                  padding: '8px 22px', borderRadius: 100, border: '1.5px solid rgba(255,255,255,0.5)', cursor: saving ? 'not-allowed' : 'pointer',
+                  background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+                  color: '#fff', fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 13, opacity: saving ? 0.6 : 1,
+                }}>{saving ? 'Saving…' : 'Save'}</button>
+                {editing && (
+                  <button onClick={() => deleteSecret(editing.id)} style={{ width: 36, height: 36, borderRadius: 10, border: 'none', cursor: 'pointer', background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <IconTrash size={15} accent="rgba(255,255,255,0.85)" />
+                  </button>
+                )}
+              </div>
+            </div>
+            <div style={{ padding: '8px 20px 0', position: 'relative' }}>
+              <input
+                value={editLabel}
+                onChange={e => setEditLabel(e.target.value)}
+                style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 800, fontSize: 26, color: '#fff', background: 'transparent', border: 'none', outline: 'none', width: '100%', letterSpacing: '-0.02em', lineHeight: 1.2 }}
+                placeholder={editing ? 'Secret label' : 'New secret'}
+                autoFocus
+              />
+            </div>
+          </div>
+
+          {/* Content */}
+          <div style={{ padding: '20px 20px 80px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <GlassInput value={editValue} onChange={setEditValue} placeholder={editing ? 'New value (leave blank to keep)' : 'Secret value'} type="password" />
+              <GlassInput value={editUrl} onChange={setEditUrl} placeholder="URL (optional)" />
+              <GlassInput value={editDesc} onChange={setEditDesc} placeholder="Description (optional)" />
+              <TagInput tags={editTags} onChange={setEditTags} />
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   )
 }

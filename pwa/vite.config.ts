@@ -34,4 +34,12 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['@electric-sql/pglite'],
   },
+  build: {
+    rollupOptions: {
+      input: {
+        main: 'index.html',
+        'oauth-callback': 'public/oauth-callback.html',
+      },
+    },
+  },
 })

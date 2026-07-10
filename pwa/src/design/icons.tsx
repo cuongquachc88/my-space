@@ -158,6 +158,35 @@ export function IconLock({ size = 24, accent = '#7c6af7', filled = false, classN
   )
 }
 
+export function IconStatusOffline({ size = 12, accent = '#34d399', className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 12 12" fill="none" className={className}>
+      {/* Outer ring — pulsing halo feel */}
+      <circle cx="6" cy="6" r="5" fill={accent} fillOpacity="0.18" />
+      {/* Inner filled dot */}
+      <circle cx="6" cy="6" r="3" fill={accent} />
+      {/* Tiny specular highlight */}
+      <circle cx="5" cy="5" r="1" fill="white" fillOpacity="0.5" />
+    </svg>
+  )
+}
+
+export function IconStatusEncrypted({ size = 13, accent = '#7c6af7', className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 13 15" fill="none" className={className}>
+      {/* Lock body */}
+      <rect x="1.5" y="6" width="10" height="8.5" rx="2" fill={accent} fillOpacity="0.18" stroke={accent} strokeWidth="1.4" />
+      {/* Shackle arc */}
+      <path d="M3.5 6 L3.5 4 C3.5 2.3 4.8 1 6.5 1 C8.2 1 9.5 2.3 9.5 4 L9.5 6"
+        stroke={accent} strokeWidth="1.5" strokeLinecap="round" fill="none" />
+      {/* Keyhole circle */}
+      <circle cx="6.5" cy="10" r="1.3" fill={accent} />
+      {/* Keyhole stem */}
+      <rect x="5.9" y="10.6" width="1.2" height="2" rx="0.5" fill={accent} />
+    </svg>
+  )
+}
+
 export function IconAppShield({ size = 24, accent = 'white', className }: IconProps) {
   const isWhite = accent === 'white' || accent === '#fff'
   const shieldFill = isWhite ? 'rgba(255,255,255,0.18)' : '#d97706'

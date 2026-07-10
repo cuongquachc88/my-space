@@ -1,0 +1,1644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Developer Guide — My SPACE</title>
+  <meta name="description" content="Technical documentation for My SPACE Chrome extension — architecture, message protocol, database schema, crypto, and Android app." />
+  <meta name="author" content="cuongquachc88" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://cuongquachc88.github.io/my-space/developer-guide.html" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1117;
+      --surface: rgba(255,255,255,0.04);
+      --border: rgba(255,255,255,0.07);
+      --border-hover: rgba(255,255,255,0.14);
+      --text: rgba(255,255,255,0.88);
+      --muted: rgba(255,255,255,0.38);
+      --faint: rgba(255,255,255,0.10);
+      --notes: #6366f1;
+      --vault: #f59e0b;
+      --sync: #3b82f6;
+      --gen: #a78bfa;
+      --subs: #34d399;
+      --reports: #f472b6;
+      --todo: #38bdf8;
+      --maps: #fb923c;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Noise */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 0; opacity: 0.5;
+    }
+
+    /* Grid */
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.016) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.016) 1px, transparent 1px);
+      background-size: 80px 80px;
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 48px; height: 64px;
+      background: rgba(13,17,23,0.75);
+      backdrop-filter: blur(24px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 17px;
+      letter-spacing: -0.02em; color: var(--text); text-decoration: none;
+      display: flex; align-items: center; gap: 10px;
+    }
+
+    .nav-logo-icon {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, #6366f1, #a78bfa);
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .nav-links { display: flex; gap: 28px; list-style: none; align-items: center; }
+    .nav-links a {
+      font-size: 13px; color: var(--muted); text-decoration: none;
+      letter-spacing: 0.02em; transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+    .nav-links a.active {
+      color: rgba(167,139,250,0.9);
+    }
+
+    .btn-ghost {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 18px; border-radius: 10px; background: var(--surface);
+      color: var(--muted); font-size: 13px; text-decoration: none;
+      border: 1px solid var(--border); transition: all 0.2s;
+    }
+    .btn-ghost:hover { color: var(--text); border-color: var(--border-hover); background: rgba(255,255,255,0.07); }
+
+    /* ── Page layout ── */
+    .page-wrap {
+      display: flex;
+      min-height: 100vh;
+      padding-top: 64px;
+      position: relative; z-index: 1;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      position: sticky;
+      top: 64px;
+      width: 260px;
+      flex-shrink: 0;
+      height: calc(100vh - 64px);
+      overflow-y: auto;
+      padding: 32px 0 32px 0;
+      border-right: 1px solid var(--border);
+      background: rgba(13,17,23,0.6);
+      backdrop-filter: blur(12px);
+    }
+
+    .sidebar::-webkit-scrollbar { width: 3px; }
+    .sidebar::-webkit-scrollbar-track { background: transparent; }
+    .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+    .toc-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--muted); padding: 0 24px 12px;
+    }
+
+    .toc-list { list-style: none; }
+
+    .toc-item a {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 24px;
+      font-size: 13px; color: var(--muted); text-decoration: none;
+      transition: color 0.18s, background 0.18s;
+      border-left: 2px solid transparent;
+      line-height: 1.4;
+    }
+
+    .toc-item a:hover {
+      color: var(--text);
+      background: rgba(255,255,255,0.03);
+    }
+
+    .toc-item a.active {
+      color: var(--text);
+      border-left-color: var(--notes);
+      background: rgba(99,102,241,0.06);
+    }
+
+    .toc-dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: currentColor; flex-shrink: 0; opacity: 0.5;
+    }
+
+    .toc-divider {
+      margin: 8px 24px;
+      border: none;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Hamburger (mobile) */
+    .hamburger {
+      display: none;
+      flex-direction: column; gap: 5px;
+      cursor: pointer; padding: 8px;
+      background: none; border: none;
+    }
+    .hamburger span {
+      display: block; width: 20px; height: 2px;
+      background: var(--muted); border-radius: 1px;
+      transition: all 0.3s;
+    }
+
+    .sidebar-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 90;
+    }
+
+    /* ── Main content ── */
+    .main-content {
+      flex: 1;
+      min-width: 0;
+      padding: 48px 64px 80px 64px;
+      max-width: 900px;
+    }
+
+    /* ── Breadcrumb ── */
+    .breadcrumb {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px; color: var(--muted);
+      text-decoration: none;
+      margin-bottom: 36px;
+      transition: color 0.2s;
+    }
+    .breadcrumb:hover { color: var(--text); }
+    .breadcrumb svg { opacity: 0.5; }
+
+    /* ── Page header ── */
+    .page-header { margin-bottom: 56px; }
+
+    .page-header-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 5px 14px; border-radius: 100px;
+      border: 1px solid rgba(99,102,241,0.3); background: rgba(99,102,241,0.08);
+      font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.08em;
+      color: rgba(167,139,250,0.85); text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    .page-title {
+      font-family: 'Syne', sans-serif; font-weight: 800;
+      font-size: clamp(36px, 5vw, 56px); letter-spacing: -0.04em; line-height: 1.0;
+      color: var(--text); margin-bottom: 16px;
+    }
+
+    .page-subtitle {
+      font-size: 16px; font-weight: 300; color: var(--muted);
+      max-width: 580px; line-height: 1.7;
+    }
+
+    /* ── Content sections ── */
+    .doc-section {
+      margin-bottom: 72px;
+      scroll-margin-top: 88px;
+    }
+
+    .section-header {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 28px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-badge {
+      display: inline-flex; align-items: center;
+      padding: 3px 10px; border-radius: 100px;
+      font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.08em;
+      text-transform: uppercase; font-weight: 500; flex-shrink: 0;
+    }
+
+    .badge-blue   { background: rgba(59,130,246,0.12); color: rgba(147,197,253,0.9); border: 1px solid rgba(59,130,246,0.22); }
+    .badge-indigo { background: rgba(99,102,241,0.12); color: rgba(165,180,252,0.9); border: 1px solid rgba(99,102,241,0.22); }
+    .badge-amber  { background: rgba(245,158,11,0.12); color: rgba(251,191,36,0.9);  border: 1px solid rgba(245,158,11,0.22); }
+    .badge-violet { background: rgba(167,139,250,0.12); color: rgba(196,181,253,0.9); border: 1px solid rgba(167,139,250,0.22); }
+    .badge-emerald { background: rgba(52,211,153,0.12); color: rgba(110,231,183,0.9); border: 1px solid rgba(52,211,153,0.22); }
+    .badge-sky    { background: rgba(56,189,248,0.12); color: rgba(125,211,252,0.9); border: 1px solid rgba(56,189,248,0.22); }
+    .badge-pink   { background: rgba(244,114,182,0.12); color: rgba(249,168,212,0.9); border: 1px solid rgba(244,114,182,0.22); }
+    .badge-orange { background: rgba(251,146,60,0.12); color: rgba(253,186,116,0.9); border: 1px solid rgba(251,146,60,0.22); }
+
+    .section-heading {
+      font-family: 'Syne', sans-serif; font-weight: 800;
+      font-size: clamp(20px,2.4vw,26px); letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    .section-heading-accent {
+      display: block;
+      width: 3px; height: 28px; border-radius: 2px;
+      background: var(--notes);
+      flex-shrink: 0;
+    }
+
+    /* Per-section accent overrides */
+    .sec-arch .section-heading-accent       { background: var(--sync); }
+    .sec-structure .section-heading-accent  { background: var(--gen); }
+    .sec-messages .section-heading-accent   { background: var(--notes); }
+    .sec-database .section-heading-accent   { background: var(--vault); }
+    .sec-content .section-heading-accent    { background: var(--todo); }
+    .sec-crypto .section-heading-accent     { background: var(--gen); }
+    .sec-drive .section-heading-accent      { background: var(--sync); }
+    .sec-design .section-heading-accent     { background: var(--notes); }
+    .sec-android .section-heading-accent    { background: var(--reports); }
+    .sec-testing .section-heading-accent    { background: var(--subs); }
+    .sec-newview .section-heading-accent    { background: var(--maps); }
+    .sec-release .section-heading-accent    { background: var(--subs); }
+
+    /* Prose */
+    .prose p {
+      color: rgba(255,255,255,0.72);
+      font-size: 14.5px;
+      line-height: 1.75;
+      margin-bottom: 16px;
+      font-weight: 300;
+    }
+
+    .prose p:last-child { margin-bottom: 0; }
+
+    .prose h3 {
+      font-family: 'Syne', sans-serif; font-weight: 700;
+      font-size: 16px; letter-spacing: -0.01em;
+      color: var(--text);
+      margin: 28px 0 10px;
+    }
+
+    .prose h4 {
+      font-family: 'Syne', sans-serif; font-weight: 600;
+      font-size: 14px; color: rgba(255,255,255,0.75);
+      margin: 20px 0 8px;
+    }
+
+    .prose ul {
+      list-style: none;
+      margin: 12px 0 16px;
+    }
+
+    .prose ul li {
+      position: relative;
+      padding-left: 18px;
+      font-size: 14px; font-weight: 300;
+      color: rgba(255,255,255,0.68);
+      margin-bottom: 6px;
+      line-height: 1.65;
+    }
+
+    .prose ul li::before {
+      content: '';
+      position: absolute; left: 0; top: 9px;
+      width: 4px; height: 4px; border-radius: 50%;
+      background: var(--muted);
+    }
+
+    .prose ol {
+      margin: 12px 0 16px;
+      padding-left: 20px;
+    }
+
+    .prose ol li {
+      font-size: 14px; font-weight: 300;
+      color: rgba(255,255,255,0.68);
+      margin-bottom: 8px;
+      line-height: 1.65;
+      padding-left: 4px;
+    }
+
+    .prose ol li::marker {
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+    }
+
+    .prose strong {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .prose code {
+      font-family: 'DM Mono', monospace;
+      font-size: 12.5px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 4px;
+      padding: 1px 6px;
+      color: rgba(196,181,253,0.9);
+    }
+
+    /* ── Code blocks ── */
+    .code-block {
+      margin: 20px 0;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.08);
+      overflow: hidden;
+      background: #0a0e14;
+    }
+
+    .code-block-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 16px;
+      background: rgba(255,255,255,0.025);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .code-lang {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .code-dots { display: flex; gap: 5px; }
+    .code-dot { width: 7px; height: 7px; border-radius: 50%; }
+    .code-dot:nth-child(1) { background: #ff5f57; opacity: 0.7; }
+    .code-dot:nth-child(2) { background: #febc2e; opacity: 0.7; }
+    .code-dot:nth-child(3) { background: #28c840; opacity: 0.7; }
+
+    .code-block pre {
+      margin: 0;
+      padding: 20px;
+      overflow-x: auto;
+      font-family: 'DM Mono', monospace;
+      font-size: 13px; line-height: 1.7;
+      color: rgba(255,255,255,0.8);
+      tab-size: 2;
+    }
+
+    .code-block pre::-webkit-scrollbar { height: 4px; }
+    .code-block pre::-webkit-scrollbar-track { background: transparent; }
+    .code-block pre::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+    /* Syntax highlighting shades */
+    .tok-kw  { color: rgba(167,139,250,0.9); }  /* keywords */
+    .tok-fn  { color: rgba(96,165,250,0.9); }   /* functions */
+    .tok-str { color: rgba(110,231,183,0.85); } /* strings */
+    .tok-cm  { color: rgba(255,255,255,0.28); font-style: italic; } /* comments */
+    .tok-ty  { color: rgba(251,191,36,0.85); }  /* types */
+    .tok-num { color: rgba(253,186,116,0.85); } /* numbers */
+
+    /* ASCII art block (architecture diagram) */
+    .ascii-block {
+      margin: 20px 0;
+      border-radius: 12px;
+      border: 1px solid rgba(59,130,246,0.18);
+      overflow: hidden;
+      background: #0a0e14;
+    }
+
+    .ascii-block pre {
+      margin: 0;
+      padding: 24px;
+      overflow-x: auto;
+      font-family: 'DM Mono', monospace;
+      font-size: 12.5px; line-height: 1.65;
+      color: rgba(147,197,253,0.8);
+    }
+
+    /* ── Database table ── */
+    .db-table-wrap {
+      margin: 20px 0;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .db-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+    }
+
+    .db-table thead tr {
+      background: rgba(99,102,241,0.08);
+      border-bottom: 1px solid rgba(99,102,241,0.2);
+    }
+
+    .db-table thead th {
+      padding: 12px 16px;
+      text-align: left;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+      color: rgba(165,180,252,0.8); font-weight: 400;
+    }
+
+    .db-table tbody tr {
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      transition: background 0.15s;
+    }
+
+    .db-table tbody tr:last-child { border-bottom: none; }
+    .db-table tbody tr:hover { background: rgba(255,255,255,0.025); }
+    .db-table tbody tr:nth-child(even) { background: rgba(255,255,255,0.015); }
+    .db-table tbody tr:nth-child(even):hover { background: rgba(255,255,255,0.035); }
+
+    .db-table td {
+      padding: 11px 16px;
+      color: rgba(255,255,255,0.72);
+      font-weight: 300;
+      line-height: 1.55;
+      vertical-align: top;
+    }
+
+    .db-table td:first-child {
+      font-family: 'DM Mono', monospace;
+      font-size: 12.5px;
+      color: rgba(110,231,183,0.85);
+      white-space: nowrap;
+    }
+
+    /* ── Generic table (Android layer table) ── */
+    .gen-table-wrap {
+      margin: 20px 0;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .gen-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+    }
+
+    .gen-table thead tr {
+      background: rgba(244,114,182,0.07);
+      border-bottom: 1px solid rgba(244,114,182,0.18);
+    }
+
+    .gen-table thead th {
+      padding: 12px 16px;
+      text-align: left;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+      color: rgba(249,168,212,0.8); font-weight: 400;
+    }
+
+    .gen-table tbody tr {
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      transition: background 0.15s;
+    }
+
+    .gen-table tbody tr:last-child { border-bottom: none; }
+    .gen-table tbody tr:hover { background: rgba(255,255,255,0.025); }
+    .gen-table tbody tr:nth-child(even) { background: rgba(255,255,255,0.015); }
+    .gen-table tbody tr:nth-child(even):hover { background: rgba(255,255,255,0.035); }
+
+    .gen-table td {
+      padding: 11px 16px;
+      color: rgba(255,255,255,0.72);
+      font-weight: 300;
+      line-height: 1.55;
+      vertical-align: top;
+    }
+
+    .gen-table td:first-child {
+      font-family: 'DM Mono', monospace;
+      font-size: 12.5px;
+      color: rgba(196,181,253,0.85);
+      white-space: nowrap;
+    }
+
+    /* ── Info cards ── */
+    .info-card {
+      border-radius: 12px;
+      border: 1px solid rgba(99,102,241,0.2);
+      background: rgba(99,102,241,0.05);
+      padding: 20px 24px;
+      margin: 20px 0;
+    }
+
+    .info-card.amber {
+      border-color: rgba(245,158,11,0.2);
+      background: rgba(245,158,11,0.04);
+    }
+
+    .info-card.sky {
+      border-color: rgba(56,189,248,0.2);
+      background: rgba(56,189,248,0.04);
+    }
+
+    .info-card.emerald {
+      border-color: rgba(52,211,153,0.2);
+      background: rgba(52,211,153,0.04);
+    }
+
+    .info-card-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+      color: rgba(167,139,250,0.7); margin-bottom: 8px;
+    }
+
+    .info-card.amber .info-card-label { color: rgba(251,191,36,0.7); }
+    .info-card.sky .info-card-label { color: rgba(125,211,252,0.7); }
+    .info-card.emerald .info-card-label { color: rgba(110,231,183,0.7); }
+
+    /* ── Numbered step list ── */
+    .step-list {
+      list-style: none;
+      margin: 16px 0;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+
+    .step-item {
+      display: flex; gap: 14px; align-items: flex-start;
+    }
+
+    .step-num {
+      flex-shrink: 0;
+      width: 24px; height: 24px; border-radius: 50%;
+      background: rgba(99,102,241,0.15);
+      border: 1px solid rgba(99,102,241,0.3);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500;
+      color: rgba(165,180,252,0.85);
+      margin-top: 1px;
+    }
+
+    .step-text {
+      font-size: 14px; font-weight: 300;
+      color: rgba(255,255,255,0.7);
+      line-height: 1.65;
+    }
+
+    .step-text code {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 4px;
+      padding: 1px 6px;
+      color: rgba(196,181,253,0.9);
+    }
+
+    /* ── File key list ── */
+    .file-list {
+      list-style: none;
+      margin: 14px 0;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+
+    .file-item {
+      display: flex; gap: 12px; align-items: flex-start;
+      padding: 10px 14px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .file-item:hover {
+      border-color: var(--border-hover);
+      background: rgba(255,255,255,0.04);
+    }
+
+    .file-path {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px; color: rgba(110,231,183,0.85);
+      flex-shrink: 0; white-space: nowrap;
+    }
+
+    .file-desc {
+      font-size: 13px; font-weight: 300;
+      color: rgba(255,255,255,0.55);
+      line-height: 1.5;
+    }
+
+    /* ── Flow steps (content scripts) ── */
+    .flow-steps {
+      margin: 16px 0;
+      display: flex; flex-direction: column; gap: 0;
+    }
+
+    .flow-step {
+      display: flex; gap: 14px; align-items: flex-start;
+      padding: 10px 0;
+      position: relative;
+    }
+
+    .flow-step:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      left: 11px; top: 38px;
+      width: 1px; height: calc(100% - 18px);
+      background: rgba(255,255,255,0.07);
+    }
+
+    .flow-dot {
+      flex-shrink: 0;
+      width: 24px; height: 24px; border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.04);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'DM Mono', monospace; font-size: 10px;
+      color: var(--muted);
+      margin-top: 1px; z-index: 1;
+    }
+
+    .flow-dot.sky-dot {
+      border-color: rgba(56,189,248,0.3);
+      background: rgba(56,189,248,0.07);
+      color: rgba(125,211,252,0.8);
+    }
+
+    .flow-text {
+      font-size: 14px; font-weight: 300;
+      color: rgba(255,255,255,0.7);
+      line-height: 1.65; padding-top: 2px;
+    }
+
+    .flow-text code {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 4px;
+      padding: 1px 6px;
+      color: rgba(196,181,253,0.9);
+    }
+
+    /* ── Spec rows (crypto) ── */
+    .spec-grid {
+      display: flex; flex-direction: column; gap: 6px;
+      margin: 16px 0;
+    }
+
+    .spec-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 14px; border-radius: 8px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.055);
+      transition: background 0.2s;
+    }
+
+    .spec-row:hover { background: rgba(255,255,255,0.055); }
+
+    .spec-key {
+      font-family: 'DM Mono', monospace;
+      font-size: 11.5px; color: var(--muted);
+    }
+
+    .spec-val {
+      font-family: 'DM Mono', monospace;
+      font-size: 11.5px; color: rgba(167,139,250,0.85);
+    }
+
+    /* ── Design token grid ── */
+    .token-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 8px; margin: 16px 0;
+    }
+
+    .token-card {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px;
+      background: rgba(255,255,255,0.025);
+      border: 1px solid var(--border); border-radius: 8px;
+      transition: border-color 0.2s;
+    }
+
+    .token-card:hover { border-color: var(--border-hover); }
+
+    .token-swatch {
+      width: 20px; height: 20px; border-radius: 6px;
+      flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    }
+
+    .token-info { min-width: 0; }
+    .token-name {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px; color: var(--muted);
+      display: block; margin-bottom: 1px;
+    }
+    .token-value {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 40px 0;
+      position: relative; z-index: 1;
+    }
+
+    .footer-inner {
+      max-width: 1200px; margin: 0 auto; padding: 0 48px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 20px;
+    }
+
+    .footer-logo {
+      font-family: 'Syne', sans-serif; font-weight: 800;
+      font-size: 15px; color: var(--muted); letter-spacing: -0.02em;
+    }
+
+    .footer-links { display: flex; gap: 24px; list-style: none; flex-wrap: wrap; }
+    .footer-links a {
+      font-size: 13px; color: var(--muted); text-decoration: none; transition: color 0.2s;
+    }
+    .footer-links a:hover { color: var(--text); }
+    .footer-links a.current { color: rgba(167,139,250,0.8); }
+
+    .footer-copy {
+      font-size: 12px; color: rgba(255,255,255,0.18);
+      font-family: 'DM Mono', monospace;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+    /* ── Animations ── */
+    @keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+
+    .page-header { animation: fadeUp 0.6s ease both; }
+
+    /* ── Responsive ── */
+    @media (max-width: 1100px) {
+      .main-content { padding: 40px 40px 80px; }
+    }
+
+    @media (max-width: 900px) {
+      nav { padding: 0 24px; }
+      .nav-links { display: none; }
+
+      .hamburger { display: flex; }
+
+      .sidebar {
+        position: fixed;
+        top: 0; left: -280px;
+        height: 100vh;
+        width: 270px;
+        z-index: 95;
+        transition: left 0.3s ease;
+        padding-top: 80px;
+        border-right: 1px solid var(--border-hover);
+      }
+
+      .sidebar.open {
+        left: 0;
+      }
+
+      .sidebar-overlay.open {
+        display: block;
+      }
+
+      .main-content {
+        padding: 32px 24px 80px;
+      }
+
+      .footer-inner { padding: 0 24px; }
+    }
+
+    @media (max-width: 600px) {
+      .token-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Sidebar overlay (mobile) -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<!-- Nav -->
+<nav>
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-icon">
+      <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+        <path d="M10 1.5L3 4.5v5c0 4 3.1 7.5 7 8.5 3.9-1 7-4.5 7-8.5v-5L10 1.5z"
+          fill="rgba(255,255,255,0.2)" stroke="white" stroke-width="1.4" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    My SPACE
+  </a>
+  <ul class="nav-links">
+    <li><a href="index.html#features">Features</a></li>
+    <li><a href="privacy-policy.html">Privacy</a></li>
+    <li><a href="terms-of-service.html">Terms</a></li>
+    <li><a href="developer-guide.html" class="active">Developer</a></li>
+    <li><a href="https://github.com/cuongquachc88/my-space">GitHub</a></li>
+  </ul>
+  <div style="display:flex;align-items:center;gap:12px">
+    <a href="https://github.com/cuongquachc88/my-space" class="btn-ghost">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+      GitHub
+    </a>
+    <button class="hamburger" id="hamburger" onclick="openSidebar()" aria-label="Open navigation">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- Page layout -->
+<div class="page-wrap">
+
+  <!-- Sidebar TOC -->
+  <aside class="sidebar" id="sidebar">
+    <p class="toc-label">On this page</p>
+    <ul class="toc-list">
+      <li class="toc-item"><a href="#architecture" data-section="architecture"><span class="toc-dot"></span>Architecture</a></li>
+      <li class="toc-item"><a href="#project-structure" data-section="project-structure"><span class="toc-dot"></span>Project Structure</a></li>
+      <li class="toc-item"><a href="#message-protocol" data-section="message-protocol"><span class="toc-dot"></span>Message Protocol</a></li>
+      <li class="toc-item"><a href="#database" data-section="database"><span class="toc-dot"></span>Database</a></li>
+      <hr class="toc-divider" />
+      <li class="toc-item"><a href="#content-scripts" data-section="content-scripts"><span class="toc-dot"></span>Content Scripts</a></li>
+      <li class="toc-item"><a href="#crypto" data-section="crypto"><span class="toc-dot"></span>Crypto</a></li>
+      <li class="toc-item"><a href="#drive-sync" data-section="drive-sync"><span class="toc-dot"></span>Google Drive Sync</a></li>
+      <li class="toc-item"><a href="#design-system" data-section="design-system"><span class="toc-dot"></span>Design System</a></li>
+      <hr class="toc-divider" />
+      <li class="toc-item"><a href="#android" data-section="android"><span class="toc-dot"></span>Android App</a></li>
+      <li class="toc-item"><a href="#testing" data-section="testing"><span class="toc-dot"></span>Testing</a></li>
+      <li class="toc-item"><a href="#adding-view" data-section="adding-view"><span class="toc-dot"></span>Adding a New View</a></li>
+      <li class="toc-item"><a href="#release" data-section="release"><span class="toc-dot"></span>Versioning &amp; Release</a></li>
+    </ul>
+  </aside>
+
+  <!-- Main content -->
+  <main class="main-content">
+
+    <!-- Breadcrumb -->
+    <a href="index.html" class="breadcrumb">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M19 12H5M12 5l-7 7 7 7"/>
+      </svg>
+      Back to Home
+    </a>
+
+    <!-- Page header -->
+    <div class="page-header">
+      <div class="page-header-badge">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+        Technical Documentation
+      </div>
+      <h1 class="page-title">Developer Guide</h1>
+      <p class="page-subtitle">Architecture, internals, and everything you need to build on or contribute to My SPACE — the Chrome MV3 extension with three execution contexts, PGlite, AES-GCM crypto, and Google Drive sync.</p>
+    </div>
+
+    <!-- ── 1. Architecture ── -->
+    <section class="doc-section sec-arch" id="architecture">
+      <div class="section-header">
+        <div class="section-heading-accent"></div>
+        <h2 class="section-heading">Architecture</h2>
+        <span class="section-badge badge-blue">Overview</span>
+      </div>
+
+      <div class="prose">
+        <p>My SPACE is a Chrome MV3 extension with three execution contexts:</p>
+      </div>
+
+      <div class="ascii-block">
+        <pre>┌─────────────────────────────────────────────────────────┐
+│  Side Panel  (React UI)                                  │
+│  src/sidepanel/                                          │
+│  Renders views, sends messages to service worker         │
+└────────────────────────┬────────────────────────────────┘
+                         │ chrome.runtime.sendMessage
+┌────────────────────────▼────────────────────────────────┐
+│  Service Worker  (message router + OAuth)                │
+│  src/service-worker/index.ts                             │
+│  Routes DB messages to offscreen, handles sync/OAuth     │
+└────────────────────────┬────────────────────────────────┘
+                         │ chrome.runtime.sendMessage
+┌────────────────────────▼────────────────────────────────┐
+│  Offscreen Document  (database host)                     │
+│  src/offscreen/                                          │
+│  Runs PGlite (PostgreSQL WASM), handles crypto           │
+└─────────────────────────────────────────────────────────┘</pre>
+      </div>
+
+      <div class="prose">
+        <p>The offscreen document is needed because Chrome service workers cannot run WebAssembly (PGlite). The service worker creates the offscreen document on demand and proxies database messages to it.</p>
+      </div>
+    </section>
+
+    <!-- ── 2. Project Structure ── -->
+    <section class="doc-section sec-structure" id="project-structure">
+      <div class="section-header">
+        <div class="section-heading-accent"></div>
+        <h2 class="section-heading">Project Structure</h2>
+        <span class="section-badge badge-violet">Source tree</span>
+      </div>
+
+      <div class="code-block">
+        <div class="code-block-header">
+          <div class="code-dots">
+            <div class="code-dot"></div>
+            <div class="code-dot"></div>
+            <div class="code-dot"></div>
+          </div>
+          <span class="code-lang">file tree</span>
+        </div>
+        <pre>src/
+├── service-worker/
+│   └── index.ts          <span class="tok-cm"># Message router, OAuth flows, Drive sync</span>
+├── offscreen/
+│   ├── main.ts           <span class="tok-cm"># Offscreen entry — wires chrome.runtime.onMessage</span>
+│   ├── handler.ts        <span class="tok-cm"># Dispatches messages to db.ts / crypto.ts</span>
+│   ├── db.ts             <span class="tok-cm"># PGlite schema + CRUD for all 8 tables</span>
+│   ├── crypto.ts         <span class="tok-cm"># AES-GCM encrypt/decrypt via Web Crypto API</span>
+│   └── polyfill.ts       <span class="tok-cm"># WASM/PGlite environment polyfills</span>
+├── sidepanel/
+│   ├── App.tsx           <span class="tok-cm"># Root — icon rail, view routing, idle lock, setup/lock screens</span>
+│   ├── views/
+│   │   ├── NotesView.tsx
+│   │   ├── KeyvaultView.tsx
+│   │   ├── GeneratorView.tsx
+│   │   ├── SubscriptionsView.tsx
+│   │   ├── ReportsView.tsx
+│   │   ├── TodoView.tsx
+│   │   ├── MapPinsView.tsx
+│   │   ├── SyncView.tsx
+│   │   └── SettingsView.tsx
+│   ├── components/
+│   │   ├── IconRail.tsx
+│   │   ├── NoteCard.tsx
+│   │   ├── SecretCard.tsx
+│   │   ├── TagInput.tsx
+│   │   ├── IconPicker.tsx
+│   │   └── icons/index.tsx
+│   └── index.css
+├── content/
+│   ├── mapExtractor.ts
+│   └── savePrompt.ts
+├── lib/
+│   ├── renderMarkdown.ts
+│   ├── generatePassword.ts
+│   ├── parseImport.ts
+│   ├── nextBilling.ts
+│   ├── currency.ts
+│   └── shareLink.ts
+└── shared/
+    └── messages.ts</pre>
+      </div>
+    </section>
+
+    <!-- ── 3. Message Protocol ── -->
+    <section class="doc-section sec-messages" id="message-protocol">
+      <div class="section-header">
+        <div class="section-heading-accent"></div>
+        <h2 class="section-heading">Message Protocol</h2>
+        <span class="section-badge badge-indigo">IPC</span>
+      </div>
+
+      <div class="prose">
+        <p>All communication uses <code>chrome.runtime.sendMessage</code>. Every message has a <code>type</code> string and optional payload. Every response has <code>&#123; ok: boolean, data?, error? &#125;</code>.</p>
+        <p>Types are defined in <code>src/shared/messages.ts</code>. Adding a new message type follows a four-step pattern:</p>
+      </div>
+
+      <ol class="prose" style="list-style:none;padding:0;">
+        <li class="step-list">
+          <div style="display:flex;flex-direction:column;gap:12px;margin:16px 0;">
+            <div class="step-item">
+              <div class="step-num">1</div>
+              <div class="step-text">Add <code>Msg&lt;'MY_TYPE', PayloadType&gt;</code> to <code>messages.ts</code> and include it in the <code>AnyMsg</code> union.</div>
+            </div>
+            <div class="step-item">
+              <div class="step-num">2</div>
+              <div class="step-text">Handle it in <code>src/offscreen/handler.ts</code> (for DB operations) or <code>src/service-worker/index.ts</code> (for everything else).</div>
+            </div>
+            <div class="step-item">
+              <div class="step-num">3</div>
+              <div class="step-text">Call it from the side panel via the <code>sendMsg</code> prop.</div>
+            </div>
+          </div>
+        </li>
+      </ol>
+
+      <div class="code-block">
+        <div class="code-block-header">
+          <div class="code-dots">
+            <div class="code-dot"></div>
+            <div class="code-dot"></div>
+            <div class="code-dot"></div>
+          </div>
+          <span class="code-lang">typescript</span>
+        </div>
+        <pre><span class="tok-cm">// In a view component</span>
+<span class="tok-kw">const</span> res = <span class="tok-kw">await</span> <span class="tok-fn">sendMsg</span>(<span class="tok-str">'MY_TYPE'</span>, &#123; foo: <span class="tok-str">'bar'</span> &#125;)
+<span class="tok-kw">if</span> (res.ok) console.<span class="tok-fn">log</span>(res.data)</pre>
+      </div>
+    </section>
+
+    <!-- ── 4. Database ── -->
+    <section class="doc-section sec-database" id="database">
+      <div class="section-header">
+        <div class="section-heading-accent"></div>
+        <h2 class="section-heading">Database</h2>
+        <span class="section-badge badge-amber">PGlite · WASM</span>
+      </div>
+
+      <div class="prose">
+        <p>PGlite runs inside the offscreen document. Schema is initialised in <code>src/offscreen/db.ts</code> → <code>initDb()</code>.</p>
+      </div>
+
+      <div class="db-table-wrap">
+        <table class="db-table">
+          <thead>
+            <tr>
+              <th>Table</th>
+              <th>Purpose</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>notes</td>
+              <td>Markdown notes with tags and embedded images (base64 data URLs)</td>
+            </tr>
+            <tr>
+              <td>secrets</td>
+              <td>AES-GCM encrypted credentials (ciphertext + IV stored, value never plaintext) plus url and description columns</td>
+            </tr>
+            <tr>
+              <td>subscriptions</td>
+              <td>Recurring billing tracker with currency, cycle, active toggle, logo</td>
+            </tr>
+            <tr>
+              <td>bills</td>
+              <td>Actual paid bills per subscription per month (composite PK: sub_id, year, month)</td>
+            </tr>
+            <tr>
+              <td>todo_lists</td>
+              <td>Colour-coded, icon-tagged task lists</td>
+            </tr>
+            <tr>
+              <td>todo_tasks</td>
+              <td>Tasks with priority, due date, recurrence (FK to todo_lists, CASCADE delete)</td>
+            </tr>
+            <tr>
+              <td>map_stacks</td>
+              <td>Colour-coded, icon-tagged pin collections</td>
+            </tr>
+            <tr>
+              <td>map_pins</td>
+              <td>Location pins with lat/lng, category, priority, rating, review (FK to map_stacks, CASCADE delete)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="prose">
+        <p>All CRUD functions are in <code>db.ts</code> and called from <code>handler.ts</code>. The vault (<code>secrets</code> table) is only accessible after <code>VAULT_UNLOCK</code> sets the encryption key in memory.</p>
+        <p>The <code>exportAllRows()</code> function serialises all 8 tables for sync, and <code>importRows()</code> performs upsert-by-<code>updated_at</code> conflict resolution — last-write-wins for notes/secrets/subs/tasks, first-write-wins for stacks/pins.</p>
+      </div>
+    </section>
+
+    <!-- ── 5. Content Scripts ── -->
+    <section class="doc-section sec-content" id="content-scripts">
+      <div class="section-header">
+        <div class="section-heading-accent"></div>
+        <h2 class="section-heading">Content Scripts</h2>
+        <span class="section-badge badge-sky">Browser integration</span>
+      </div>
+
+      <div class="prose">
+        <p>My SPACE ships two content scripts that live in <code>src/content/</code> and are registered in <code>manifest.json</code>.</p>
+
+        <h3>mapExtractor.ts — floating Pin button on map pages</h3>
+        <p>Matches: <code>google.com/maps</code>, <code>maps.google.com</code>, <code>openstreetmap.org</code>, <code>bing.com/maps</code>, <code>maps.apple.com</code>.</p>
+      </div>
+
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="flow-dot sky-dot">1</div>
+          <div class="flow-text">On load, scans the URL for lat/lng patterns (<code>/@lat,lng</code>, <code>ll=lat,lng</code>, <code>map=zoom/lat/lng</code>, <code>cp=lat~lng</code>, <code>!3dlat!4dlng</code>, <code>lat=…&lng=…</code>).</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot sky-dot">2</div>
+          <div class="flow-text">If coords are found, injects a floating <strong>"Pin to My SPACE"</strong> button at <code>bottom: 220px right: 16px</code>.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot sky-dot">3</div>
+          <div class="flow-text">A small "×" collapse button next to it shrinks the badge to an icon-only state.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot sky-dot">4</div>
+          <div class="flow-text">On click, the button sends <code>&#123; type: 'MAP_PIN_CAPTURE', payload: ExtractedPin &#125;</code> to the service worker.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot sky-dot">5</div>
+          <div class="flow-text">The service worker forwards <code>&#123; type: 'MAP_PIN_FROM_PAGE', payload &#125;</code> to the side panel.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot sky-dot">6</div>
+          <div class="flow-text"><code>MapPinsView</code> listens for <code>MAP_PIN_FROM_PAGE</code> — when received, it sets <code>pendingPin</code> and <code>addMode='page'</code> so the confirm form is pre-filled.</div>
+        </div>
+      </div>
+
+      <div class="prose">
+        <p>A <code>MutationObserver</code> re-scans the URL on SPA navigation.</p>
+
+        <h3>savePrompt.ts — Save Password badge on login forms</h3>
+        <p>The script wants to run on every login form on the web, which would normally trigger Chrome Web Store's "Broad Host Permissions" review. We avoid that by registering the script <strong>dynamically</strong> with <code>chrome.scripting.registerContentScripts</code> only after the user opts in.</p>
+      </div>
+
+      <div class="info-card sky">
+        <div class="info-card-label">Permissions design</div>
+        <div class="prose" style="margin:0">
+          <p style="margin-bottom:8px">The bundle path <code>savePrompt.js</code> is generated by Vite with a non-hashed filename and listed in <code>web_accessible_resources</code>. <code>&lt;all_urls&gt;</code> is declared under <code>optional_host_permissions</code>, not <code>host_permissions</code>. The Settings view shows a "Save Password Prompt" card to let the user opt in.</p>
+        </div>
+      </div>
+
+      <div class="flow-steps" style="margin-top:20px">
+        <div class="flow-step">
+          <div class="flow-dot">1</div>
+          <div class="flow-text">Scans the page for <code>&lt;input type="password"&gt;</code> fields.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot">2</div>
+          <div class="flow-text">Listens for <code>input</code> events on both fields (debounced 500 ms).</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot">3</div>
+          <div class="flow-text">When both fields have non-empty values (password ≥ 4 chars), shows a floating orange <strong>"Save to My SPACE?"</strong> badge.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot">4</div>
+          <div class="flow-text">On click, captures <code>&#123; url, username, password, formAction? &#125;</code> and sends <code>SAVE_PASSWORD_OFFER</code>.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot">5</div>
+          <div class="flow-text">The service worker forwards <code>SAVE_PASSWORD_OFFER_FROM_PAGE</code> to the side panel.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot">6</div>
+          <div class="flow-text"><code>KeyvaultView</code> listens and renders a confirm card.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 6. Crypto ── -->
+    <section class="doc-section sec-crypto" id="crypto">
+      <div class="section-header">
+        <div class="section-heading-accent"></div>
+        <h2 class="section-heading">Crypto</h2>
+        <span class="section-badge badge-violet">AES-GCM · PBKDF2</span>
+      </div>
+
+      <div class="prose">
+        <p><code>src/offscreen/crypto.ts</code> wraps the Web Crypto API with four capabilities:</p>
+      </div>
+
+      <div class="spec-grid">
+        <div class="spec-row">
+          <span class="spec-key">Vault encryption</span>
+          <span class="spec-val">AES-GCM 256-bit, PBKDF2 600 000 iter / SHA-256</span>
+        </div>
+        <div class="spec-row">
+          <span class="spec-key">IV</span>
+          <span class="spec-val">Random 12-byte per secret</span>
+        </div>
+        <div class="spec-row">
+          <span class="spec-key">Sync encryption</span>
+          <span class="spec-val">AES-GCM, same vault key, random 12-byte IV per export</span>
+        </div>
+        <div class="spec-row">
+          <span class="spec-key">Cross-device decrypt</span>
+          <span class="spec-val">SYNC_DECRYPT_WITH_SALT — re-derives temporary key from backup salt</span>
+        </div>
+        <div class="spec-row">
+          <span class="spec-key">Salt storage</span>
+          <span class="spec-val">16-byte random salt in chrome.storage.local as vaultSalt</span>
+        </div>
+        <div class="spec-row">
+          <span class="spec-key">Key persistence</span>
+          <span class="spec-val">Memory only — never written to storage, wiped on lock</span>
+        </div>
+        <div class="spec-row">
+          <span class="spec-key">Auto-lock</span>
+          <span class="spec-val">Default 15 min inactivity, configurable in Settings</span>
+        </div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-card-label">Security note</div>
+        <div class="prose" style="margin:0">
+          <p style="margin-bottom:0">The vault key is held in memory in the offscreen document only. It is never written to storage. Locking the vault clears it. Cross-device pull with a mismatched salt uses <code>SYNC_DECRYPT_WITH_SALT</code> to re-derive a temporary key — this derived key is never cached.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 7. Drive Sync ── -->
+    <section class="doc-section sec-drive" id="drive-sync">
+      <div class="section-header">
+        <div class="section-heading-accent"></div>
+        <h2 class="section-heading">Google Drive Sync</h2>
+        <span class="section-badge badge-blue">OAuth · appData</span>
+      </div>
+
+      <div class="prose">
+        <p>Handled entirely in <code>src/service-worker/index.ts</code>.</p>
+        <p>OAuth uses <code>chrome.identity.getAuthToken</code> with three scopes: <code>drive.appdata</code>, <code>userinfo.email</code>, <code>userinfo.profile</code>.</p>
+      </div>
+
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="flow-dot">→</div>
+          <div class="flow-text"><strong>Push flow:</strong> <code>DB_EXPORT</code> → encrypt → upload to Drive <code>appDataFolder</code> (file: <code>keyvault-backup.json</code>)</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot">←</div>
+          <div class="flow-text"><strong>Pull flow:</strong> download from Drive → decrypt → <code>DB_IMPORT</code></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot">⟳</div>
+          <div class="flow-text"><strong>Cross-device pull:</strong> if the backup's salt differs from the local salt (different device/profile), the user is prompted for their master password. <code>SYNC_DECRYPT_WITH_SALT</code> re-derives the key using the backup's salt, decrypts, then imports.</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-dot">⟳</div>
+          <div class="flow-text"><strong>Token refresh:</strong> on 401 responses, the cached token is cleared and a fresh silent token is fetched automatically.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 8. Design System ── -->
+    <section class="doc-section sec-design" id="design-system">
+      <div class="section-header">
+        <div class="section-heading-accent"></div>
+        <h2 class="section-heading">Design System</h2>
+        <span class="section-badge badge-indigo">Glass-card dark UI</span>
+      </div>
+
+      <div class="prose">
+        <p>Glass-card dark UI. Key CSS variables in <code>src/sidepanel/index.css</code>. Tailwind v4 is available for layout and spacing. Use the <code>glass-card</code> class for cards.</p>
+      </div>
+
+      <div class="code-block">
+        <div class="code-block-header">
+          <div class="code-dots">
+            <div class="code-dot"></div>
+            <div class="code-dot"></div>
+            <div class="code-dot"></div>
+          </div>
+          <span class="code-lang">css</span>
+        </div>
+        <pre><span class="tok-cm">/* Base */</span>
+<span class="tok-kw">--bg-base</span>:    <span class="tok-str">#0d1117</span>;
+<span class="tok-kw">--glass-bg</span>:   <span class="tok-str">rgba(255,255,255,0.06)</span>;
+<span class="tok-kw">--glass-border</span>: <span class="tok-str">rgba(255,255,255,0.08)</span>;
+
+<span class="tok-cm">/* Feature accents */</span>
+<span class="tok-kw">--accent-notes</span>:   <span class="tok-str">#6366f1</span>;   <span class="tok-cm">/* indigo */</span>
+<span class="tok-kw">--accent-vault</span>:   <span class="tok-str">#f59e0b</span>;   <span class="tok-cm">/* amber */</span>
+<span class="tok-kw">--accent-sync</span>:    <span class="tok-str">#3b82f6</span>;   <span class="tok-cm">/* blue */</span>
+<span class="tok-kw">--accent-gen</span>:     <span class="tok-str">#a78bfa</span>;   <span class="tok-cm">/* violet */</span>
+<span class="tok-kw">--accent-subs</span>:    <span class="tok-str">#34d399</span>;   <span class="tok-cm">/* emerald */</span>
+<span class="tok-kw">--accent-reports</span>: <span class="tok-str">#f472b6</span>;   <span class="tok-cm">/* pink */</span>
+<span class="tok-kw">--accent-todo</span>:    <span class="tok-str">#38bdf8</span>;   <span class="tok-cm">/* sky */</span>
+<span class="tok-kw">--accent-maps</span>:    <span class="tok-str">#fb923c</span>;   <span class="tok-cm">/* orange */</span></pre>
+      </div>
+
+      <div class="token-grid">
+        <div class="token-card">
+          <div class="token-swatch" style="background:#6366f1"></div>
+          <div class="token-info">
+            <span class="token-name">--accent-notes</span>
+            <span class="token-value">#6366f1</span>
+          </div>
+        </div>
+        <div class="token-card">
+          <div class="token-swatch" style="background:#f59e0b"></div>
+          <div class="token-info">
+            <span class="token-name">--accent-vault</span>
+            <span class="token-value">#f59e0b</span>
+          </div>
+        </div>
+        <div class="token-card">
+          <div class="token-swatch" style="background:#3b82f6"></div>
+          <div class="token-info">
+            <span class="token-name">--accent-sync</span>
+            <span class="token-value">#3b82f6</span>
+          </div>
+        </div>
+        <div class="token-card">
+          <div class="token-swatch" style="background:#a78bfa"></div>
+          <div class="token-info">
+            <span class="token-name">--accent-gen</span>
+            <span class="token-value">#a78bfa</span>
+          </div>
+        </div>
+        <div class="token-card">
+          <div class="token-swatch" style="background:#34d399"></div>
+          <div class="token-info">
+            <span class="token-name">--accent-subs</span>
+            <span class="token-value">#34d399</span>
+          </div>
+        </div>
+        <div class="token-card">
+          <div class="token-swatch" style="background:#f472b6"></div>
+          <div class="token-info">
+            <span class="token-name">--accent-reports</span>
+            <span class="token-value">#f472b6</span>
+          </div>
+        </div>
+        <div class="token-card">
+          <div class="token-swatch" style="background:#38bdf8"></div>
+          <div class="token-info">
+            <span class="token-name">--accent-todo</span>
+            <span class="token-value">#38bdf8</span>
+          </div>
+        </div>
+        <div class="token-card">
+          <div class="token-swatch" style="background:#fb923c"></div>
+          <div class="token-info">
+            <span class="token-name">--accent-maps</span>
+            <span class="token-value">#fb923c</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 9. Android App ── -->
+    <section class="doc-section sec-android" id="android">
+      <div class="section-header">
+        <div class="section-heading-accent"></div>
+        <h2 class="section-heading">Android App</h2>
+        <span class="section-badge badge-pink">Kotlin · Compose</span>
+      </div>
+
+      <div class="prose">
+        <p>The <code>android/</code> directory contains a Kotlin + Jetpack Compose app that mirrors the Chrome extension's feature set.</p>
+      </div>
+
+      <div class="gen-table-wrap">
+        <table class="gen-table">
+          <thead>
+            <tr>
+              <th>Layer</th>
+              <th>Technology</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>UI</td>
+              <td>Jetpack Compose + Material3, HorizontalPager navigation</td>
+            </tr>
+            <tr>
+              <td>Database</td>
+              <td>Room (SQLite), 8 entities, 6 migrations (v1→v7)</td>
+            </tr>
+            <tr>
+              <td>Crypto</td>
+              <td>Android Keystore AES-GCM (hardware-backed)</td>
+            </tr>
+            <tr>
+              <td>Sync</td>
+              <td>Google Drive REST API via OkHttp + OAuth implicit flow</td>
+            </tr>
+            <tr>
+              <td>Images</td>
+              <td>Coil async image loading</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="prose">
+        <h3>Key files</h3>
+      </div>
+
+      <ul class="file-list">
+        <li class="file-item">
+          <span class="file-path">crypto/CryptoManager.kt</span>
+          <span class="file-desc">Keystore-backed AES-GCM encrypt/decrypt</span>
+        </li>
+        <li class="file-item">
+          <span class="file-path">data/AppDatabase.kt</span>
+          <span class="file-desc">Room database with all entities, DAOs, and migrations</span>
+        </li>
+        <li class="file-item">
+          <span class="file-path">sync/DriveRepository.kt</span>
+          <span class="file-desc">Drive push/pull with multipart upload</span>
+        </li>
+        <li class="file-item">
+          <span class="file-path">ui/MySpaceApp.kt</span>
+          <span class="file-desc">Root composable with pager navigation and accent glows</span>
+        </li>
+        <li class="file-item">
+          <span class="file-path">ui/screens/</span>
+          <span class="file-desc">8 screen composables — one per feature</span>
+        </li>
+        <li class="file-item">
+          <span class="file-path">ui/theme/Theme.kt</span>
+          <span class="file-desc">Dark colour scheme with per-feature accent colours</span>
+        </li>
+        <li class="file-item">
+          <span class="file-path">util/BillingCalc.kt</span>
+          <span class="file-desc">Monthly equivalent USD conversion and chart data builder</span>
+        </li>
+      </ul>
+    </section>
+
+    <!-- ── 10. Testing ── -->
+    <section class="doc-section sec-testing" id="testing">
+      <div class="section-header">
+        <div class="section-heading-accent"></div>
+        <h2 class="section-heading">Testing</h2>
+        <span class="section-badge badge-emerald">Vitest · jsdom</span>
+      </div>
+
+      <div class="code-block">
+        <div class="code-block-header">
+          <div class="code-dots">
+            <div class="code-dot"></div>
+            <div class="code-dot"></div>
+            <div class="code-dot"></div>
+          </div>
+          <span class="code-lang">bash</span>
+        </div>
+        <pre>npm test</pre>
+      </div>
+
+      <div class="prose">
+        <p>Tests live in <code>tests/</code>. Currently covers:</p>
+        <ul>
+          <li><code>renderMarkdown</code></li>
+          <li><code>parseImport</code></li>
+          <li><code>generatePassword</code></li>
+          <li><code>nextBilling</code></li>
+          <li><code>crypto</code></li>
+        </ul>
+        <p>The test environment is <strong>Vitest</strong> with <strong>jsdom</strong>.</p>
+      </div>
+    </section>
+
+    <!-- ── 11. Adding a New View ── -->
+    <section class="doc-section sec-newview" id="adding-view">
+      <div class="section-header">
+        <div class="section-heading-accent"></div>
+        <h2 class="section-heading">Adding a New View</h2>
+        <span class="section-badge badge-orange">Extension guide</span>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px;margin:4px 0 20px;">
+        <div class="step-item">
+          <div class="step-num">1</div>
+          <div class="step-text">Create <code>src/sidepanel/views/MyView.tsx</code> — accept <code>&#123; sendMsg &#125;</code> as props.</div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">2</div>
+          <div class="step-text">Add an icon to <code>src/sidepanel/components/icons/index.tsx</code>.</div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">3</div>
+          <div class="step-text">Add the view name to the <code>View</code> type in <code>App.tsx</code> and add it to the icon rail in <code>IconRail.tsx</code>.</div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">4</div>
+          <div class="step-text">Import and render it in <code>App.tsx</code> (add to the <code>GATED_VIEWS</code> set if it requires vault unlock).</div>
+        </div>
+        <div class="step-item">
+          <div class="step-num">5</div>
+          <div class="step-text">Add message types to <code>src/shared/messages.ts</code> and handle in <code>handler.ts</code>.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 12. Versioning & Release ── -->
+    <section class="doc-section sec-release" id="release">
+      <div class="section-header">
+        <div class="section-heading-accent"></div>
+        <h2 class="section-heading">Versioning &amp; Release</h2>
+        <span class="section-badge badge-emerald">Deployment</span>
+      </div>
+
+      <div class="prose">
+        <p>Version is kept in sync between <code>package.json</code> and <code>manifest.json</code> via <code>scripts/bump.js</code>.</p>
+      </div>
+
+      <div class="code-block">
+        <div class="code-block-header">
+          <div class="code-dots">
+            <div class="code-dot"></div>
+            <div class="code-dot"></div>
+            <div class="code-dot"></div>
+          </div>
+          <span class="code-lang">bash</span>
+        </div>
+        <pre>npm run release:patch   <span class="tok-cm"># bump + build + zip</span></pre>
+      </div>
+
+      <div class="prose">
+        <p>The zip file is named <code>my-space-&lt;version&gt;.zip</code> and is ready for Chrome Web Store upload.</p>
+      </div>
+
+      <div class="info-card emerald">
+        <div class="info-card-label">Release checklist</div>
+        <div class="prose" style="margin:0">
+          <ul>
+            <li>Run <code>npm test</code> — all tests green</li>
+            <li>Bump version with <code>npm run release:patch</code> (or <code>:minor</code> / <code>:major</code>)</li>
+            <li>Verify the zip contains the correct <code>manifest.json</code> version</li>
+            <li>Upload to Chrome Web Store Developer Dashboard</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-logo">My SPACE</div>
+    <ul class="footer-links">
+      <li><a href="privacy-policy.html">Privacy Policy</a></li>
+      <li><a href="terms-of-service.html">Terms of Service</a></li>
+      <li><a href="developer-guide.html" class="current">Developer Guide</a></li>
+      <li><a href="autofill-plan.html">Autofill Plan</a></li>
+      <li><a href="https://github.com/cuongquachc88/my-space">GitHub</a></li>
+    </ul>
+    <div class="footer-copy">© 2026 cuongquachc88</div>
+  </div>
+</footer>
+
+<script>
+  // ── Sidebar mobile ──
+  function openSidebar() {
+    document.getElementById('sidebar').classList.add('open')
+    document.getElementById('sidebarOverlay').classList.add('open')
+    document.body.style.overflow = 'hidden'
+  }
+  function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open')
+    document.getElementById('sidebarOverlay').classList.remove('open')
+    document.body.style.overflow = ''
+  }
+
+  // Close sidebar on TOC link click (mobile)
+  document.querySelectorAll('.toc-item a').forEach(link => {
+    link.addEventListener('click', () => {
+      if (window.innerWidth < 900) closeSidebar()
+    })
+  })
+
+  // ── IntersectionObserver TOC highlight ──
+  const tocLinks = document.querySelectorAll('.toc-item a[data-section]')
+  const sections = document.querySelectorAll('.doc-section[id]')
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id
+        tocLinks.forEach(link => {
+          link.classList.toggle('active', link.getAttribute('data-section') === id)
+        })
+      }
+    })
+  }, {
+    rootMargin: '-80px 0px -60% 0px',
+    threshold: 0
+  })
+
+  sections.forEach(sec => observer.observe(sec))
+
+  // Highlight first link on load
+  if (tocLinks.length) tocLinks[0].classList.add('active')
+</script>
+</body>
+</html>

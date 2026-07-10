@@ -168,7 +168,7 @@ export default function ReportsView() {
         <BentoCell span="1">
           <GlassCard accentBar accent={accent}>
             <div style={{ padding: 20, textAlign: 'center' }}>
-              <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 28, color: accent }}>{fmtUSD(actualTotal, display)}</div>
+              <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 28, color: accent }}>{fmtUSD(actualTotal, display)}</div>
               <div style={{ fontSize: 13, color: '#4a4a6a', fontFamily: 'Inter, sans-serif', marginTop: 4 }}>This month</div>
             </div>
           </GlassCard>
@@ -177,7 +177,7 @@ export default function ReportsView() {
         <BentoCell span="1">
           <GlassCard>
             <div style={{ padding: 20, textAlign: 'center' }}>
-              <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 28, color: '#1a1a2e' }}>{fmtUSD(expectedTotal, display)}</div>
+              <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 28, color: '#1a1a2e' }}>{fmtUSD(expectedTotal, display)}</div>
               <div style={{ fontSize: 13, color: '#4a4a6a', fontFamily: 'Inter, sans-serif', marginTop: 4 }}>Expected</div>
             </div>
           </GlassCard>
@@ -186,7 +186,7 @@ export default function ReportsView() {
         <BentoCell span="1">
           <GlassCard>
             <div style={{ padding: 20, textAlign: 'center' }}>
-              <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 28, color: delta > 0 ? '#ef4444' : '#34d399' }}>{delta >= 0 ? '+' : ''}{fmtUSD(Math.abs(delta), display)}</div>
+              <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 28, color: delta > 0 ? '#ef4444' : '#34d399' }}>{delta >= 0 ? '+' : ''}{fmtUSD(Math.abs(delta), display)}</div>
               <div style={{ fontSize: 13, color: '#4a4a6a', fontFamily: 'Inter, sans-serif', marginTop: 4 }}>Delta</div>
             </div>
           </GlassCard>
@@ -195,7 +195,7 @@ export default function ReportsView() {
         <BentoCell span="full">
           <GlassCard>
             <div style={{ padding: 16 }}>
-              <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e', marginBottom: 10 }}>
+              <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e', marginBottom: 10 }}>
                 {MONTH_SHORT[curMonth-1]} {curYear}
               </div>
               {subs.length === 0 && <div style={{ color: '#4a4a6a', fontSize: 13, fontFamily: 'Inter, sans-serif' }}>No active subscriptions.</div>}
@@ -227,7 +227,7 @@ export default function ReportsView() {
           <BentoCell span="full">
             <GlassCard accentBar accent={accent}>
               <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 18, color: '#1a1a2e' }}>
+                <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 18, color: '#1a1a2e' }}>
                   {editingBill.sub.name} — {MONTH_SHORT[editingBill.month-1]} {editingBill.year}
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>

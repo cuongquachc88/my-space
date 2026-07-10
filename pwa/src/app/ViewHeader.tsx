@@ -17,7 +17,7 @@ export default function ViewHeader({ title, icon, accent, stats, action, onActio
           {icon}
         </div>
         <div>
-          <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 26, letterSpacing: '-0.02em', color: '#1a1a2e', lineHeight: 1.1 }}>{title}</div>
+          <div style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 800, fontSize: 26, letterSpacing: '-0.03em', color: '#1a1a2e', lineHeight: 1.0 }}>{title}</div>
           {stats && <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#8e8e93', marginTop: 2 }}>{stats}</div>}
         </div>
       </div>

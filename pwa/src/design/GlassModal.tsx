@@ -39,9 +39,8 @@ export default function GlassModal({ open, onClose, title, children, maxWidth = 
           background: 'rgba(255,255,255,0.72)',
           backdropFilter: 'blur(28px)',
           WebkitBackdropFilter: 'blur(28px)',
-          border: '1px solid rgba(255,255,255,0.75)',
           borderRadius: 24,
-          boxShadow: '0 20px 60px rgba(124,106,247,0.18), 0 4px 16px rgba(0,0,0,0.08)',
+          boxShadow: '0 40px 100px rgba(15,15,35,0.32), 0 8px 24px rgba(15,15,35,0.12)',
           overflow: 'hidden',
           animation: 'slideUp 200ms cubic-bezier(0.34,1.56,0.64,1)',
         }}
@@ -51,7 +50,7 @@ export default function GlassModal({ open, onClose, title, children, maxWidth = 
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '18px 20px 0',
         }}>
-          <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 18, color: '#1a1a2e', letterSpacing: '-0.01em' }}>
+          <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 18, color: '#1a1a2e', letterSpacing: '-0.01em' }}>
             {title}
           </div>
           <button
