@@ -52,18 +52,24 @@ function makeAuthUrl(state: string, codeChallenge: string): string {
 async function exchangeCode(code: string): Promise<string> {
   const verifier = localStorage.getItem('oauth_verifier')
   if (!verifier) throw new Error('Missing code verifier')
+  const body: Record<string, string> = {
+    client_id: getClientId(),
+    redirect_uri: getRedirectUri(),
+    grant_type: 'authorization_code',
+    code,
+    code_verifier: verifier,
+  }
+  const secret = import.meta.env.VITE_GOOGLE_CLIENT_SECRET
+  if (secret) body.client_secret = secret
   const res = await fetch(TOKEN_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      client_id: getClientId(),
-      redirect_uri: getRedirectUri(),
-      grant_type: 'authorization_code',
-      code,
-      code_verifier: verifier,
-    }),
+    body: new URLSearchParams(body),
   })
-  if (!res.ok) throw new Error(`Token exchange failed: ${res.status}`)
+  if (!res.ok) {
+    const body = await res.text()
+    throw new Error(`Token exchange failed: ${res.status} — ${body}`)
+  }
   const data = await res.json() as { access_token: string }
   return data.access_token
 }
