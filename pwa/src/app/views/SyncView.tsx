@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getDb } from '../../db'
-import { deriveKey, encryptWithKey, decryptWithKey } from '../../crypto'
+import { deriveKey, encryptWithKey, decryptWithKey, unlock } from '../../crypto'
 import { ACCENT } from '../../design/tokens'
 import ViewHeader from '../ViewHeader'
 import { IconSync } from '../../design/icons'
@@ -200,6 +200,9 @@ export function useSyncLogic() {
         }
         log(`Merged ${pins.length} pins`)
       }
+
+      // Unlock the vault with the same password so reveal works immediately without a separate unlock step
+      try { await unlock(syncPw, localSalt) } catch { /* vault verify token may not exist yet on fresh install — ignore */ }
 
       log('Pull complete ✓', 'ok'); setStatus('ok')
     } catch (e) { log(String(e), 'error'); setStatus('error') }
