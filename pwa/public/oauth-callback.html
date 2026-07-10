@@ -8,14 +8,12 @@
   </div>
   <script>
     (function () {
-      const hash = new URLSearchParams(window.location.hash.slice(1))
       const params = new URLSearchParams(window.location.search)
-      const token = hash.get('access_token')
-      const state = hash.get('state') || params.get('state')
-      const error = hash.get('error') || params.get('error')
+      const code = params.get('code')
+      const state = params.get('state')
+      const error = params.get('error')
 
       if (!window.opener) {
-        // Opened directly (not as popup) — just go home
         window.location.href = '/'
         return
       }
@@ -26,14 +24,13 @@
         return
       }
 
-      if (token && state) {
-        // Send token+state to parent for validation — parent holds oauth_state
-        window.opener.postMessage({ type: 'OAUTH_TOKEN', token, state }, window.location.origin)
+      if (code && state) {
+        window.opener.postMessage({ type: 'OAUTH_CODE', code, state }, window.location.origin)
         window.close()
         return
       }
 
-      window.opener.postMessage({ type: 'OAUTH_ERROR', error: 'no_token' }, window.location.origin)
+      window.opener.postMessage({ type: 'OAUTH_ERROR', error: 'no_code' }, window.location.origin)
       window.close()
     })()
   </script>

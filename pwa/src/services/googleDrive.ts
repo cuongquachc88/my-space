@@ -4,6 +4,7 @@ import { App } from '@capacitor/app'
 
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata'
 const FILE_NAME = 'myspace-backup.json'
+const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token'
 
 function getClientId(): string {
   const id = import.meta.env.VITE_GOOGLE_CLIENT_ID
@@ -16,20 +17,55 @@ function getRedirectUri(): string {
   return `${location.origin}/oauth-callback`
 }
 
-function makeAuthUrl(state: string): string {
-  const params = new URLSearchParams({
-    client_id: getClientId(),
-    redirect_uri: getRedirectUri(),
-    response_type: 'token',
-    scope: DRIVE_SCOPE,
-    state,
-  })
-  return `https://accounts.google.com/o/oauth2/auth?${params}`
-}
+// ── PKCE helpers ──────────────────────────────────────────────────────────
 
 function makeState(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(16))
   return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')
+}
+
+async function makeCodeVerifier(): Promise<string> {
+  const bytes = crypto.getRandomValues(new Uint8Array(48))
+  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
+}
+
+async function makeCodeChallenge(verifier: string): Promise<string> {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))
+  return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
+}
+
+function makeAuthUrl(state: string, codeChallenge: string): string {
+  const params = new URLSearchParams({
+    client_id: getClientId(),
+    redirect_uri: getRedirectUri(),
+    response_type: 'code',
+    scope: DRIVE_SCOPE,
+    state,
+    code_challenge: codeChallenge,
+    code_challenge_method: 'S256',
+    access_type: 'offline',
+    prompt: 'select_account',
+  })
+  return `https://accounts.google.com/o/oauth2/v2/auth?${params}`
+}
+
+async function exchangeCode(code: string): Promise<string> {
+  const verifier = localStorage.getItem('oauth_verifier')
+  if (!verifier) throw new Error('Missing code verifier')
+  const res = await fetch(TOKEN_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: getClientId(),
+      redirect_uri: getRedirectUri(),
+      grant_type: 'authorization_code',
+      code,
+      code_verifier: verifier,
+    }),
+  })
+  if (!res.ok) throw new Error(`Token exchange failed: ${res.status}`)
+  const data = await res.json() as { access_token: string }
+  return data.access_token
 }
 
 // ── Token storage ──────────────────────────────────────────────────────────
@@ -41,15 +77,18 @@ export function getStoredToken(): string | null {
 export function clearToken(): void {
   localStorage.removeItem('drive_token')
   localStorage.removeItem('oauth_state')
-  localStorage.removeItem('oauth_pending')
+  localStorage.removeItem('oauth_verifier')
 }
 
 // ── Authorize ──────────────────────────────────────────────────────────────
 
 export async function authorize(): Promise<string> {
   const state = makeState()
+  const verifier = await makeCodeVerifier()
+  const challenge = await makeCodeChallenge(verifier)
   localStorage.setItem('oauth_state', state)
-  const url = makeAuthUrl(state)
+  localStorage.setItem('oauth_verifier', verifier)
+  const url = makeAuthUrl(state, challenge)
 
   if (Capacitor.isNativePlatform()) {
     return authorizeNative(url)
@@ -65,15 +104,19 @@ function authorizeWeb(url: string): Promise<string> {
     const popup = window.open(url, 'google-auth', 'width=520,height=620,left=200,top=100')
     if (!popup) { reject(new Error('Popup blocked — allow popups for this site')); return }
 
-    const handler = (e: MessageEvent) => {
+    const handler = async (e: MessageEvent) => {
       if (e.origin !== location.origin) return
-      if (e.data?.type === 'OAUTH_TOKEN') {
+      if (e.data?.type === 'OAUTH_CODE') {
         clearInterval(poll)
         window.removeEventListener('message', handler)
         if (!storedState || storedState !== e.data.state) { reject(new Error('State mismatch')); return }
-        localStorage.setItem('drive_token', e.data.token)
-        localStorage.removeItem('oauth_state')
-        resolve(e.data.token)
+        try {
+          const token = await exchangeCode(e.data.code)
+          localStorage.setItem('drive_token', token)
+          localStorage.removeItem('oauth_state')
+          localStorage.removeItem('oauth_verifier')
+          resolve(token)
+        } catch (err) { reject(err) }
       } else if (e.data?.type === 'OAUTH_ERROR') {
         clearInterval(poll)
         window.removeEventListener('message', handler)
@@ -94,23 +137,24 @@ function authorizeWeb(url: string): Promise<string> {
 
 function authorizeNative(url: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    // App.addListener('appUrlOpen') catches the deep link when Google redirects to com.myspace.app:/oauth-callback
-    App.addListener('appUrlOpen', (event: { url: string }) => {
+    App.addListener('appUrlOpen', async (event: { url: string }) => {
       if (!event.url.startsWith('com.myspace.app:/oauth-callback')) return
       App.removeAllListeners()
       Browser.close()
-      const hash = new URLSearchParams(event.url.split('#')[1] ?? '')
-      const token = hash.get('access_token')
-      const state = hash.get('state')
+      const params = new URLSearchParams(event.url.split('?')[1] ?? '')
+      const code = params.get('code')
+      const state = params.get('state')
       const storedState = localStorage.getItem('oauth_state')
-      if (!token) { reject(new Error('No token in redirect')); return }
-      // Fail closed: reject when no active auth flow OR state mismatch
+      if (!code) { reject(new Error('No code in redirect')); return }
       if (!storedState || storedState !== state) { reject(new Error('State mismatch')); return }
-      localStorage.setItem('drive_token', token)
-      localStorage.removeItem('oauth_state')
-      resolve(token)
+      try {
+        const token = await exchangeCode(code)
+        localStorage.setItem('drive_token', token)
+        localStorage.removeItem('oauth_state')
+        localStorage.removeItem('oauth_verifier')
+        resolve(token)
+      } catch (err) { reject(err) }
     })
-
     Browser.open({ url })
   })
 }
