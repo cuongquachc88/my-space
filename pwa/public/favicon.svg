@@ -1,21 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#7c6af7"/>
-      <stop offset="100%" style="stop-color:#a78bfa"/>
+      <stop offset="0%" stop-color="#5b4fe8"/>
+      <stop offset="100%" stop-color="#9d7cf4"/>
     </linearGradient>
-    <linearGradient id="lock" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1"/>
-      <stop offset="100%" style="stop-color:#e0d9ff;stop-opacity:1"/>
+    <linearGradient id="shine" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
     </linearGradient>
   </defs>
-  <!-- Background rounded square -->
+  <!-- Background -->
   <rect width="32" height="32" rx="8" fill="url(#bg)"/>
+  <!-- Shine overlay -->
+  <rect width="32" height="16" rx="8" fill="url(#shine)"/>
   <!-- Lock body -->
-  <rect x="9" y="15" width="14" height="11" rx="3" fill="url(#lock)"/>
+  <rect x="9.5" y="16" width="13" height="10" rx="2.5" fill="white" opacity="0.95"/>
   <!-- Lock shackle -->
-  <path d="M11.5 15v-3.5a4.5 4.5 0 0 1 9 0V15" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
-  <!-- Keyhole -->
-  <circle cx="16" cy="20.5" r="1.8" fill="#7c6af7"/>
-  <rect x="15.2" y="21.5" width="1.6" height="2.5" rx="0.8" fill="#7c6af7"/>
+  <path d="M12 16v-3a4 4 0 0 1 8 0v3" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.95"/>
+  <!-- Keyhole dot -->
+  <circle cx="16" cy="20.5" r="1.6" fill="#7c6af7"/>
+  <!-- Keyhole stem -->
+  <rect x="15.3" y="21.4" width="1.4" height="2.2" rx="0.7" fill="#7c6af7"/>
 </svg>
