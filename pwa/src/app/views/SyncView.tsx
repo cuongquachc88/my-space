@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { getDb } from '../../db'
 import { deriveKey, encryptWithKey, decryptWithKey } from '../../crypto'
 import { ACCENT } from '../../design/tokens'
@@ -32,6 +32,21 @@ export function useSyncLogic() {
   const [logs, setLogs] = useState<{ time: string; msg: string; type: 'info' | 'ok' | 'error' }[]>([])
   const [syncPw, setSyncPw] = useState('')
   const [connected, setConnected] = useState(() => !!getStoredToken())
+
+  // Pick up result from OAuth redirect flow on mount
+  useEffect(() => {
+    const error = localStorage.getItem('oauth_error')
+    if (error) {
+      localStorage.removeItem('oauth_error')
+      log(`OAuth failed: ${error}`, 'error')
+      setStatus('error')
+      return
+    }
+    if (getStoredToken() && !connected) {
+      setConnected(true)
+      log('Connected to Google Drive ✓', 'ok')
+    }
+  }, [])
 
   function log(msg: string, type: 'info' | 'ok' | 'error' = 'info') {
     const time = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })

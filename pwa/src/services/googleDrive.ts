@@ -35,19 +35,20 @@ function makeState(): string {
 // ── Token storage ──────────────────────────────────────────────────────────
 
 export function getStoredToken(): string | null {
-  return sessionStorage.getItem('drive_token')
+  return localStorage.getItem('drive_token')
 }
 
 export function clearToken(): void {
-  sessionStorage.removeItem('drive_token')
-  sessionStorage.removeItem('oauth_state')
+  localStorage.removeItem('drive_token')
+  localStorage.removeItem('oauth_state')
+  localStorage.removeItem('oauth_pending')
 }
 
 // ── Authorize ──────────────────────────────────────────────────────────────
 
 export async function authorize(): Promise<string> {
   const state = makeState()
-  sessionStorage.setItem('oauth_state', state)
+  localStorage.setItem('oauth_state', state)
   const url = makeAuthUrl(state)
 
   if (Capacitor.isNativePlatform()) {
@@ -58,65 +59,11 @@ export async function authorize(): Promise<string> {
 }
 
 function authorizeWeb(url: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const storedState = sessionStorage.getItem('oauth_state')
-
-    // Check if a pending token landed via redirect flow (no popup)
-    const pending = localStorage.getItem('oauth_pending')
-    if (pending) {
-      try {
-        const { token, state, ts } = JSON.parse(pending) as { token: string; state: string; ts: number }
-        localStorage.removeItem('oauth_pending')
-        if (Date.now() - ts > 5 * 60 * 1000) { reject(new Error('OAuth response expired')); return }
-        if (!storedState || storedState !== state) { reject(new Error('State mismatch')); return }
-        sessionStorage.setItem('drive_token', token)
-        sessionStorage.removeItem('oauth_state')
-        resolve(token)
-        return
-      } catch { localStorage.removeItem('oauth_pending') }
-    }
-
-    const popup = window.open(url, 'google-auth', 'width=520,height=620,left=200,top=100')
-    if (!popup) {
-      // Popup blocked — fall back to redirect
-      window.location.href = url
-      return
-    }
-
-    const handler = (e: MessageEvent) => {
-      if (e.origin !== location.origin) return
-      if (e.data?.type === 'OAUTH_TOKEN') {
-        window.removeEventListener('message', handler)
-        clearInterval(poll)
-        // Validate state in parent window (state lives here, not in popup)
-        if (!storedState || storedState !== e.data.state) {
-          reject(new Error('State mismatch'))
-          return
-        }
-        sessionStorage.setItem('drive_token', e.data.token)
-        sessionStorage.removeItem('oauth_state')
-        resolve(e.data.token)
-      } else if (e.data?.type === 'OAUTH_ERROR') {
-        window.removeEventListener('message', handler)
-        clearInterval(poll)
-        reject(new Error(`OAuth error: ${e.data.error}`))
-      }
-    }
-    window.addEventListener('message', handler)
-
-    const poll = setInterval(() => {
-      if (popup.closed) {
-        clearInterval(poll)
-        window.removeEventListener('message', handler)
-        // Check if redirect flow landed while popup was open
-        const p = localStorage.getItem('oauth_pending')
-        if (p) { try { const { token, state } = JSON.parse(p); localStorage.removeItem('oauth_pending'); if (storedState && storedState === state) { sessionStorage.setItem('drive_token', token); sessionStorage.removeItem('oauth_state'); resolve(token); return } } catch { localStorage.removeItem('oauth_pending') } }
-        const token = sessionStorage.getItem('drive_token')
-        if (token) resolve(token)
-        else reject(new Error('Authorization cancelled'))
-      }
-    }, 500)
-  })
+  // Full redirect flow — simpler and more reliable than popup
+  window.location.href = url
+  // Promise never resolves here; app reloads after redirect
+  return new Promise(() => {})
+}
 }
 
 function authorizeNative(url: string): Promise<string> {
@@ -129,12 +76,12 @@ function authorizeNative(url: string): Promise<string> {
       const hash = new URLSearchParams(event.url.split('#')[1] ?? '')
       const token = hash.get('access_token')
       const state = hash.get('state')
-      const storedState = sessionStorage.getItem('oauth_state')
+      const storedState = localStorage.getItem('oauth_state')
       if (!token) { reject(new Error('No token in redirect')); return }
       // Fail closed: reject when no active auth flow OR state mismatch
       if (!storedState || storedState !== state) { reject(new Error('State mismatch')); return }
-      sessionStorage.setItem('drive_token', token)
-      sessionStorage.removeItem('oauth_state')
+      localStorage.setItem('drive_token', token)
+      localStorage.removeItem('oauth_state')
       resolve(token)
     })
 

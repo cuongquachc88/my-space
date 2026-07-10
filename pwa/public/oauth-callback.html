@@ -15,29 +15,24 @@
       const error = hash.get('error') || params.get('error')
 
       if (error) {
-        if (window.opener) {
-          window.opener.postMessage({ type: 'OAUTH_ERROR', error }, window.location.origin)
-          window.close()
-        } else {
-          window.location.href = '/?oauth_error=' + encodeURIComponent(error)
-        }
+        localStorage.setItem('oauth_error', error)
+        window.location.href = '/'
         return
       }
 
       if (token && state) {
-        if (window.opener) {
-          // Popup flow: send token+state to parent for validation, parent closes us
-          window.opener.postMessage({ type: 'OAUTH_TOKEN', token, state }, window.location.origin)
-          window.close()
-        } else {
-          // Redirect flow (no popup): store in localStorage so main app can pick it up
-          localStorage.setItem('oauth_pending', JSON.stringify({ token, state, ts: Date.now() }))
+        const storedState = localStorage.getItem('oauth_state')
+        if (!storedState || storedState !== state) {
+          localStorage.setItem('oauth_error', 'state_mismatch')
           window.location.href = '/'
+          return
         }
+        localStorage.setItem('drive_token', token)
+        localStorage.removeItem('oauth_state')
+        window.location.href = '/'
         return
       }
 
-      // No token and no error — likely landed here directly, go home
       window.location.href = '/'
     })()
   </script>
