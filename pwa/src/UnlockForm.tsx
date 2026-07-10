@@ -7,7 +7,7 @@ import PillButton from './design/PillButton'
 import { IconAppShield, IconLock } from './design/icons'
 import { unlock } from './crypto'
 
-interface Props { onUnlocked: () => void }
+interface Props { onUnlocked: (pw: string) => void }
 
 const SALT_KEY = 'myspace_vault_salt'
 const MODE_KEY = 'myspace_unlock_mode'
@@ -57,7 +57,7 @@ export default function UnlockForm({ onUnlocked }: Props) {
       const salt = getSalt()
       await unlock(value, salt)
       setExiting(true)
-      setTimeout(onUnlocked, 280)
+      setTimeout(() => onUnlocked(value), 280)
     } catch {
       setError('Incorrect password.')
       setLoading(false)
