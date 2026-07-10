@@ -18,7 +18,7 @@ export function BentoGrid({ children, className = '' }: GridProps) {
       className={className}
       style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))',
         gap: 12,
       }}
     >
