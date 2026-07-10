@@ -1,11 +1,17 @@
 import { useEffect, useState, useCallback } from 'react'
 import { getDb } from '../../db'
+import { ACCENT } from '../../design/tokens'
+import GlassCard from '../../design/GlassCard'
+import GlassInput from '../../design/GlassInput'
+import PillButton from '../../design/PillButton'
+import { BentoGrid, BentoCell } from '../../design/BentoGrid'
+import ViewHeader from '../ViewHeader'
+import { IconTodo } from '../../design/icons'
 
 interface TodoList { id: string; name: string; color: string; icon: string }
 interface TodoTask { id: string; list_id: string; title: string; note: string; priority: 'low'|'medium'|'high'; due_date: string|null; recurrence: string; done: boolean; created_at: string }
 
 const COLORS = ['#818cf8','#34d399','#f59e0b','#f87171','#60a5fa','#a78bfa','#fb923c','#e879f9']
-const PRIORITY_COLOR: Record<string, string> = { high:'text-red-400', medium:'text-yellow-400', low:'text-blue-400' }
 
 export default function TodoView() {
   const [lists, setLists] = useState<TodoList[]>([])
@@ -74,126 +80,122 @@ export default function TodoView() {
     setEditingTask(null); await loadTasks(activeList!.id)
   }
 
-  if (editingTask) {
-    return (
-      <div className="flex flex-col h-full bg-[#0f2020]">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10 bg-[#0d1f1f]">
-          <button onClick={() => setEditingTask(null)} className="text-white/50 hover:text-white mr-1">←</button>
-          <span className="font-semibold flex-1">Edit Task</span>
-          <button onClick={saveTask} className="text-xs bg-[#b4e645] text-[#0f2020] font-semibold px-3 py-1 rounded-full">Save</button>
-        </div>
-        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
-          <input value={tf.title} onChange={e => setTf(p=>({...p,title:e.target.value}))} placeholder="Task title" className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none" />
-          <textarea value={tf.note} onChange={e => setTf(p=>({...p,note:e.target.value}))} placeholder="Note" rows={3} className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none resize-none" />
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <div className="text-xs text-white/40 mb-1">Priority</div>
-              <select value={tf.priority} onChange={e => setTf(p=>({...p,priority:e.target.value as 'low'|'medium'|'high'}))} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none">
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-              </select>
-            </div>
-            <div className="flex-1">
-              <div className="text-xs text-white/40 mb-1">Recurrence</div>
-              <select value={tf.recurrence} onChange={e => setTf(p=>({...p,recurrence:e.target.value}))} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none">
-                <option value="none">None</option>
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <div className="text-xs text-white/40 mb-1">Due date</div>
-            <input type="date" value={tf.due_date} onChange={e => setTf(p=>({...p,due_date:e.target.value}))} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none" />
-          </div>
-          <button onClick={() => deleteTask(editingTask.id)} className="text-red-400 text-sm text-left mt-2">Delete task</button>
-        </div>
-      </div>
-    )
-  }
-
-  if (activeList) {
-    const done = tasks.filter(t => t.done)
-    const pending = tasks.filter(t => !t.done)
-    return (
-      <div className="flex flex-col h-full bg-[#0f2020]">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10 bg-[#0d1f1f]">
-          <button onClick={() => setActiveList(null)} className="text-white/50 hover:text-white mr-1">←</button>
-          <span className="w-3 h-3 rounded-full shrink-0" style={{ background: activeList.color }} />
-          <span className="font-semibold flex-1">{activeList.name}</span>
-          <button onClick={() => deleteList(activeList.id)} className="text-white/30 hover:text-red-400 text-xs">Delete list</button>
-        </div>
-        <div className="px-4 py-3 border-b border-white/10 flex gap-2">
-          <input
-            value={newTaskTitle}
-            onChange={e => setNewTaskTitle(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && addTask()}
-            placeholder="Add task…"
-            className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/30 outline-none"
-          />
-          <button onClick={addTask} className="bg-[#b4e645] text-[#0f2020] font-bold px-4 py-2 rounded-lg text-sm">Add</button>
-        </div>
-        <div className="flex-1 overflow-y-auto">
-          {pending.map(t => (
-            <div key={t.id} className="flex items-center gap-3 px-4 py-3 border-b border-white/5 group">
-              <button onClick={() => toggleDone(t)} className="w-5 h-5 rounded-full border-2 border-white/30 shrink-0 hover:border-[#b4e645] transition-colors" />
-              <div className="flex-1 min-w-0" onClick={() => { setEditingTask(t); setTf({ title:t.title, note:t.note, priority:t.priority, due_date:t.due_date??'', recurrence:t.recurrence }) }}>
-                <div className="text-sm cursor-pointer hover:text-[#b4e645]">{t.title}</div>
-                {t.due_date && <div className="text-xs text-white/40">{t.due_date}</div>}
-              </div>
-              <span className={`text-xs ${PRIORITY_COLOR[t.priority]} shrink-0`}>{t.priority}</span>
-              {t.recurrence !== 'none' && <span className="text-xs text-white/30 shrink-0">↺</span>}
-            </div>
-          ))}
-          {done.length > 0 && (
-            <div className="px-4 py-2 text-xs text-white/30 mt-2">Completed ({done.length})</div>
-          )}
-          {done.map(t => (
-            <div key={t.id} className="flex items-center gap-3 px-4 py-3 border-b border-white/5 opacity-40">
-              <button onClick={() => toggleDone(t)} className="w-5 h-5 rounded-full border-2 border-[#b4e645] bg-[#b4e645]/20 shrink-0 flex items-center justify-center text-[#b4e645] text-xs">✓</button>
-              <span className="text-sm line-through flex-1">{t.title}</span>
-            </div>
-          ))}
-          {tasks.length === 0 && <div className="text-center text-white/30 py-12 text-sm">No tasks yet</div>}
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="flex flex-col h-full bg-[#0f2020]">
-      <div className="px-4 pt-4 pb-3 border-b border-white/10 bg-[#0d1f1f]">
-        <div className="flex items-center justify-between">
-          <h1 className="font-bold text-lg">Todo</h1>
-          <button onClick={() => setShowNewList(true)} className="bg-[#b4e645] text-[#0f2020] font-bold px-4 py-1.5 rounded-full text-sm">+ List</button>
-        </div>
-      </div>
+    <div>
+      <ViewHeader
+        title="Todo" icon={<IconTodo size={22} accent={ACCENT.todo} filled />}
+        accent={ACCENT.todo} stats={`${lists.length} lists`}
+        action="+ List" onAction={() => setShowNewList(true)}
+      />
+      <BentoGrid>
+        <BentoCell span="1">
+          <GlassCard style={{ height: '100%' }}>
+            <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e', marginBottom: 4 }}>Lists</div>
+              {showNewList && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 8 }}>
+                  <GlassInput value={newListName} onChange={setNewListName} placeholder="List name" autoFocus />
+                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                    {COLORS.map(c => (
+                      <button key={c} onClick={() => setNewListColor(c)}
+                        style={{ width: 24, height: 24, borderRadius: '50%', background: c, border: newListColor === c ? '2px solid #1a1a2e' : '2px solid transparent', cursor: 'pointer' }} />
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <PillButton onClick={createList} accent={ACCENT.todo}>Create</PillButton>
+                    <PillButton variant="ghost" onClick={() => setShowNewList(false)}>Cancel</PillButton>
+                  </div>
+                </div>
+              )}
+              {lists.map(l => (
+                <button key={l.id} onClick={() => setActiveList(l)}
+                  style={{ textAlign: 'left', padding: '8px 12px', borderRadius: 10, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+                    background: activeList?.id === l.id ? `${l.color}20` : 'rgba(255,255,255,0.4)', borderLeft: `3px solid ${l.color}` }}>
+                  <span style={{ width: 10, height: 10, borderRadius: '50%', background: l.color, flexShrink: 0 }} />
+                  <span style={{ fontFamily: 'Satoshi, sans-serif', fontWeight: 500, fontSize: 14, color: '#1a1a2e' }}>{l.name}</span>
+                </button>
+              ))}
+            </div>
+          </GlassCard>
+        </BentoCell>
 
-      {showNewList && (
-        <div className="px-4 py-3 border-b border-white/10 bg-[#152a2a] flex flex-col gap-2">
-          <input value={newListName} onChange={e => setNewListName(e.target.value)} onKeyDown={e => e.key === 'Enter' && createList()} placeholder="List name" autoFocus className="bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none" />
-          <div className="flex gap-1.5">
-            {COLORS.map(c => <button key={c} onClick={() => setNewListColor(c)} className={`w-6 h-6 rounded-full border-2 transition-all ${newListColor===c ? 'border-white scale-125' : 'border-transparent'}`} style={{ background:c }} />)}
-          </div>
-          <div className="flex gap-2">
-            <button onClick={createList} className="bg-[#b4e645] text-[#0f2020] font-semibold px-4 py-1.5 rounded-full text-sm">Create</button>
-            <button onClick={() => setShowNewList(false)} className="text-white/40 text-sm px-3">Cancel</button>
-          </div>
-        </div>
-      )}
+        <BentoCell span="2">
+          <GlassCard style={{ height: '100%' }}>
+            <div style={{ padding: 16 }}>
+              {!activeList ? (
+                <div style={{ textAlign: 'center', color: '#4a4a6a', padding: 32, fontFamily: 'Satoshi, sans-serif' }}>Select a list</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 700, fontSize: 18, color: '#1a1a2e' }}>{activeList.name}</div>
+                    <PillButton variant="ghost" onClick={() => deleteList(activeList.id)} style={{ color: '#ef4444', fontSize: 12 }}>Delete list</PillButton>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <GlassInput value={newTaskTitle} onChange={setNewTaskTitle} placeholder="New task…" />
+                    <PillButton onClick={addTask} accent={ACCENT.todo}>Add</PillButton>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 300, overflowY: 'auto' }}>
+                    {tasks.map(t => (
+                      <div key={t.id} style={{ padding: '8px 12px', borderRadius: 10, background: 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <button onClick={() => toggleDone(t)} style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${ACCENT.todo}`, background: t.done ? ACCENT.todo : 'transparent', cursor: 'pointer', flexShrink: 0 }} />
+                        <span
+                          onClick={() => { setEditingTask(t); setTf({ title: t.title, note: t.note, priority: t.priority, due_date: t.due_date ?? '', recurrence: t.recurrence }) }}
+                          style={{ flex: 1, fontFamily: 'Satoshi, sans-serif', fontSize: 14, color: '#1a1a2e', textDecoration: t.done ? 'line-through' : 'none', opacity: t.done ? 0.5 : 1, cursor: 'pointer' }}>{t.title}</span>
+                        <span style={{ fontSize: 11, fontFamily: 'Satoshi, sans-serif', color: t.priority === 'high' ? '#ef4444' : t.priority === 'medium' ? '#f59e0b' : '#94a3b8' }}>{t.priority}</span>
+                        <PillButton variant="ghost" onClick={() => deleteTask(t.id)}>×</PillButton>
+                      </div>
+                    ))}
+                    {tasks.length === 0 && <div style={{ textAlign: 'center', color: '#4a4a6a', padding: 16, fontFamily: 'Satoshi, sans-serif', fontSize: 14 }}>No tasks yet</div>}
+                  </div>
+                </div>
+              )}
+            </div>
+          </GlassCard>
+        </BentoCell>
 
-      <div className="flex-1 overflow-y-auto">
-        {lists.length === 0 ? (
-          <div className="text-center text-white/30 py-16 text-sm">No lists yet — create one above</div>
-        ) : lists.map(l => (
-          <button key={l.id} onClick={() => setActiveList(l)} className="w-full text-left px-4 py-4 border-b border-white/5 hover:bg-white/5 transition-colors flex items-center gap-3">
-            <span className="w-3 h-3 rounded-full shrink-0" style={{ background:l.color }} />
-            <span className="font-medium">{l.name}</span>
-          </button>
-        ))}
-      </div>
+        {editingTask !== null && (
+          <BentoCell span="full">
+            <GlassCard accentBar accent={ACCENT.todo}>
+              <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 700, fontSize: 18, color: '#1a1a2e' }}>Edit Task</div>
+                <GlassInput value={tf.title} onChange={v => setTf(p => ({ ...p, title: v }))} placeholder="Task title" />
+                <GlassInput value={tf.note} onChange={v => setTf(p => ({ ...p, note: v }))} placeholder="Note" />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 12, color: '#4a4a6a', marginBottom: 4, fontFamily: 'Satoshi, sans-serif' }}>Priority</div>
+                    <select value={tf.priority} onChange={e => setTf(p => ({ ...p, priority: e.target.value as 'low'|'medium'|'high' }))}
+                      style={{ width: '100%', background: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.6)', borderRadius: 12, padding: '12px 16px', fontSize: 15, color: '#1a1a2e', outline: 'none', cursor: 'pointer' }}>
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                    </select>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 12, color: '#4a4a6a', marginBottom: 4, fontFamily: 'Satoshi, sans-serif' }}>Recurrence</div>
+                    <select value={tf.recurrence} onChange={e => setTf(p => ({ ...p, recurrence: e.target.value }))}
+                      style={{ width: '100%', background: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.6)', borderRadius: 12, padding: '12px 16px', fontSize: 15, color: '#1a1a2e', outline: 'none', cursor: 'pointer' }}>
+                      <option value="none">None</option>
+                      <option value="daily">Daily</option>
+                      <option value="weekly">Weekly</option>
+                      <option value="monthly">Monthly</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, color: '#4a4a6a', marginBottom: 4, fontFamily: 'Satoshi, sans-serif' }}>Due date</div>
+                  <input type="date" value={tf.due_date} onChange={e => setTf(p => ({ ...p, due_date: e.target.value }))}
+                    style={{ width: '100%', background: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.6)', borderRadius: 12, padding: '12px 16px', fontSize: 15, color: '#1a1a2e', outline: 'none', boxSizing: 'border-box' }} />
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <PillButton onClick={saveTask} accent={ACCENT.todo}>Save</PillButton>
+                  <PillButton variant="ghost" onClick={() => setEditingTask(null)}>Cancel</PillButton>
+                  <PillButton variant="ghost" onClick={() => deleteTask(editingTask.id)} style={{ color: '#ef4444' }}>Delete</PillButton>
+                </div>
+              </div>
+            </GlassCard>
+          </BentoCell>
+        )}
+      </BentoGrid>
     </div>
   )
 }

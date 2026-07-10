@@ -1,8 +1,14 @@
 import { useEffect, useState, useCallback } from 'react'
 import { getDb } from '../../db'
-import { nextBillingDate } from '../../lib/nextBilling'
 import { monthlyEquivalentUSD, convertFromUSD } from '../../lib/currency'
 import TagInput from '../components/TagInput'
+import { ACCENT } from '../../design/tokens'
+import GlassCard from '../../design/GlassCard'
+import GlassInput from '../../design/GlassInput'
+import PillButton from '../../design/PillButton'
+import { BentoGrid, BentoCell } from '../../design/BentoGrid'
+import ViewHeader from '../ViewHeader'
+import { IconSubs } from '../../design/icons'
 
 interface Sub {
   id: string; name: string; amount: string; currency: string; cycle: string
@@ -17,6 +23,8 @@ function fmt(usd: number, display: string) {
   const amt = convertFromUSD(usd, display)
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: display, maximumFractionDigits: 0 }).format(amt)
 }
+
+const accent = ACCENT.subs
 
 export default function SubscriptionsView() {
   const [subs, setSubs] = useState<Sub[]>([])
@@ -49,14 +57,16 @@ export default function SubscriptionsView() {
   async function save() {
     const db = await getDb()
     const amt = parseFloat(ef.amount) || 0
-    if (isNew) {
-      await db.query('INSERT INTO subscriptions (name,amount,currency,cycle,start_date,tags,notes,active) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
-        [ef.name, amt, ef.currency, ef.cycle, ef.start_date, ef.tags, ef.notes, ef.active])
-    } else {
-      await db.query('UPDATE subscriptions SET name=$1,amount=$2,currency=$3,cycle=$4,start_date=$5,tags=$6,notes=$7,active=$8,updated_at=now() WHERE id=$9',
-        [ef.name, amt, ef.currency, ef.cycle, ef.start_date, ef.tags, ef.notes, ef.active, editing!.id])
-    }
-    setEditing(null); await load()
+    try {
+      if (isNew) {
+        await db.query('INSERT INTO subscriptions (name,amount,currency,cycle,start_date,tags,notes,active) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+          [ef.name, amt, ef.currency, ef.cycle, ef.start_date, ef.tags, ef.notes, ef.active])
+      } else {
+        await db.query('UPDATE subscriptions SET name=$1,amount=$2,currency=$3,cycle=$4,start_date=$5,tags=$6,notes=$7,active=$8,updated_at=now() WHERE id=$9',
+          [ef.name, amt, ef.currency, ef.cycle, ef.start_date, ef.tags, ef.notes, ef.active, editing!.id])
+      }
+      setEditing(null); await load()
+    } catch (e) { console.error('[subs] save failed:', e) }
   }
 
   async function deleteSub() {
@@ -66,76 +76,85 @@ export default function SubscriptionsView() {
     setEditing(null); await load()
   }
 
-  if (editing !== null) {
-    return (
-      <div className="flex flex-col h-full bg-[#0f2020]">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10 bg-[#0d1f1f]">
-          <button onClick={() => setEditing(null)} className="text-white/50 hover:text-white mr-1">←</button>
-          <span className="font-semibold flex-1">{isNew ? 'New Subscription' : 'Edit Subscription'}</span>
-          <button onClick={save} className="text-xs bg-[#b4e645] text-[#0f2020] font-semibold px-3 py-1 rounded-full">Save</button>
-        </div>
-        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
-          <input value={ef.name} onChange={e => setEf(p=>({...p,name:e.target.value}))} placeholder="Name (e.g. Netflix)" className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none" />
-          <div className="flex gap-2">
-            <input value={ef.amount} onChange={e => setEf(p=>({...p,amount:e.target.value}))} placeholder="Amount" type="number" min="0" step="0.01" className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none" />
-            <select value={ef.currency} onChange={e => setEf(p=>({...p,currency:e.target.value}))} className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none">
-              {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-          <div className="flex gap-2">
-            <select value={ef.cycle} onChange={e => setEf(p=>({...p,cycle:e.target.value}))} className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none">
-              {CYCLES.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase()+c.slice(1)}</option>)}
-            </select>
-            <input type="date" value={ef.start_date} onChange={e => setEf(p=>({...p,start_date:e.target.value}))} className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none" />
-          </div>
-          <textarea value={ef.notes} onChange={e => setEf(p=>({...p,notes:e.target.value}))} placeholder="Notes" rows={2} className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none resize-none" />
-          <TagInput tags={ef.tags} onChange={t => setEf(p=>({...p,tags:t}))} />
-          <label className="flex items-center gap-2 text-sm text-white/70 cursor-pointer">
-            <input type="checkbox" checked={ef.active} onChange={e => setEf(p=>({...p,active:e.target.checked}))} className="accent-[#b4e645]" />
-            Active
-          </label>
-          {!isNew && <button onClick={deleteSub} className="text-red-400 text-sm text-left">Delete subscription</button>}
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="flex flex-col h-full bg-[#0f2020]">
-      <div className="px-4 pt-4 pb-3 border-b border-white/10 bg-[#0d1f1f]">
-        <div className="flex items-center justify-between mb-1">
-          <h1 className="font-bold text-lg">Subscriptions</h1>
-          <button onClick={openNew} className="bg-[#b4e645] text-[#0f2020] font-bold px-4 py-1.5 rounded-full text-sm">+ New</button>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-2xl font-bold text-[#b4e645]">{fmt(totalUSD, display)}</span>
-          <span className="text-white/40 text-sm">/mo</span>
-          <select value={display} onChange={e => setDisplay(e.target.value)} className="ml-auto bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white outline-none">
-            {DISPLAY_CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
-      </div>
-      <div className="flex-1 overflow-y-auto">
-        {subs.length === 0 ? (
-          <div className="text-center text-white/30 py-16 text-sm">No subscriptions yet</div>
-        ) : subs.map(s => (
-          <button key={s.id} onClick={() => openEdit(s)} className="w-full text-left px-4 py-3 border-b border-white/5 hover:bg-white/5 transition-colors">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full shrink-0 ${s.active ? 'bg-[#b4e645]' : 'bg-white/20'}`} />
-                <span className={`font-medium text-sm ${!s.active && 'opacity-40'}`}>{s.name}</span>
-              </div>
-              <div className="text-right">
-                <div className="text-sm font-semibold">{new Intl.NumberFormat('en-US', { style:'currency', currency:s.currency, maximumFractionDigits:2 }).format(parseFloat(s.amount))}</div>
-                <div className="text-xs text-white/40">{s.cycle}</div>
-              </div>
+    <div>
+      <ViewHeader
+        title="Subscriptions" icon={<IconSubs size={22} accent={accent} filled />}
+        accent={accent} stats={`${subs.filter(s => s.active).length} active`}
+        action="+ Add" onAction={openNew}
+      />
+      <BentoGrid>
+        <BentoCell span="1">
+          <GlassCard accentBar accent={accent} style={{ height: '100%' }}>
+            <div style={{ padding: 20, textAlign: 'center' }}>
+              <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 700, fontSize: 36, color: accent }}>{fmt(totalUSD, display)}</div>
+              <div style={{ fontFamily: 'Satoshi, sans-serif', fontSize: 13, color: '#4a4a6a', marginTop: 4 }}>Monthly total</div>
+              <select value={display} onChange={e => setDisplay(e.target.value)}
+                style={{ marginTop: 12, background: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.6)', borderRadius: 8, padding: '4px 8px', fontSize: 12, color: '#1a1a2e', outline: 'none', cursor: 'pointer' }}>
+                {DISPLAY_CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
             </div>
-            {s.active && s.cycle !== 'one-time' && (
-              <div className="text-xs text-white/30 mt-0.5 ml-4">Next: {nextBillingDate(s.start_date, s.cycle as 'monthly')}</div>
-            )}
-          </button>
-        ))}
-      </div>
+          </GlassCard>
+        </BentoCell>
+
+        <BentoCell span="2">
+          <GlassCard style={{ height: '100%' }}>
+            <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 340, overflowY: 'auto' }}>
+              {subs.length === 0 && <div style={{ textAlign: 'center', color: '#4a4a6a', padding: 24, fontFamily: 'Satoshi, sans-serif', fontSize: 14 }}>No subscriptions yet.</div>}
+              {subs.map(s => (
+                <button key={s.id} onClick={() => openEdit(s)}
+                  style={{ textAlign: 'left', padding: '10px 12px', borderRadius: 12, border: 'none', cursor: 'pointer', background: editing?.id === s.id ? `${accent}18` : 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', gap: 10, opacity: s.active ? 1 : 0.5 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: s.active ? accent : '#94a3b8', flexShrink: 0 }} />
+                  <span style={{ flex: 1, fontFamily: 'Satoshi, sans-serif', fontWeight: 500, fontSize: 14, color: '#1a1a2e' }}>{s.name}</span>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontFamily: 'Satoshi, sans-serif', fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>
+                      {new Intl.NumberFormat('en-US', { style:'currency', currency:s.currency, maximumFractionDigits:2 }).format(parseFloat(s.amount))}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#4a4a6a' }}>{s.cycle}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </GlassCard>
+        </BentoCell>
+
+        {editing !== null && (
+          <BentoCell span="full">
+            <GlassCard accentBar accent={accent}>
+              <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 700, fontSize: 18, color: '#1a1a2e' }}>{isNew ? 'New Subscription' : 'Edit Subscription'}</div>
+                <GlassInput value={ef.name} onChange={v => setEf(p=>({...p,name:v}))} placeholder="Name (e.g. Netflix)" />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <GlassInput value={ef.amount} onChange={v => setEf(p=>({...p,amount:v}))} placeholder="Amount" type="number" />
+                  <select value={ef.currency} onChange={e => setEf(p=>({...p,currency:e.target.value}))}
+                    style={{ background: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.6)', borderRadius: 12, padding: '12px 16px', fontSize: 15, color: '#1a1a2e', outline: 'none', cursor: 'pointer' }}>
+                    {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <select value={ef.cycle} onChange={e => setEf(p=>({...p,cycle:e.target.value}))}
+                    style={{ flex: 1, background: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.6)', borderRadius: 12, padding: '12px 16px', fontSize: 15, color: '#1a1a2e', outline: 'none', cursor: 'pointer' }}>
+                    {CYCLES.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase()+c.slice(1)}</option>)}
+                  </select>
+                  <input type="date" value={ef.start_date} onChange={e => setEf(p=>({...p,start_date:e.target.value}))}
+                    style={{ flex: 1, background: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.6)', borderRadius: 12, padding: '12px 16px', fontSize: 15, color: '#1a1a2e', outline: 'none' }} />
+                </div>
+                <GlassInput value={ef.notes} onChange={v => setEf(p=>({...p,notes:v}))} placeholder="Notes (optional)" />
+                <TagInput tags={ef.tags} onChange={t => setEf(p=>({...p,tags:t}))} />
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'Satoshi, sans-serif', fontSize: 14, color: '#1a1a2e', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={ef.active} onChange={e => setEf(p=>({...p,active:e.target.checked}))} />
+                  Active
+                </label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <PillButton onClick={save} accent={accent}>Save</PillButton>
+                  <PillButton variant="ghost" onClick={() => setEditing(null)}>Cancel</PillButton>
+                  {!isNew && <PillButton variant="ghost" onClick={deleteSub} style={{ color: '#ef4444' }}>Delete</PillButton>}
+                </div>
+              </div>
+            </GlassCard>
+          </BentoCell>
+        )}
+      </BentoGrid>
     </div>
   )
 }

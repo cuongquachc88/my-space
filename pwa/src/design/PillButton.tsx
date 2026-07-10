@@ -7,13 +7,14 @@ interface Props {
   variant?: 'primary' | 'secondary' | 'ghost'
   accent?: string
   className?: string
+  style?: React.CSSProperties
   type?: 'button' | 'submit'
   disabled?: boolean
 }
 
 export default function PillButton({
   children, onClick, variant = 'primary', accent = '#7c6af7',
-  className = '', type = 'button', disabled = false,
+  className = '', style: styleProp, type = 'button', disabled = false,
 }: Props) {
   const base = 'inline-flex items-center justify-center gap-2 font-semibold transition-all active:scale-[0.96] cursor-pointer border-0 outline-none'
   const radius = 'rounded-full'
@@ -47,7 +48,7 @@ export default function PillButton({
       onClick={onClick}
       disabled={disabled}
       className={`${base} ${radius} ${padding} ${font} ${extraClass} ${className}`}
-      style={{ ...style, opacity: disabled ? 0.5 : 1 }}
+      style={{ ...style, opacity: disabled ? 0.5 : 1, ...styleProp }}
     >
       {children}
     </button>
