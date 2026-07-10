@@ -373,13 +373,11 @@ async function handlePush(): Promise<{ ok: boolean; data?: { syncedAt: string; n
   }
 }
 
-async function handlePull(): Promise<{ ok: boolean; needsPassword?: boolean; data?: { syncedAt: string; notesUpdated: number; secretsAdded: number }; error?: string }> {
+async function handlePull(): Promise<{ ok: boolean; needsPassword?: boolean; data?: unknown; error?: string }> {
   try {
     const fileId = await findFileId()
     if (!fileId) throw new Error('No backup found on Drive — push first')
-    const res = await driveRequest(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
-      headers: {},
-    })
+    const res = await driveRequest(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, { headers: {} })
 
     const text = await res.text()
     if (!text.trim()) throw new Error('No data on Drive — push first')
@@ -390,34 +388,28 @@ async function handlePull(): Promise<{ ok: boolean; needsPassword?: boolean; dat
 
     const { vaultSalt } = await chrome.storage.local.get('vaultSalt') as { vaultSalt: number[] | undefined }
 
-    // If the backup includes a salt and it differs from the local salt, we need the password
-    // to re-derive the key used during push (cross-device / cross-profile scenario)
     const saltsDiffer = backupSalt && vaultSalt && JSON.stringify(backupSalt) !== JSON.stringify(vaultSalt)
     const noLocalSalt = backupSalt && !vaultSalt
 
     if (saltsDiffer || noLocalSalt) {
-      // Store encrypted payload in session so SyncView can confirm with password
       await chrome.storage.session.set({ pendingPull: { ciphertext, iv, salt: backupSalt } })
       return { ok: true, needsPassword: true }
     }
 
-    // Check vault is unlocked before attempting decrypt
     const vaultStatus = await sendToOffscreen({ type: 'VAULT_STATUS' }) as { ok: boolean; data: { locked: boolean } }
     if (vaultStatus.data.locked) throw new Error('Vault is locked — unlock before syncing')
 
-    // Same salt (same device/profile) or legacy backup without salt — decrypt normally
     const decReply = await sendToOffscreen({ type: 'SYNC_DECRYPT', payload: { ciphertext, iv } }) as { ok: boolean; data: { plaintext: string } }
     if (!decReply.ok) {
       if (!backupSalt) {
         throw new Error('Cannot decrypt: this backup was created with an older version. Push from your original device first to include the encryption key, then pull here.')
       }
-      // Salts match in storage but decryption still failed — vault key was derived with a different salt.
-      // Fall back to password prompt so the user can re-derive with the correct key.
       await chrome.storage.session.set({ pendingPull: { ciphertext, iv, salt: backupSalt } })
       return { ok: true, needsPassword: true }
     }
 
-    return finishImport(decReply.data.plaintext)
+    // Same-device pull: pass null for password/salt to skip per-secret re-encryption
+    return finishImport(decReply.data.plaintext, null, null)
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) }
   }
@@ -434,15 +426,30 @@ async function handlePullConfirm(password: string): Promise<{ ok: boolean; data?
 
     await chrome.storage.session.remove('pendingPull')
 
-    return finishImport(decReply.data.plaintext)
+    return finishImport(decReply.data.plaintext, password, salt)
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) }
   }
 }
 
-async function finishImport(plaintext: string): Promise<{ ok: boolean; data?: { syncedAt: string; notesUpdated: number; secretsAdded: number; subsUpdated: number; mapsUpdated: number; todosUpdated: number; totalNotes: number; totalSecrets: number; totalSubs: number; totalMaps: number; totalTodos: number }; error?: string }> {
-  const parsed = JSON.parse(plaintext) as { notes: unknown[]; secrets: unknown[]; subscriptions: unknown[]; bills: unknown[]; mapStacks: unknown[]; mapPins: unknown[]; todoLists: unknown[]; todoTasks: unknown[] }
-  const { notes, secrets, subscriptions, bills, mapStacks, mapPins, todoLists, todoTasks } = parsed
+async function finishImport(plaintext: string, backupPassword: string | null, backupSalt: number[] | null): Promise<{ ok: boolean; data?: { syncedAt: string; notesUpdated: number; secretsAdded: number; subsUpdated: number; mapsUpdated: number; todosUpdated: number; totalNotes: number; totalSecrets: number; totalSubs: number; totalMaps: number; totalTodos: number }; error?: string }> {
+  const parsed = JSON.parse(plaintext) as { notes: unknown[]; secrets: { id: string; label: string; ciphertext: string; iv: string; tags: string[]; url: string; description: string }[]; subscriptions: unknown[]; bills: unknown[]; mapStacks: unknown[]; mapPins: unknown[]; todoLists: unknown[]; todoTasks: unknown[] }
+  const { notes, subscriptions, bills, mapStacks, mapPins, todoLists, todoTasks } = parsed
+  let { secrets } = parsed
+
+  // Cross-device pull: re-encrypt each secret from backup key → local vault key
+  if (backupPassword && backupSalt) {
+    const reEncrypted = []
+    for (const s of secrets) {
+      const decReply = await sendToOffscreen({ type: 'SYNC_DECRYPT_WITH_SALT', payload: { ciphertext: s.ciphertext, iv: s.iv, salt: backupSalt, password: backupPassword } }) as { ok: boolean; data: { plaintext: string } }
+      if (!decReply.ok) throw new Error(`Failed to decrypt secret "${s.label}" — wrong password or corrupt backup`)
+      const encReply = await sendToOffscreen({ type: 'SYNC_ENCRYPT', payload: { plaintext: decReply.data.plaintext } }) as { ok: boolean; data: { ciphertext: string; iv: string } }
+      if (!encReply.ok) throw new Error(`Failed to re-encrypt secret "${s.label}"`)
+      reEncrypted.push({ ...s, ciphertext: encReply.data.ciphertext, iv: encReply.data.iv })
+    }
+    secrets = reEncrypted
+  }
+
   const importReply = await sendToOffscreen({ type: 'DB_IMPORT', payload: { notes, secrets, subscriptions, bills, mapStacks, mapPins, todoLists, todoTasks } }) as { ok: boolean; data: { notesUpdated: number; secretsAdded: number; subsUpdated: number; mapsUpdated: number; todosUpdated: number } }
   if (!importReply.ok) throw new Error('DB import failed')
 
