@@ -31,14 +31,14 @@ export default function AppShell({ onLogout }: Props) {
       {/* Main content */}
       <main style={{
         position: 'relative', zIndex: 1,
-        marginLeft: 0, paddingBottom: 96,
+        marginLeft: 0, paddingBottom: 90,
       }}
         className="sm:ml-14"
       >
         {/* Mobile hero — edge-to-edge, concave ears at bottom */}
         <div className="mobile-hero" style={{ position: 'relative' }}>
           <div style={{
-            background: 'linear-gradient(145deg, #6d5ce7 0%, #7c6af7 40%, #3b82f6 100%)',
+            background: 'linear-gradient(160deg, #7c6af7 0%, #6d5ce7 50%, #5b4fcf 100%)',
             padding: '24px 20px 36px',
             position: 'relative',
             overflow: 'visible',
@@ -77,7 +77,7 @@ export default function AppShell({ onLogout }: Props) {
 
           {/* Concave ear corners — page-colored circles sitting on bottom corners */}
           <div style={{ position: 'relative', height: 28, overflow: 'hidden', pointerEvents: 'none' }}>
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(145deg, #6d5ce7 0%, #7c6af7 40%, #3b82f6 100%)' }} />
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(160deg, #7c6af7 0%, #6d5ce7 50%, #5b4fcf 100%)' }} />
             {/* Left ear */}
             <div style={{ position: 'absolute', left: -28, bottom: 0, width: 56, height: 56, borderRadius: '50%', background: '#c9d6ff' }} />
             {/* Right ear */}

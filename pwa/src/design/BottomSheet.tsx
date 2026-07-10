@@ -29,7 +29,7 @@ export default function BottomSheet({ open, onClose, children, maxHeight = '90dv
     <div
       onClick={onClose}
       style={{
-        position: 'fixed', inset: 0, zIndex: 200,
+        position: 'fixed', inset: 0, zIndex: 300,
         background: visible ? 'rgba(20,20,40,0.38)' : 'rgba(20,20,40,0)',
         backdropFilter: visible ? 'blur(4px)' : 'blur(0px)',
         WebkitBackdropFilter: visible ? 'blur(4px)' : 'blur(0px)',
@@ -40,15 +40,18 @@ export default function BottomSheet({ open, onClose, children, maxHeight = '90dv
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          width: '100%',
+          width: '100vw',
           maxHeight,
-          background: 'rgba(248,248,255,0.96)',
+          background: 'rgba(248,248,255,0.97)',
           backdropFilter: 'blur(28px)',
           WebkitBackdropFilter: 'blur(28px)',
           borderTopLeftRadius: 28,
           borderTopRightRadius: 28,
           boxShadow: '0 -8px 40px rgba(124,106,247,0.14), 0 -2px 8px rgba(0,0,0,0.06)',
           overflowY: 'auto',
+          overflowX: 'hidden',
+          boxSizing: 'border-box',
+          paddingBottom: 'env(safe-area-inset-bottom)',
           transform: visible ? 'translateY(0)' : 'translateY(100%)',
           transition: 'transform 300ms cubic-bezier(0.32,0.72,0,1)',
         }}

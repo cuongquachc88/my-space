@@ -1,6 +1,4 @@
 import React from 'react'
-import GlassCard from '../design/GlassCard'
-import PillButton from '../design/PillButton'
 
 interface Props {
   title: string
@@ -13,21 +11,26 @@ interface Props {
 
 export default function ViewHeader({ title, icon, accent, stats, action, onAction }: Props) {
   return (
-    <GlassCard style={{ marginBottom: 12 }}>
-      <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div style={{ width: 40, height: 40, borderRadius: 10, background: `${accent}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+    <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 0' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ width: 44, height: 44, borderRadius: 12, background: `${accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           {icon}
         </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 24, letterSpacing: '-0.01em', lineHeight: 1.2, background: `linear-gradient(135deg, ${accent}, ${accent}99)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>{title}</div>
-          {stats && <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#4a4a6a', marginTop: 2 }}>{stats}</div>}
+        <div>
+          <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 26, letterSpacing: '-0.02em', color: '#1a1a2e', lineHeight: 1.1 }}>{title}</div>
+          {stats && <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#8e8e93', marginTop: 2 }}>{stats}</div>}
         </div>
-        {action && onAction && (
-          <PillButton onClick={onAction} accent={accent} variant="primary">
-            {action}
-          </PillButton>
-        )}
       </div>
-    </GlassCard>
+      {action && onAction && (
+        <button onClick={onAction} style={{
+          padding: '10px 20px', borderRadius: 100, border: 'none', cursor: 'pointer',
+          background: `linear-gradient(135deg, ${accent}, ${accent}cc)`,
+          color: '#fff', fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 14,
+          boxShadow: `0 4px 12px ${accent}40`,
+        }}>
+          {action}
+        </button>
+      )}
+    </div>
   )
 }

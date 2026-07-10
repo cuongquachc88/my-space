@@ -10,6 +10,7 @@ import BottomSheet from '../../design/BottomSheet'
 import { BentoGrid, BentoCell } from '../../design/BentoGrid'
 import ViewHeader from '../ViewHeader'
 import { IconNotes, IconTrash } from '../../design/icons'
+import SwipeToDelete from '../../design/SwipeToDelete'
 import TagInput from '../components/TagInput'
 
 interface Note { id: string; title: string; content: string; tags: string[]; image_data: string; updated_at: string }
@@ -138,23 +139,25 @@ export default function NotesView() {
                   <div style={{ textAlign: 'center', color: '#4a4a6a', padding: 24, fontFamily: 'Inter, sans-serif', fontSize: 14 }}>No notes yet. Create one!</div>
                 )}
                 {notes.map(n => (
-                  <div key={n.id} style={{ position: 'relative' }}>
-                    <button onClick={() => openNote(n)}
-                      style={{
-                        width: '100%', textAlign: 'left', padding: '10px 44px 10px 12px', borderRadius: 12, cursor: 'pointer',
-                        background: selected?.id === n.id ? `${accent}18` : 'rgba(255,255,255,0.4)',
-                        border: selected?.id === n.id ? `1.5px solid ${accent}80` : '1.5px solid rgba(255,255,255,0.5)',
-                        transition: 'background 150ms, border-color 150ms',
-                      }}>
-                      <div style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e', marginBottom: 2 }}>{n.title || 'Untitled'}</div>
-                      <div style={{ fontSize: 12, color: '#4a4a6a' }}>{new Date(n.updated_at).toLocaleDateString()}</div>
-                    </button>
-                    <button
-                      onClick={e => { e.stopPropagation(); deleteNote(n) }}
-                      style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', width: 28, height: 28, borderRadius: 8, border: 'none', cursor: 'pointer', background: 'rgba(239,68,68,0.1)', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <IconTrash size={14} accent="#ef4444" />
-                    </button>
-                  </div>
+                  <SwipeToDelete key={n.id} onDelete={() => deleteNote(n)}>
+                    <div style={{ position: 'relative' }}>
+                      <button onClick={() => openNote(n)}
+                        style={{
+                          width: '100%', textAlign: 'left', padding: '10px 44px 10px 12px', borderRadius: 12, cursor: 'pointer',
+                          background: selected?.id === n.id ? `${accent}18` : 'rgba(255,255,255,0.4)',
+                          border: selected?.id === n.id ? `1.5px solid ${accent}80` : '1.5px solid rgba(255,255,255,0.5)',
+                          transition: 'background 150ms, border-color 150ms',
+                        }}>
+                        <div style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e', marginBottom: 2 }}>{n.title || 'Untitled'}</div>
+                        <div style={{ fontSize: 12, color: '#4a4a6a' }}>{new Date(n.updated_at).toLocaleDateString()}</div>
+                      </button>
+                      <button
+                        onClick={e => { e.stopPropagation(); deleteNote(n) }}
+                        style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', width: 28, height: 28, borderRadius: 8, border: 'none', cursor: 'pointer', background: 'rgba(239,68,68,0.1)', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <IconTrash size={14} accent="#ef4444" />
+                      </button>
+                    </div>
+                  </SwipeToDelete>
                 ))}
               </div>
             </div>
