@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getDb } from '../../db'
-import { deriveKey, encryptWithKey, decryptWithKey, saveVerifyToken } from '../../crypto'
+import { deriveKey, encryptWithKey, decryptWithKey, saveVerifyToken, unlock } from '../../crypto'
 import { ACCENT } from '../../design/tokens'
 import ViewHeader from '../ViewHeader'
 import { IconSync } from '../../design/icons'
@@ -113,15 +113,17 @@ export function useSyncLogic() {
       log('Downloading…')
       const raw = await downloadFile(token, fileId)
       const payload = JSON.parse(raw) as { ciphertext: string; iv: string; salt: number[] }
-      log(`Backup fields: ${Object.keys(payload).join(', ')} | salt len: ${payload.salt?.length ?? 'none'}`)
+      if (!payload.salt || !payload.ciphertext || !payload.iv) throw new Error('Backup is missing required fields (salt/ciphertext/iv). Push from the source device first.')
       log('Decrypting…')
       const salt = Uint8Array.from(payload.salt)
       const key = await deriveKey(syncPw, salt)
       const plaintext = await decryptWithKey(payload.ciphertext, payload.iv, key)
       const data = JSON.parse(plaintext) as Record<string, unknown[]>
-      // Update vault salt + verify token to match the backup's key
+      // Update vault salt + verify token to match the backup's key, then re-derive in-memory key
       const saltB64 = btoa(Array.from(salt, c => String.fromCharCode(c)).join(''))
       localStorage.setItem('myspace_vault_salt', saltB64)
+      localStorage.removeItem('myspace_vault_verify')
+      await unlock(syncPw, salt)
       await saveVerifyToken(key)
       log('Merging…')
       const db = await getDb()
