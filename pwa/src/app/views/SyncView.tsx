@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getDb } from '../../db'
-import { deriveKey, encryptWithKey, decryptWithKey } from '../../crypto'
+import { deriveKey, encryptWithKey, decryptWithKey, unlock } from '../../crypto'
 import { ACCENT } from '../../design/tokens'
 import ViewHeader from '../ViewHeader'
 import { IconSync } from '../../design/icons'
@@ -119,9 +119,10 @@ export function useSyncLogic() {
       const plaintext = await decryptWithKey(payload.ciphertext, payload.iv, key)
       const data = JSON.parse(plaintext) as Record<string, unknown[]>
       log('Merging…')
-      // Restore vault salt so secrets encrypted with the backup key work locally
+      // Restore vault salt + re-derive in-memory vault key so reveal works immediately
       const saltB64 = btoa(Array.from(salt, c => String.fromCharCode(c)).join(''))
       localStorage.setItem('myspace_vault_salt', saltB64)
+      await unlock(syncPw, salt)
       const db = await getDb()
       if (data.notes) {
         for (const n of data.notes as { id: string; title: string; content: string; tags: string[]; image_data: string }[]) {
