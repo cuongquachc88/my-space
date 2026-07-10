@@ -59,11 +59,13 @@ export default function NotesView() {
   async function save() {
     if (!selected) return
     setSaving(true)
-    const db = await getDb()
-    await db.query('UPDATE notes SET title=$1, content=$2, tags=$3, image_data=$4, updated_at=now() WHERE id=$5',
-      [editTitle, editContent, editTags, JSON.stringify(editImages), selected.id])
-    await load(query, activeTag)
-    setSaving(false)
+    try {
+      const db = await getDb()
+      await db.query('UPDATE notes SET title=$1, content=$2, tags=$3, image_data=$4, updated_at=now() WHERE id=$5',
+        [editTitle, editContent, editTags, JSON.stringify(editImages), selected.id])
+      await load(query, activeTag)
+    } catch (e) { console.error('[notes] save failed:', e) }
+    finally { setSaving(false) }
   }
 
   async function remove() {
