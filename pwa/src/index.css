@@ -39,6 +39,24 @@ h1, h2, h3, h4, h5, h6 {
 .safe-area-pb { padding-bottom: env(safe-area-inset-bottom); }
 .safe-area-pt { padding-top: env(safe-area-inset-top); }
 
+/* Bento grid: 3-col desktop, 1-col mobile */
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.bento-grid > * { min-width: 0; }
+
+@media (max-width: 640px) {
+  .bento-grid { grid-template-columns: 1fr; }
+  .bento-grid > [style*="span 2"],
+  .bento-grid > [style*="span 3"] { grid-column: 1 / -1 !important; }
+}
+
+/* Mobile hero banner */
+.mobile-hero { display: none; }
+@media (max-width: 640px) { .mobile-hero { display: block; } }
+
 /* Markdown */
 .prose h1 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1.5rem; font-weight: 700; margin: 0.5rem 0; color: var(--text-primary); }
 .prose h2 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1.25rem; font-weight: 600; margin: 0.5rem 0; color: var(--text-primary); }

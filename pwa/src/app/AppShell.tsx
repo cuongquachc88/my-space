@@ -37,36 +37,43 @@ export default function AppShell({ onLogout }: Props) {
         <div style={{ maxWidth: 900, margin: '0 auto', padding: '16px' }} className="md:p-6">
 
           {/* Mobile hero banner */}
-          <div className="block md:hidden" style={{ marginBottom: 20 }}>
+          <div className="mobile-hero" style={{ marginBottom: 16 }}>
             <div style={{
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.25) 100%)',
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255,255,255,0.6)',
+              background: 'linear-gradient(135deg, #7c6af7 0%, #3b82f6 100%)',
               borderRadius: 24,
-              padding: '20px 20px 16px',
-              boxShadow: '0 4px 24px rgba(124,106,247,0.10)',
+              padding: '20px 20px 22px',
+              boxShadow: '0 8px 32px rgba(124,106,247,0.35)',
+              position: 'relative',
+              overflow: 'hidden',
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
-                <div style={{
-                  width: 40, height: 40, borderRadius: 12,
-                  background: 'linear-gradient(135deg, #7c6af7, #3b82f6)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  flexShrink: 0, boxShadow: '0 4px 12px rgba(124,106,247,0.35)',
-                }}>
-                  <span style={{ fontSize: 20 }}>✦</span>
-                </div>
-                <div>
+              {/* decorative circles */}
+              <div style={{ position: 'absolute', top: -20, right: -20, width: 100, height: 100, borderRadius: '50%', background: 'rgba(255,255,255,0.08)' }} />
+              <div style={{ position: 'absolute', bottom: -30, right: 40, width: 70, height: 70, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{
-                    fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 800, fontSize: 22,
-                    background: 'linear-gradient(135deg, #7c6af7, #3b82f6)',
-                    WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-                    letterSpacing: '-0.02em', lineHeight: 1.1,
-                  }}>My SPACE</div>
-                  <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 11, color: '#94a3b8', marginTop: 1 }}>
-                    Private · Offline · Yours
-                  </div>
+                    width: 36, height: 36, borderRadius: 10,
+                    background: 'rgba(255,255,255,0.2)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 18,
+                  }}>✦</div>
+                  <span style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 800, fontSize: 20, color: '#fff', letterSpacing: '-0.02em' }}>
+                    My SPACE
+                  </span>
                 </div>
+                <div style={{
+                  background: 'rgba(255,255,255,0.2)', borderRadius: 100,
+                  padding: '4px 10px',
+                  fontFamily: 'Inter, sans-serif', fontSize: 11, color: '#fff', fontWeight: 500,
+                }}>
+                  🔒 Encrypted
+                </div>
+              </div>
+
+              <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.4 }}>
+                Your private space — notes, secrets, tasks & more.<br />
+                <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>Offline-first · No cloud · No tracking</span>
               </div>
             </div>
           </div>

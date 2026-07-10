@@ -14,14 +14,7 @@ interface CellProps {
 
 export function BentoGrid({ children, className = '' }: GridProps) {
   return (
-    <div
-      className={className}
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))',
-        gap: 12,
-      }}
-    >
+    <div className={`bento-grid ${className}`}>
       {children}
     </div>
   )
