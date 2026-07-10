@@ -25,7 +25,7 @@ export default function GlassInput({ value, onChange, placeholder, type = 'text'
         borderRadius: 12,
         padding: '12px 16px',
         fontSize: 15,
-        fontFamily: 'Satoshi, sans-serif',
+        fontFamily: 'Inter, sans-serif',
         color: 'var(--text-primary)',
         outline: 'none',
         width: '100%',

@@ -18,12 +18,12 @@ body {
   margin: 0;
   background: #c9d6ff;
   color: var(--text-primary);
-  font-family: 'Satoshi', system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Clash Display', system-ui, sans-serif;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
 }
 
 .glass {
@@ -40,13 +40,13 @@ h1, h2, h3, h4, h5, h6 {
 .safe-area-pt { padding-top: env(safe-area-inset-top); }
 
 /* Markdown */
-.prose h1 { font-family: 'Clash Display', sans-serif; font-size: 1.5rem; font-weight: 700; margin: 0.5rem 0; color: var(--text-primary); }
-.prose h2 { font-family: 'Clash Display', sans-serif; font-size: 1.25rem; font-weight: 600; margin: 0.5rem 0; color: var(--text-primary); }
+.prose h1 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1.5rem; font-weight: 700; margin: 0.5rem 0; color: var(--text-primary); }
+.prose h2 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1.25rem; font-weight: 600; margin: 0.5rem 0; color: var(--text-primary); }
 .prose h3 { font-size: 1.1rem; font-weight: 600; margin: 0.4rem 0; color: var(--text-primary); }
 .prose p  { margin: 0.25rem 0; line-height: 1.6; color: var(--text-primary); }
 .prose ul, .prose ol { padding-left: 1.25rem; margin: 0.25rem 0; }
 .prose li { margin: 0.15rem 0; }
-.prose code { background: rgba(99,102,241,0.1); padding: 0.1em 0.3em; border-radius: 4px; font-size: 0.875em; font-family: 'Satoshi', monospace; }
+.prose code { background: rgba(99,102,241,0.1); padding: 0.1em 0.3em; border-radius: 4px; font-size: 0.875em; font-family: 'Inter', monospace; }
 .prose pre { background: rgba(99,102,241,0.08); padding: 0.75rem; border-radius: 12px; overflow-x: auto; margin: 0.5rem 0; }
 .prose pre code { background: none; padding: 0; }
 .prose a { color: #7c6af7; text-decoration: underline; }

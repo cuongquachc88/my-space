@@ -44,7 +44,7 @@ export default function NavRail({ tab, onTab, onLogout }: Props) {
         <div style={{ width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg,#7c6af7,#38bdf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <IconAppShield size={18} />
         </div>
-        <span style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 700, fontSize: 16, color: '#1a1a2e', whiteSpace: 'nowrap', opacity: hovered ? 1 : 0, transition: 'opacity 150ms ease' }}>
+        <span style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: 16, color: '#1a1a2e', whiteSpace: 'nowrap', opacity: hovered ? 1 : 0, transition: 'opacity 150ms ease' }}>
           My <span style={{ color: '#7c6af7' }}>SPACE</span>
         </span>
       </div>
@@ -69,7 +69,7 @@ export default function NavRail({ tab, onTab, onLogout }: Props) {
                 }}
               >
                 <t.Icon size={22} accent={accent} filled={active} />
-                <span style={{ fontFamily: 'Satoshi, sans-serif', fontWeight: active ? 600 : 400, fontSize: 14, opacity: hovered ? 1 : 0, transition: 'opacity 150ms ease' }}>
+                <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: active ? 600 : 400, fontSize: 14, opacity: hovered ? 1 : 0, transition: 'opacity 150ms ease' }}>
                   {t.label}
                 </span>
               </button>
@@ -97,7 +97,7 @@ export default function NavRail({ tab, onTab, onLogout }: Props) {
                 }}
               >
                 <t.Icon size={22} accent={accent} filled={active} />
-                <span style={{ fontFamily: 'Satoshi, sans-serif', fontWeight: active ? 600 : 400, fontSize: 14, opacity: hovered ? 1 : 0, transition: 'opacity 150ms ease' }}>
+                <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: active ? 600 : 400, fontSize: 14, opacity: hovered ? 1 : 0, transition: 'opacity 150ms ease' }}>
                   {t.label}
                 </span>
               </button>
@@ -108,7 +108,7 @@ export default function NavRail({ tab, onTab, onLogout }: Props) {
             style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 10px', borderRadius: 12, border: 'none', cursor: 'pointer', background: 'transparent', color: '#ef4444', opacity: 0.7, width: '100%', marginTop: 4, transition: 'opacity 150ms' }}
           >
             <IconLock size={20} />
-            <span style={{ fontFamily: 'Satoshi, sans-serif', fontSize: 13, opacity: hovered ? 1 : 0, transition: 'opacity 150ms ease', whiteSpace: 'nowrap' }}>Lock</span>
+            <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, opacity: hovered ? 1 : 0, transition: 'opacity 150ms ease', whiteSpace: 'nowrap' }}>Lock</span>
           </button>
         </div>
       </nav>

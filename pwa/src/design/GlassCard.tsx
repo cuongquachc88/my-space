@@ -15,9 +15,6 @@ export default function GlassCard({ children, className = '', accent, accentBar 
       className={`glass ${className}`}
       style={{ borderRadius: 20, overflow: 'hidden', transition: 'background 200ms ease', ...style }}
     >
-      {accentBar && accent && (
-        <div style={{ height: 3, background: accent, width: '100%' }} />
-      )}
       {children}
     </div>
   )

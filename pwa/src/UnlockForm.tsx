@@ -72,10 +72,10 @@ export default function UnlockForm({ onUnlocked }: Props) {
             <IconAppShield size={28} />
           </div>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 700, fontSize: 24, color: '#1a1a2e', letterSpacing: '-0.01em' }}>
+            <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: 24, color: '#1a1a2e', letterSpacing: '-0.01em' }}>
               My <span style={{ color: '#7c6af7' }}>SPACE</span>
             </div>
-            <div style={{ fontFamily: 'Satoshi, sans-serif', fontSize: 14, color: '#4a4a6a', marginTop: 4 }}>
+            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 14, color: '#4a4a6a', marginTop: 4 }}>
               {firstTime ? 'Create your master password' : 'Enter your master password'}
             </div>
           </div>
@@ -96,7 +96,7 @@ export default function UnlockForm({ onUnlocked }: Props) {
               />
             )}
             {error && (
-              <div style={{ fontSize: 13, color: '#ef4444', textAlign: 'center', fontFamily: 'Satoshi, sans-serif' }}>
+              <div style={{ fontSize: 13, color: '#ef4444', textAlign: 'center', fontFamily: 'Inter, sans-serif' }}>
                 {error}
               </div>
             )}

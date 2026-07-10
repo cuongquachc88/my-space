@@ -133,17 +133,17 @@ export default function SyncView() {
         <BentoCell span="1">
           <GlassCard accentBar accent={accent}>
             <div style={{ padding: 20 }}>
-              <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 700, fontSize: 16, color: '#1a1a2e', marginBottom: 8 }}>Connection</div>
+              <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: 16, color: '#1a1a2e', marginBottom: 8 }}>Connection</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: connected ? '#34d399' : '#94a3b8' }} />
-                <span style={{ fontFamily: 'Satoshi, sans-serif', fontSize: 13, color: '#4a4a6a' }}>
+                <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#4a4a6a' }}>
                   {connected ? 'Google Drive connected' : 'Not connected'}
                 </span>
               </div>
               <PillButton onClick={authorize} accent={accent} style={{ width: '100%', justifyContent: 'center' }}>
                 Authorize Google Drive
               </PillButton>
-              <div style={{ marginTop: 12, fontFamily: 'Satoshi, sans-serif', fontSize: 12, color: '#94a3b8', lineHeight: 1.5 }}>
+              <div style={{ marginTop: 12, fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#94a3b8', lineHeight: 1.5 }}>
                 Data is encrypted locally before upload. Use the same sync password on all devices.
               </div>
             </div>
@@ -153,7 +153,7 @@ export default function SyncView() {
         <BentoCell span="2">
           <GlassCard style={{ height: '100%' }}>
             <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 700, fontSize: 16, color: '#1a1a2e' }}>Backup & Restore</div>
+              <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: 16, color: '#1a1a2e' }}>Backup & Restore</div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <div style={{ flex: 1 }}>
                   <GlassInput value={syncPw} onChange={setSyncPw} placeholder="Sync password" type={showPw ? 'text' : 'password'} />
@@ -169,7 +169,7 @@ export default function SyncView() {
                 </PillButton>
               </div>
               {msg && (
-                <div style={{ padding: '10px 14px', borderRadius: 10, background: status === 'error' ? 'rgba(239,68,68,0.1)' : status === 'ok' ? 'rgba(52,211,153,0.1)' : 'rgba(255,255,255,0.3)', fontFamily: 'Satoshi, sans-serif', fontSize: 13, color: statusColor }}>
+                <div style={{ padding: '10px 14px', borderRadius: 10, background: status === 'error' ? 'rgba(239,68,68,0.1)' : status === 'ok' ? 'rgba(52,211,153,0.1)' : 'rgba(255,255,255,0.3)', fontFamily: 'Inter, sans-serif', fontSize: 13, color: statusColor }}>
                   {msg}
                 </div>
               )}

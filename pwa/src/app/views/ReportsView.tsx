@@ -153,10 +153,10 @@ export default function ReportsView() {
           <GlassCard accentBar accent={accent}>
             <div style={{ padding: 20 }}>
               <div style={{ display: 'flex', gap: 16, marginBottom: 8 }}>
-                <span style={{ fontFamily: 'Satoshi, sans-serif', fontSize: 12, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 4 }}>
                   <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: 'rgba(255,255,255,0.3)' }} />Expected
                 </span>
-                <span style={{ fontFamily: 'Satoshi, sans-serif', fontSize: 12, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 4 }}>
                   <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: accent }} />Actual
                 </span>
               </div>
@@ -168,8 +168,8 @@ export default function ReportsView() {
         <BentoCell span="1">
           <GlassCard accentBar accent={accent}>
             <div style={{ padding: 20, textAlign: 'center' }}>
-              <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 700, fontSize: 28, color: accent }}>{fmtUSD(actualTotal, display)}</div>
-              <div style={{ fontSize: 13, color: '#4a4a6a', fontFamily: 'Satoshi, sans-serif', marginTop: 4 }}>This month</div>
+              <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: 28, color: accent }}>{fmtUSD(actualTotal, display)}</div>
+              <div style={{ fontSize: 13, color: '#4a4a6a', fontFamily: 'Inter, sans-serif', marginTop: 4 }}>This month</div>
             </div>
           </GlassCard>
         </BentoCell>
@@ -177,8 +177,8 @@ export default function ReportsView() {
         <BentoCell span="1">
           <GlassCard>
             <div style={{ padding: 20, textAlign: 'center' }}>
-              <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 700, fontSize: 28, color: '#1a1a2e' }}>{fmtUSD(expectedTotal, display)}</div>
-              <div style={{ fontSize: 13, color: '#4a4a6a', fontFamily: 'Satoshi, sans-serif', marginTop: 4 }}>Expected</div>
+              <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: 28, color: '#1a1a2e' }}>{fmtUSD(expectedTotal, display)}</div>
+              <div style={{ fontSize: 13, color: '#4a4a6a', fontFamily: 'Inter, sans-serif', marginTop: 4 }}>Expected</div>
             </div>
           </GlassCard>
         </BentoCell>
@@ -186,8 +186,8 @@ export default function ReportsView() {
         <BentoCell span="1">
           <GlassCard>
             <div style={{ padding: 20, textAlign: 'center' }}>
-              <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 700, fontSize: 28, color: delta > 0 ? '#ef4444' : '#34d399' }}>{delta >= 0 ? '+' : ''}{fmtUSD(Math.abs(delta), display)}</div>
-              <div style={{ fontSize: 13, color: '#4a4a6a', fontFamily: 'Satoshi, sans-serif', marginTop: 4 }}>Delta</div>
+              <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: 28, color: delta > 0 ? '#ef4444' : '#34d399' }}>{delta >= 0 ? '+' : ''}{fmtUSD(Math.abs(delta), display)}</div>
+              <div style={{ fontSize: 13, color: '#4a4a6a', fontFamily: 'Inter, sans-serif', marginTop: 4 }}>Delta</div>
             </div>
           </GlassCard>
         </BentoCell>
@@ -195,10 +195,10 @@ export default function ReportsView() {
         <BentoCell span="full">
           <GlassCard>
             <div style={{ padding: 16 }}>
-              <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e', marginBottom: 10 }}>
+              <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e', marginBottom: 10 }}>
                 {MONTH_SHORT[curMonth-1]} {curYear}
               </div>
-              {subs.length === 0 && <div style={{ color: '#4a4a6a', fontSize: 13, fontFamily: 'Satoshi, sans-serif' }}>No active subscriptions.</div>}
+              {subs.length === 0 && <div style={{ color: '#4a4a6a', fontSize: 13, fontFamily: 'Inter, sans-serif' }}>No active subscriptions.</div>}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {subs.map(s => {
                   const exp = expectedMonthlyUSD(s, curYear, curMonth)
@@ -208,8 +208,8 @@ export default function ReportsView() {
                   return (
                     <button key={s.id} onClick={() => openBill(s, curYear, curMonth)}
                       style={{ textAlign: 'left', padding: '8px 12px', borderRadius: 10, border: 'none', cursor: 'pointer', background: editingBill?.sub.id === s.id ? `${accent}15` : 'rgba(255,255,255,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontFamily: 'Satoshi, sans-serif', fontWeight: 500, fontSize: 14, color: '#1a1a2e' }}>{s.name}</span>
-                      <div style={{ textAlign: 'right', fontSize: 12, fontFamily: 'Satoshi, sans-serif' }}>
+                      <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: 14, color: '#1a1a2e' }}>{s.name}</span>
+                      <div style={{ textAlign: 'right', fontSize: 12, fontFamily: 'Inter, sans-serif' }}>
                         <div style={{ color: '#94a3b8' }}>Exp {fmtUSD(exp, display)}</div>
                         {act !== null
                           ? <div style={{ color: over ? '#ef4444' : '#34d399' }}>Act {fmtUSD(act, display)}</div>
@@ -227,7 +227,7 @@ export default function ReportsView() {
           <BentoCell span="full">
             <GlassCard accentBar accent={accent}>
               <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 700, fontSize: 18, color: '#1a1a2e' }}>
+                <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: 18, color: '#1a1a2e' }}>
                   {editingBill.sub.name} — {MONTH_SHORT[editingBill.month-1]} {editingBill.year}
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>

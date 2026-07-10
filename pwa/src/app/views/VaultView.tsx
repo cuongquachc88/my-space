@@ -113,11 +113,11 @@ export default function VaultView() {
             <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
               <GlassInput value={query} onChange={v => { setQuery(v) }} placeholder="Search secrets…" />
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 340, overflowY: 'auto' }}>
-                {secrets.length === 0 && <div style={{ textAlign: 'center', color: '#4a4a6a', padding: 24, fontFamily: 'Satoshi, sans-serif', fontSize: 14 }}>No secrets yet.</div>}
+                {secrets.length === 0 && <div style={{ textAlign: 'center', color: '#4a4a6a', padding: 24, fontFamily: 'Inter, sans-serif', fontSize: 14 }}>No secrets yet.</div>}
                 {secrets.map(s => (
                   <div key={s.id} style={{ padding: '10px 12px', borderRadius: 12, background: 'rgba(255,255,255,0.4)', display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontFamily: 'Satoshi, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e' }}>{s.label}</span>
+                      <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e' }}>{s.label}</span>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <PillButton variant="secondary" accent={accent} onClick={() => reveal(s)}>{revealId === s.id ? 'Hide' : 'Reveal'}</PillButton>
                         <PillButton variant="ghost" onClick={() => startEdit(s)}>Edit</PillButton>
@@ -125,7 +125,7 @@ export default function VaultView() {
                       </div>
                     </div>
                     {revealId === s.id && (
-                      <div style={{ fontFamily: 'Satoshi, sans-serif', fontSize: 13, background: `${accent}15`, borderRadius: 8, padding: '6px 10px', color: '#1a1a2e', wordBreak: 'break-all' }}>{revealValue}</div>
+                      <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, background: `${accent}15`, borderRadius: 8, padding: '6px 10px', color: '#1a1a2e', wordBreak: 'break-all' }}>{revealValue}</div>
                     )}
                     {s.url && <div style={{ fontSize: 12, color: '#4a4a6a' }}>{s.url}</div>}
                   </div>
@@ -138,11 +138,11 @@ export default function VaultView() {
         <BentoCell span="1">
           <GlassCard style={{ height: '100%' }}>
             <div style={{ padding: 16 }}>
-              <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e', marginBottom: 10 }}>Tags</div>
+              <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e', marginBottom: 10 }}>Tags</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {allTags.map(tag => (
                   <button key={tag} onClick={() => setActiveTag(activeTag === tag ? null : tag)}
-                    style={{ padding: '4px 10px', borderRadius: 100, border: 'none', cursor: 'pointer', fontSize: 12, fontFamily: 'Satoshi, sans-serif', background: activeTag === tag ? accent : `${accent}18`, color: activeTag === tag ? 'white' : accent }}>
+                    style={{ padding: '4px 10px', borderRadius: 100, border: 'none', cursor: 'pointer', fontSize: 12, fontFamily: 'Inter, sans-serif', background: activeTag === tag ? accent : `${accent}18`, color: activeTag === tag ? 'white' : accent }}>
                     #{tag}
                   </button>
                 ))}
@@ -155,7 +155,7 @@ export default function VaultView() {
           <BentoCell span="full">
             <GlassCard accentBar accent={accent}>
               <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 700, fontSize: 18, color: '#1a1a2e' }}>
+                <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: 18, color: '#1a1a2e' }}>
                   {editing ? 'Edit Secret' : 'New Secret'}
                 </div>
                 <GlassInput value={editLabel} onChange={setEditLabel} placeholder="Label (e.g. Gmail password)" />

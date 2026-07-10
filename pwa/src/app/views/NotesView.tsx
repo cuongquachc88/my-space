@@ -99,7 +99,7 @@ export default function NotesView() {
               <GlassInput value={query} onChange={search} placeholder="Search notes…" />
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 320, overflowY: 'auto' }}>
                 {notes.length === 0 && (
-                  <div style={{ textAlign: 'center', color: '#4a4a6a', padding: 24, fontFamily: 'Satoshi, sans-serif', fontSize: 14 }}>No notes yet. Create one!</div>
+                  <div style={{ textAlign: 'center', color: '#4a4a6a', padding: 24, fontFamily: 'Inter, sans-serif', fontSize: 14 }}>No notes yet. Create one!</div>
                 )}
                 {notes.map(n => (
                   <button key={n.id} onClick={() => select(n)}
@@ -109,7 +109,7 @@ export default function NotesView() {
                       borderLeft: selected?.id === n.id ? `3px solid ${accent}` : '3px solid transparent',
                       transition: 'background 150ms',
                     }}>
-                    <div style={{ fontFamily: 'Satoshi, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e', marginBottom: 2 }}>{n.title || 'Untitled'}</div>
+                    <div style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e', marginBottom: 2 }}>{n.title || 'Untitled'}</div>
                     <div style={{ fontSize: 12, color: '#4a4a6a' }}>{new Date(n.updated_at).toLocaleDateString()}</div>
                   </button>
                 ))}
@@ -122,12 +122,12 @@ export default function NotesView() {
         <BentoCell span="1">
           <GlassCard style={{ height: '100%' }}>
             <div style={{ padding: 16 }}>
-              <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e', marginBottom: 10 }}>Tags</div>
-              {allTags.length === 0 && <div style={{ fontSize: 13, color: '#4a4a6a', fontFamily: 'Satoshi, sans-serif' }}>No tags yet</div>}
+              <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e', marginBottom: 10 }}>Tags</div>
+              {allTags.length === 0 && <div style={{ fontSize: 13, color: '#4a4a6a', fontFamily: 'Inter, sans-serif' }}>No tags yet</div>}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {allTags.map(tag => (
                   <button key={tag} onClick={() => { const next = activeTag === tag ? null : tag; setActiveTag(next); setSelected(null); load(query, next) }}
-                    style={{ padding: '4px 10px', borderRadius: 100, border: 'none', cursor: 'pointer', fontSize: 12, fontFamily: 'Satoshi, sans-serif',
+                    style={{ padding: '4px 10px', borderRadius: 100, border: 'none', cursor: 'pointer', fontSize: 12, fontFamily: 'Inter, sans-serif',
                       background: activeTag === tag ? accent : `${accent}18`, color: activeTag === tag ? 'white' : accent }}>
                     #{tag}
                   </button>
@@ -142,13 +142,13 @@ export default function NotesView() {
           <GlassCard>
             <div style={{ padding: 20 }}>
               {!selected ? (
-                <div style={{ textAlign: 'center', color: '#4a4a6a', padding: 32, fontFamily: 'Satoshi, sans-serif' }}>
+                <div style={{ textAlign: 'center', color: '#4a4a6a', padding: 32, fontFamily: 'Inter, sans-serif' }}>
                   Select a note or create a new one
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   <input value={editTitle} onChange={e => setEditTitle(e.target.value)}
-                    style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 700, fontSize: 22, color: '#1a1a2e', background: 'transparent', border: 'none', outline: 'none', width: '100%' }}
+                    style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: 22, color: '#1a1a2e', background: 'transparent', border: 'none', outline: 'none', width: '100%' }}
                     placeholder="Title" />
                   <TagInput tags={editTags} onChange={setEditTags} />
                   <div style={{ display: 'flex', gap: 8 }}>
@@ -159,7 +159,7 @@ export default function NotesView() {
                     <div className="prose" dangerouslySetInnerHTML={{ __html: safeHtml(renderMarkdown(editContent)) }} />
                   ) : (
                     <textarea value={editContent} onChange={e => setEditContent(e.target.value)}
-                      style={{ fontFamily: 'Satoshi, sans-serif', fontSize: 15, color: '#1a1a2e', background: 'rgba(255,255,255,0.3)', border: '1px solid rgba(255,255,255,0.6)', borderRadius: 12, padding: 12, minHeight: 180, resize: 'vertical', outline: 'none' }}
+                      style={{ fontFamily: 'Inter, sans-serif', fontSize: 15, color: '#1a1a2e', background: 'rgba(255,255,255,0.3)', border: '1px solid rgba(255,255,255,0.6)', borderRadius: 12, padding: 12, minHeight: 180, resize: 'vertical', outline: 'none' }}
                       placeholder="Write in Markdown…" />
                   )}
                   {editImages.length > 0 && (

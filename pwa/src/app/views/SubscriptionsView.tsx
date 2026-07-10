@@ -87,8 +87,8 @@ export default function SubscriptionsView() {
         <BentoCell span="1">
           <GlassCard accentBar accent={accent} style={{ height: '100%' }}>
             <div style={{ padding: 20, textAlign: 'center' }}>
-              <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 700, fontSize: 36, color: accent }}>{fmt(totalUSD, display)}</div>
-              <div style={{ fontFamily: 'Satoshi, sans-serif', fontSize: 13, color: '#4a4a6a', marginTop: 4 }}>Monthly total</div>
+              <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: 36, color: accent }}>{fmt(totalUSD, display)}</div>
+              <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#4a4a6a', marginTop: 4 }}>Monthly total</div>
               <select value={display} onChange={e => setDisplay(e.target.value)}
                 style={{ marginTop: 12, background: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.6)', borderRadius: 8, padding: '4px 8px', fontSize: 12, color: '#1a1a2e', outline: 'none', cursor: 'pointer' }}>
                 {DISPLAY_CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
@@ -100,14 +100,14 @@ export default function SubscriptionsView() {
         <BentoCell span="2">
           <GlassCard style={{ height: '100%' }}>
             <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 340, overflowY: 'auto' }}>
-              {subs.length === 0 && <div style={{ textAlign: 'center', color: '#4a4a6a', padding: 24, fontFamily: 'Satoshi, sans-serif', fontSize: 14 }}>No subscriptions yet.</div>}
+              {subs.length === 0 && <div style={{ textAlign: 'center', color: '#4a4a6a', padding: 24, fontFamily: 'Inter, sans-serif', fontSize: 14 }}>No subscriptions yet.</div>}
               {subs.map(s => (
                 <button key={s.id} onClick={() => openEdit(s)}
                   style={{ textAlign: 'left', padding: '10px 12px', borderRadius: 12, border: 'none', cursor: 'pointer', background: editing?.id === s.id ? `${accent}18` : 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', gap: 10, opacity: s.active ? 1 : 0.5 }}>
                   <span style={{ width: 8, height: 8, borderRadius: '50%', background: s.active ? accent : '#94a3b8', flexShrink: 0 }} />
-                  <span style={{ flex: 1, fontFamily: 'Satoshi, sans-serif', fontWeight: 500, fontSize: 14, color: '#1a1a2e' }}>{s.name}</span>
+                  <span style={{ flex: 1, fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: 14, color: '#1a1a2e' }}>{s.name}</span>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontFamily: 'Satoshi, sans-serif', fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>
+                    <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>
                       {new Intl.NumberFormat('en-US', { style:'currency', currency:s.currency, maximumFractionDigits:2 }).format(parseFloat(s.amount))}
                     </div>
                     <div style={{ fontSize: 11, color: '#4a4a6a' }}>{s.cycle}</div>
@@ -122,7 +122,7 @@ export default function SubscriptionsView() {
           <BentoCell span="full">
             <GlassCard accentBar accent={accent}>
               <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 700, fontSize: 18, color: '#1a1a2e' }}>{isNew ? 'New Subscription' : 'Edit Subscription'}</div>
+                <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: 18, color: '#1a1a2e' }}>{isNew ? 'New Subscription' : 'Edit Subscription'}</div>
                 <GlassInput value={ef.name} onChange={v => setEf(p=>({...p,name:v}))} placeholder="Name (e.g. Netflix)" />
                 <div style={{ display: 'flex', gap: 8 }}>
                   <GlassInput value={ef.amount} onChange={v => setEf(p=>({...p,amount:v}))} placeholder="Amount" type="number" />
@@ -141,7 +141,7 @@ export default function SubscriptionsView() {
                 </div>
                 <GlassInput value={ef.notes} onChange={v => setEf(p=>({...p,notes:v}))} placeholder="Notes (optional)" />
                 <TagInput tags={ef.tags} onChange={t => setEf(p=>({...p,tags:t}))} />
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'Satoshi, sans-serif', fontSize: 14, color: '#1a1a2e', cursor: 'pointer' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'Inter, sans-serif', fontSize: 14, color: '#1a1a2e', cursor: 'pointer' }}>
                   <input type="checkbox" checked={ef.active} onChange={e => setEf(p=>({...p,active:e.target.checked}))} />
                   Active
                 </label>

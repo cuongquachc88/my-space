@@ -96,13 +96,13 @@ export default function SettingsView({ onLogout }: Props) {
         <BentoCell span="1">
           <GlassCard accentBar accent={accent}>
             <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 700, fontSize: 16, color: '#1a1a2e' }}>Security</div>
+              <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: 16, color: '#1a1a2e' }}>Security</div>
               <button onClick={handleLogout}
                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 12, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', cursor: 'pointer', width: '100%', textAlign: 'left' }}>
                 <IconLock size={16} accent="#ef4444" filled />
-                <span style={{ fontFamily: 'Satoshi, sans-serif', fontSize: 14, color: '#ef4444', fontWeight: 500 }}>Lock & Sign Out</span>
+                <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 14, color: '#ef4444', fontWeight: 500 }}>Lock & Sign Out</span>
               </button>
-              <div style={{ fontFamily: 'Satoshi, sans-serif', fontSize: 12, color: '#94a3b8', lineHeight: 1.5 }}>
+              <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#94a3b8', lineHeight: 1.5 }}>
                 All data stays on this device. Encrypted with your master password via PBKDF2 + AES-GCM.
               </div>
             </div>
@@ -112,17 +112,17 @@ export default function SettingsView({ onLogout }: Props) {
         <BentoCell span="1">
           <GlassCard>
             <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 700, fontSize: 16, color: '#1a1a2e' }}>Data</div>
+              <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: 16, color: '#1a1a2e' }}>Data</div>
               <PillButton onClick={exportData} accent={accent} disabled={exporting} style={{ width: '100%', justifyContent: 'center' }}>
                 {exporting ? 'Exporting…' : 'Export JSON'}
               </PillButton>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <div style={{ fontFamily: 'Satoshi, sans-serif', fontSize: 13, color: '#4a4a6a' }}>Import from JSON</div>
+                <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#4a4a6a' }}>Import from JSON</div>
                 <input type="file" accept=".json" onChange={e => setImportFile(e.target.files?.[0] ?? null)}
-                  style={{ fontSize: 12, color: '#4a4a6a', fontFamily: 'Satoshi, sans-serif' }} />
+                  style={{ fontSize: 12, color: '#4a4a6a', fontFamily: 'Inter, sans-serif' }} />
                 {importFile && <PillButton onClick={importData} accent={accent}>Import</PillButton>}
               </div>
-              {msg && <div style={{ fontFamily: 'Satoshi, sans-serif', fontSize: 13, color: '#34d399' }}>{msg}</div>}
+              {msg && <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#34d399' }}>{msg}</div>}
             </div>
           </GlassCard>
         </BentoCell>
@@ -130,11 +130,11 @@ export default function SettingsView({ onLogout }: Props) {
         <BentoCell span="1">
           <GlassCard>
             <div style={{ padding: 20 }}>
-              <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 700, fontSize: 16, color: '#1a1a2e', marginBottom: 12 }}>About</div>
+              <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: 16, color: '#1a1a2e', marginBottom: 12 }}>About</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <div style={{ fontFamily: 'Satoshi, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e' }}>My SPACE v1.0.0</div>
-                <div style={{ fontFamily: 'Satoshi, sans-serif', fontSize: 13, color: '#4a4a6a' }}>Privacy-first · No servers · No tracking</div>
-                <div style={{ fontFamily: 'Satoshi, sans-serif', fontSize: 12, color: '#94a3b8', lineHeight: 1.5, marginTop: 4 }}>
+                <div style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e' }}>My SPACE v1.0.0</div>
+                <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#4a4a6a' }}>Privacy-first · No servers · No tracking</div>
+                <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#94a3b8', lineHeight: 1.5, marginTop: 4 }}>
                   Data stored in PGlite (WASM Postgres) — offline-first PWA. Works without internet.
                 </div>
               </div>

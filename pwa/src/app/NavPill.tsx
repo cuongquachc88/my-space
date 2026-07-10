@@ -41,7 +41,7 @@ export default function NavPill({ tab, onTab }: Props) {
               <button key={t} onClick={() => { onTab(t); setOverflowOpen(false) }}
                 style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 12px', borderRadius: 12, border: 'none', cursor: 'pointer', background: active ? `${accent}20` : 'transparent', color: active ? accent : '#4a4a6a', opacity: active ? 1 : 0.6, transition: 'opacity 150ms' }}>
                 <Ic size={22} accent={accent} filled={active} />
-                <span style={{ fontSize: 11, fontFamily: 'Satoshi, sans-serif' }}>{LABEL_MAP[t]}</span>
+                <span style={{ fontSize: 11, fontFamily: 'Inter, sans-serif' }}>{LABEL_MAP[t]}</span>
               </button>
             )
           })}

@@ -57,12 +57,12 @@ export default function GeneratorView() {
                     {password}
                   </div>
                   <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
-                    <span style={{ fontFamily: 'Satoshi, sans-serif', fontSize: 13, color: strengthColor, fontWeight: 600 }}>{strengthLabel}</span>
+                    <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: strengthColor, fontWeight: 600 }}>{strengthLabel}</span>
                     <PillButton onClick={copyPassword} accent={accent}>{copied ? 'Copied!' : 'Copy'}</PillButton>
                   </div>
                 </>
               ) : (
-                <div style={{ color: '#4a4a6a', fontFamily: 'Satoshi, sans-serif', fontSize: 15 }}>Press Generate to create a password</div>
+                <div style={{ color: '#4a4a6a', fontFamily: 'Inter, sans-serif', fontSize: 15 }}>Press Generate to create a password</div>
               )}
             </div>
           </GlassCard>
@@ -72,7 +72,7 @@ export default function GeneratorView() {
           <GlassCard>
             <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'Satoshi, sans-serif', fontSize: 14, color: '#4a4a6a', marginBottom: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'Inter, sans-serif', fontSize: 14, color: '#4a4a6a', marginBottom: 8 }}>
                   <span>Length</span>
                   <span style={{ fontWeight: 700, color: '#1a1a2e', fontFamily: 'monospace' }}>{length}</span>
                 </div>
@@ -84,7 +84,7 @@ export default function GeneratorView() {
                  ['Digits 0–9', digits, (v: boolean) => setDigits(v)] as const,
                  ['Symbols !@#…', symbols, (v: boolean) => setSymbols(v)] as const]).map(([label, val, set]) => (
                 <label key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
-                  <span style={{ fontFamily: 'Satoshi, sans-serif', fontSize: 14, color: '#4a4a6a' }}>{label}</span>
+                  <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 14, color: '#4a4a6a' }}>{label}</span>
                   <div onClick={() => set(!val)}
                     style={{ width: 40, height: 20, borderRadius: 100, background: val ? accent : 'rgba(148,163,184,0.3)', position: 'relative', cursor: 'pointer', transition: 'background 150ms' }}>
                     <div style={{ position: 'absolute', top: 2, left: val ? 22 : 2, width: 16, height: 16, borderRadius: '50%', background: 'white', transition: 'left 150ms', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
@@ -99,8 +99,8 @@ export default function GeneratorView() {
         <BentoCell span="1">
           <GlassCard style={{ height: '100%' }}>
             <div style={{ padding: 16 }}>
-              <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e', marginBottom: 10 }}>History</div>
-              {history.length === 0 && <div style={{ color: '#94a3b8', fontSize: 13, fontFamily: 'Satoshi, sans-serif' }}>No history yet.</div>}
+              <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e', marginBottom: 10 }}>History</div>
+              {history.length === 0 && <div style={{ color: '#94a3b8', fontSize: 13, fontFamily: 'Inter, sans-serif' }}>No history yet.</div>}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 300, overflowY: 'auto' }}>
                 {history.map((pw, i) => (
                   <div key={i} style={{ padding: '6px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', gap: 6 }}>
