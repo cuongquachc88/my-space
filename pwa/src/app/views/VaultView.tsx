@@ -50,16 +50,26 @@ export default function VaultView() {
     setEditing(null); setEditLabel(''); setEditValue(''); setEditTags([]); setEditUrl(''); setEditDesc(''); setShowAdd(true)
   }
 
+  function startEdit(s: SecretMeta) {
+    setEditing(s); setEditLabel(s.label); setEditValue(''); setEditTags(s.tags ?? []); setEditUrl(s.url ?? ''); setEditDesc(s.description ?? ''); setShowAdd(true)
+  }
+
   async function saveSecret() {
     if (!editLabel.trim()) return
     setSaving(true)
     try {
       const db = await getDb()
-      const { ciphertext, iv } = await encrypt(editValue)
       if (editing) {
-        await db.query('UPDATE secrets SET label=$1,ciphertext=$2,iv=$3,tags=$4,url=$5,description=$6,updated_at=now() WHERE id=$7',
-          [editLabel, ciphertext, iv, editTags, editUrl, editDesc, editing.id])
+        if (editValue.trim()) {
+          const { ciphertext, iv } = await encrypt(editValue)
+          await db.query('UPDATE secrets SET label=$1,ciphertext=$2,iv=$3,tags=$4,url=$5,description=$6,updated_at=now() WHERE id=$7',
+            [editLabel, ciphertext, iv, editTags, editUrl, editDesc, editing.id])
+        } else {
+          await db.query('UPDATE secrets SET label=$1,tags=$2,url=$3,description=$4,updated_at=now() WHERE id=$5',
+            [editLabel, editTags, editUrl, editDesc, editing.id])
+        }
       } else {
+        const { ciphertext, iv } = await encrypt(editValue)
         await db.query('INSERT INTO secrets (label,ciphertext,iv,tags,url,description) VALUES ($1,$2,$3,$4,$5,$6)',
           [editLabel, ciphertext, iv, editTags, editUrl, editDesc])
       }
@@ -107,6 +117,7 @@ export default function VaultView() {
                       <span style={{ fontFamily: 'Satoshi, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e' }}>{s.label}</span>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <PillButton variant="secondary" accent={accent} onClick={() => reveal(s)}>{revealId === s.id ? 'Hide' : 'Reveal'}</PillButton>
+                        <PillButton variant="ghost" onClick={() => startEdit(s)}>Edit</PillButton>
                         <PillButton variant="ghost" onClick={() => deleteSecret(s.id)}>Delete</PillButton>
                       </div>
                     </div>
@@ -145,7 +156,7 @@ export default function VaultView() {
                   {editing ? 'Edit Secret' : 'New Secret'}
                 </div>
                 <GlassInput value={editLabel} onChange={setEditLabel} placeholder="Label (e.g. Gmail password)" />
-                <GlassInput value={editValue} onChange={setEditValue} placeholder="Secret value" type="password" />
+                <GlassInput value={editValue} onChange={setEditValue} placeholder={editing ? "New value (leave blank to keep existing)" : "Secret value"} type="password" />
                 <GlassInput value={editUrl} onChange={setEditUrl} placeholder="URL (optional)" />
                 <GlassInput value={editDesc} onChange={setEditDesc} placeholder="Description (optional)" />
                 <TagInput tags={editTags} onChange={setEditTags} />
