@@ -2,19 +2,11 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import SplashScreen from './SplashScreen'
 import UnlockForm from './UnlockForm'
 import AppShell from './app/AppShell'
-import { lock, unlock } from './crypto'
+import { lock } from './crypto'
 
 type Screen = 'splash' | 'unlock' | 'app'
 
 const IDLE_MS = 5 * 60 * 1000 // 5 minutes
-const SESSION_PW_KEY = 'myspace_session_pw'  // sessionStorage — cleared on tab close
-const SALT_KEY = 'myspace_vault_salt'
-
-function getSalt(): Uint8Array | null {
-  const stored = localStorage.getItem(SALT_KEY)
-  if (!stored) return null
-  return Uint8Array.from(atob(stored), c => c.charCodeAt(0))
-}
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('splash')
@@ -22,7 +14,6 @@ export default function App() {
 
   const doLock = useCallback(() => {
     lock()
-    sessionStorage.removeItem(SESSION_PW_KEY)
     setScreen('unlock')
   }, [])
 
@@ -31,8 +22,7 @@ export default function App() {
     idleTimer.current = setTimeout(doLock, IDLE_MS)
   }, [doLock])
 
-  const enterApp = useCallback((pw: string) => {
-    sessionStorage.setItem(SESSION_PW_KEY, pw)
+  const enterApp = useCallback(() => {
     setScreen('app')
     resetIdle()
   }, [resetIdle])
@@ -48,24 +38,7 @@ export default function App() {
     }
   }, [screen, resetIdle])
 
-  // On splash done: auto-unlock if session password still in sessionStorage (F5 / OAuth redirect)
-  const handleSplashDone = useCallback(async () => {
-    const pw = sessionStorage.getItem(SESSION_PW_KEY)
-    const salt = getSalt()
-    if (pw && salt) {
-      try {
-        await unlock(pw, salt)
-        setScreen('app')
-        resetIdle()
-        return
-      } catch {
-        sessionStorage.removeItem(SESSION_PW_KEY)
-      }
-    }
-    setScreen('unlock')
-  }, [resetIdle])
-
-  if (screen === 'splash') return <SplashScreen onDone={handleSplashDone} />
+  if (screen === 'splash') return <SplashScreen onDone={() => setScreen('unlock')} />
   if (screen === 'unlock') return <UnlockForm onUnlocked={enterApp} />
   return <AppShell onLogout={doLock} />
 }
