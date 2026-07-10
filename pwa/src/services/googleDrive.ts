@@ -1,5 +1,6 @@
 import { Capacitor } from '@capacitor/core'
 import { Browser } from '@capacitor/browser'
+import { App } from '@capacitor/app'
 
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata'
 const FILE_NAME = 'myspace-backup.json'
@@ -90,11 +91,11 @@ function authorizeWeb(url: string): Promise<string> {
 
 function authorizeNative(url: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    Browser.open({ url, windowName: '_self' })
-
-    const listener = (event: { url: string }) => {
+    // App.addListener('appUrlOpen') catches the deep link when Google redirects to com.myspace.app:/oauth-callback
+    App.addListener('appUrlOpen', (event: { url: string }) => {
       if (!event.url.startsWith('com.myspace.app:/oauth-callback')) return
-      Browser.removeAllListeners()
+      App.removeAllListeners()
+      Browser.close()
       const hash = new URLSearchParams(event.url.split('#')[1] ?? '')
       const token = hash.get('access_token')
       const state = hash.get('state')
@@ -105,9 +106,9 @@ function authorizeNative(url: string): Promise<string> {
       sessionStorage.setItem('drive_token', token)
       sessionStorage.removeItem('oauth_state')
       resolve(token)
-    }
+    })
 
-    Browser.addListener('browserFinishedNavigation', listener as never)
+    Browser.open({ url })
   })
 }
 
