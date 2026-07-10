@@ -14,7 +14,6 @@ interface MapPin { id: string; stack_id: string; label: string; lat: number; lng
 
 const COLORS = ['#34d399','#818cf8','#f59e0b','#f87171','#60a5fa','#a78bfa','#fb923c']
 const PRIORITIES = ['none','low','medium','high']
-const PRIORITY_COLOR: Record<string, string> = { none: '#94a3b8', low: '#60a5fa', medium: '#f59e0b', high: '#ef4444' }
 
 const accent = ACCENT.maps
 

@@ -69,6 +69,7 @@ export default function VaultView() {
             [editLabel, editTags, editUrl, editDesc, editing.id])
         }
       } else {
+        if (!editValue.trim()) { setSaving(false); return }
         const { ciphertext, iv } = await encrypt(editValue)
         await db.query('INSERT INTO secrets (label,ciphertext,iv,tags,url,description) VALUES ($1,$2,$3,$4,$5,$6)',
           [editLabel, ciphertext, iv, editTags, editUrl, editDesc])
@@ -91,10 +92,12 @@ export default function VaultView() {
   }
 
   async function deleteSecret(id: string) {
-    const db = await getDb()
-    await db.query('DELETE FROM secrets WHERE id=$1', [id])
-    if (revealId === id) { setRevealId(null); setRevealValue('') }
-    await load()
+    try {
+      const db = await getDb()
+      await db.query('DELETE FROM secrets WHERE id=$1', [id])
+      if (revealId === id) { setRevealId(null); setRevealValue('') }
+      await load()
+    } catch (e) { console.error('[vault] deleteSecret failed:', e) }
   }
 
   return (

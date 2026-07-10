@@ -22,6 +22,7 @@ export default function SyncView() {
   const [msg, setMsg] = useState('')
   const [syncPw, setSyncPw] = useState('')
   const [showPw, setShowPw] = useState(false)
+  const [connected, setConnected] = useState(() => !!sessionStorage.getItem('drive_token'))
 
   async function getToken(): Promise<string | null> {
     return sessionStorage.getItem('drive_token')
@@ -65,6 +66,7 @@ export default function SyncView() {
       const payload = JSON.stringify({ ciphertext, iv, salt: Array.from(salt) })
 
       const listRes = await fetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${FILE_NAME}'`, { headers: { Authorization: `Bearer ${token}` } })
+      if (!listRes.ok) throw new Error(`Drive list failed: ${listRes.status}`)
       const list = await listRes.json() as { files?: { id: string }[] }
       const existingId = list.files?.[0]?.id
 
@@ -79,7 +81,8 @@ export default function SyncView() {
         : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart'
       const method = existingId ? 'PATCH' : 'POST'
 
-      await fetch(url, { method, headers: { Authorization: `Bearer ${token}` }, body: form })
+      const uploadRes = await fetch(url, { method, headers: { Authorization: `Bearer ${token}` }, body: form })
+      if (!uploadRes.ok) throw new Error(`Drive upload failed: ${uploadRes.status}`)
       setMsg('Pushed to Drive ✓'); setStatus('ok')
     } catch (e) { setMsg(String(e)); setStatus('error') }
   }
@@ -91,11 +94,13 @@ export default function SyncView() {
     setStatus('busy'); setMsg('Pulling…')
     try {
       const listRes = await fetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${FILE_NAME}'`, { headers: { Authorization: `Bearer ${token}` } })
+      if (!listRes.ok) throw new Error(`Drive list failed: ${listRes.status}`)
       const list = await listRes.json() as { files?: { id: string }[] }
       const fileId = list.files?.[0]?.id
       if (!fileId) { setMsg('No backup found on Drive'); setStatus('error'); return }
 
       const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, { headers: { Authorization: `Bearer ${token}` } })
+      if (!fileRes.ok) throw new Error(`Drive download failed: ${fileRes.status}`)
       const payload = await fileRes.json() as { ciphertext: string; iv: string; salt: number[] }
       const salt = Uint8Array.from(payload.salt)
       const key = await deriveKey(syncPw, salt)
@@ -130,9 +135,9 @@ export default function SyncView() {
             <div style={{ padding: 20 }}>
               <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 700, fontSize: 16, color: '#1a1a2e', marginBottom: 8 }}>Connection</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: sessionStorage.getItem('drive_token') ? '#34d399' : '#94a3b8' }} />
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: connected ? '#34d399' : '#94a3b8' }} />
                 <span style={{ fontFamily: 'Satoshi, sans-serif', fontSize: 13, color: '#4a4a6a' }}>
-                  {sessionStorage.getItem('drive_token') ? 'Google Drive connected' : 'Not connected'}
+                  {connected ? 'Google Drive connected' : 'Not connected'}
                 </span>
               </div>
               <PillButton onClick={authorize} accent={accent} style={{ width: '100%', justifyContent: 'center' }}>

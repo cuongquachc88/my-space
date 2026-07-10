@@ -126,7 +126,7 @@ export default function NotesView() {
               {allTags.length === 0 && <div style={{ fontSize: 13, color: '#4a4a6a', fontFamily: 'Satoshi, sans-serif' }}>No tags yet</div>}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {allTags.map(tag => (
-                  <button key={tag} onClick={() => { setActiveTag(activeTag === tag ? null : tag); load(query, activeTag === tag ? null : tag) }}
+                  <button key={tag} onClick={() => { const next = activeTag === tag ? null : tag; setActiveTag(next); setSelected(null); load(query, next) }}
                     style={{ padding: '4px 10px', borderRadius: 100, border: 'none', cursor: 'pointer', fontSize: 12, fontFamily: 'Satoshi, sans-serif',
                       background: activeTag === tag ? accent : `${accent}18`, color: activeTag === tag ? 'white' : accent }}>
                     #{tag}
