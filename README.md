@@ -32,6 +32,19 @@
 
 ```
 my-space/
+├── pwa/                  PWA + Capacitor mobile app (main codebase)
+│   ├── src/
+│   │   ├── app/          AppShell, NavRail, NavPill, views (mobile + desktop)
+│   │   ├── crypto/       AES-GCM-256 + PBKDF2 encryption
+│   │   ├── db/           PGlite WASM PostgreSQL (offline-first)
+│   │   ├── design/       Glass UI components, icons, tokens
+│   │   ├── lib/          Password gen, billing, markdown, currency
+│   │   └── services/     Google Drive sync service
+│   ├── public/           Static assets (favicon, oauth-callback.html)
+│   ├── ios/              Xcode project (Capacitor)
+│   ├── android/          Android Studio project (Capacitor)
+│   └── tests/            Unit tests (Vitest) + E2E (Playwright)
+│
 ├── chrome-extension/     Chrome MV3 side panel extension
 │   ├── src/
 │   │   ├── sidepanel/    React UI (9 views + 6 components)
@@ -44,22 +57,83 @@ my-space/
 │   ├── scripts/          Version bump script
 │   └── output/           Packed .zip files (gitignored)
 │
-├── android/              Android app (Kotlin + Jetpack Compose)
-│   └── app/src/main/
-│       ├── java/com/myspace/app/
-│       │   ├── crypto/   Android Keystore AES-GCM
-│       │   ├── data/     Room database (8 entities, 6 migrations)
-│       │   ├── sync/     Google Drive REST sync
-│       │   ├── util/     Billing calculations, currency conversion
-│       │   └── ui/       Jetpack Compose screens + theme
-│       └── res/
-│
 └── docs/                 GitHub Pages landing page
-    ├── index.html        Landing page with 8 feature cards
-    ├── developer-guide.md
-    ├── privacy-policy.md
-    └── terms-of-service.md
+    ├── index.html        Landing page
+    ├── privacy-policy.html
+    └── terms-of-service.html
 ```
+
+---
+
+## PWA + Mobile App (`/pwa`)
+
+The primary codebase — a React PWA that runs in the browser and is packaged as a native iOS/Android app via Capacitor.
+
+### Prerequisites
+- Node.js 18+
+- For iOS: macOS + Xcode + CocoaPods
+- For Android: Android Studio + Android SDK + JDK 17
+
+### Setup
+
+```bash
+cd pwa
+npm install
+cp .env.example .env.local
+# Edit .env.local — set VITE_GOOGLE_CLIENT_ID (required for Google Drive sync)
+```
+
+### Development
+
+```bash
+npm run dev          # Vite dev server at http://localhost:5173
+npm run build        # Production build → dist/
+npm run preview      # Serve dist/ locally
+```
+
+### Testing
+
+```bash
+npm test             # Unit tests (Vitest) — 125 tests
+npm run test:watch   # Watch mode
+npm run test:coverage # Coverage report
+npm run test:e2e     # E2E tests (Playwright)
+```
+
+### Deploy to Cloudflare Pages
+
+```
+Root directory:        pwa
+Build command:         npm run build
+Build output directory: dist
+Environment variables: VITE_GOOGLE_CLIENT_ID=<your-client-id>
+```
+
+### Mobile (Capacitor)
+
+```bash
+npm run cap:sync     # Build PWA + sync to iOS/Android
+npm run cap:ios      # Open Xcode
+npm run cap:android  # Open Android Studio
+```
+
+**App ID:** `com.myspace.app`
+
+**OAuth Deep Link:** `com.myspace.app:/oauth-callback`
+
+### Architecture
+
+| Layer | Technology |
+|---|---|
+| UI | React 19 + inline styles (glassmorphism) |
+| Database | PGlite (PostgreSQL in WASM) → IndexedDB |
+| Crypto | Web Crypto API — AES-GCM-256, PBKDF2 600k iterations |
+| Mobile | Capacitor 7 (iOS + Android) |
+| Sync | Google Drive REST API (`drive.appdata` scope) |
+| Build | Vite 6 + TypeScript + Tailwind 4 |
+| PWA | vite-plugin-pwa + Workbox (15MB cache) |
+
+**Desktop vs Mobile:** At ≥640px, each view renders a completely separate desktop dashboard component with sidebar navigation. Mobile keeps the bottom nav + bottom sheet layout.
 
 ---
 
