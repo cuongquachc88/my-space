@@ -59,10 +59,37 @@ export async function authorize(): Promise<string> {
 }
 
 function authorizeWeb(url: string): Promise<string> {
-  // Full redirect flow — simpler and more reliable than popup
-  window.location.href = url
-  // Promise never resolves here; app reloads after redirect
-  return new Promise(() => {})
+  return new Promise((resolve, reject) => {
+    const storedState = localStorage.getItem('oauth_state')
+
+    const popup = window.open(url, 'google-auth', 'width=520,height=620,left=200,top=100')
+    if (!popup) { reject(new Error('Popup blocked — allow popups for this site')); return }
+
+    const handler = (e: MessageEvent) => {
+      if (e.origin !== location.origin) return
+      if (e.data?.type === 'OAUTH_TOKEN') {
+        clearInterval(poll)
+        window.removeEventListener('message', handler)
+        if (!storedState || storedState !== e.data.state) { reject(new Error('State mismatch')); return }
+        localStorage.setItem('drive_token', e.data.token)
+        localStorage.removeItem('oauth_state')
+        resolve(e.data.token)
+      } else if (e.data?.type === 'OAUTH_ERROR') {
+        clearInterval(poll)
+        window.removeEventListener('message', handler)
+        reject(new Error(`OAuth error: ${e.data.error}`))
+      }
+    }
+    window.addEventListener('message', handler)
+
+    const poll = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(poll)
+        window.removeEventListener('message', handler)
+        reject(new Error('Authorization cancelled'))
+      }
+    }, 500)
+  })
 }
 
 function authorizeNative(url: string): Promise<string> {

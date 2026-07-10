@@ -14,26 +14,27 @@
       const state = hash.get('state') || params.get('state')
       const error = hash.get('error') || params.get('error')
 
-      if (error) {
-        localStorage.setItem('oauth_error', error)
+      if (!window.opener) {
+        // Opened directly (not as popup) — just go home
         window.location.href = '/'
+        return
+      }
+
+      if (error) {
+        window.opener.postMessage({ type: 'OAUTH_ERROR', error }, window.location.origin)
+        window.close()
         return
       }
 
       if (token && state) {
-        const storedState = localStorage.getItem('oauth_state')
-        if (!storedState || storedState !== state) {
-          localStorage.setItem('oauth_error', 'state_mismatch')
-          window.location.href = '/'
-          return
-        }
-        localStorage.setItem('drive_token', token)
-        localStorage.removeItem('oauth_state')
-        window.location.href = '/'
+        // Send token+state to parent for validation — parent holds oauth_state
+        window.opener.postMessage({ type: 'OAUTH_TOKEN', token, state }, window.location.origin)
+        window.close()
         return
       }
 
-      window.location.href = '/'
+      window.opener.postMessage({ type: 'OAUTH_ERROR', error: 'no_token' }, window.location.origin)
+      window.close()
     })()
   </script>
 </body>
