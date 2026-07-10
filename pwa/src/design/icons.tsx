@@ -66,7 +66,7 @@ export function IconSubs({ size = 24, accent = '#34d399', filled = false, classN
     <Icon size={size} className={className}>
       {filled && <rect x="2" y="7" width="20" height="14" rx="2" fill={accent} fillOpacity="0.25" stroke="none" />}
       <rect x="2" y="7" width="20" height="14" rx="2" />
-      <rect x="2" y="7" width="20" height="5" rx="2" fill={accent} fillOpacity={filled ? "0.4" : "0"} stroke="none" />
+      {filled && <rect x="2" y="7" width="20" height="5" rx="2" fill={accent} fillOpacity="0.35" stroke="none" />}
       <rect x="2" y="7" width="20" height="5" rx="2" />
       {/* wifi arc bottom right */}
       <path d="M17 17 Q18.5 15.5 20 17" strokeWidth="1.5" />
@@ -90,7 +90,7 @@ export function IconGen({ size = 24, accent = '#a78bfa', filled = false, classNa
       {filled && <polygon points="12,3 14.5,8 20,8 15.5,12 17.5,18 12,14.5 6.5,18 8.5,12 4,8 9.5,8" fill={accent} fillOpacity="0.25" stroke="none" />}
       <polygon points="12,3 14.5,8 20,8 15.5,12 17.5,18 12,14.5 6.5,18 8.5,12 4,8 9.5,8" />
       {/* center hexagon */}
-      <polygon points="12,9 13.5,10.5 13.5,12.5 12,14 10.5,12.5 10.5,10.5" fill={accent} fillOpacity="0.4" stroke="none" />
+      {filled && <polygon points="12,9 13.5,10.5 13.5,12.5 12,14 10.5,12.5 10.5,10.5" fill={accent} fillOpacity="0.4" stroke="none" />}
     </Icon>
   )
 }
@@ -116,7 +116,7 @@ export function IconReports({ size = 24, accent = '#f472b6', filled = false, cla
 export function IconSync({ size = 24, accent = '#3b82f6', filled = false, className }: IconProps) {
   return (
     <Icon size={size} className={className}>
-      {filled && <path d="M17 4 C20 7 20 17 12 18 C8 18 5 15 4 12" fill={accent} fillOpacity="0.15" stroke="none" />}
+      {filled && <path d="M17 4 C20 7 20 17 12 18 C8 18 5 15 4 12" fill={accent} fillOpacity="0.25" stroke="none" />}
       <path d="M21 2 L17 4 L21 8" />
       <path d="M17 4 C20 7 20 17 12 18 C8 18 5 15 4 12" />
       <path d="M3 22 L7 20 L3 16" />
@@ -128,7 +128,7 @@ export function IconSync({ size = 24, accent = '#3b82f6', filled = false, classN
 export function IconSettings({ size = 24, accent = '#94a3b8', filled = false, className }: IconProps) {
   return (
     <Icon size={size} className={className}>
-      {filled && <circle cx="12" cy="12" r="3" fill={accent} fillOpacity="0.35" stroke="none" />}
+      {filled && <circle cx="12" cy="12" r="3" fill={accent} fillOpacity="0.28" stroke="none" />}
       <circle cx="12" cy="12" r="3" />
       <path d="M12 2 L12 5 M12 19 L12 22 M2 12 L5 12 M19 12 L22 12 M4.9 4.9 L7 7 M17 17 L19.1 19.1 M19.1 4.9 L17 7 M7 17 L4.9 19.1" strokeWidth="1.5" />
     </Icon>
@@ -150,10 +150,10 @@ export function IconAppShield({ size = 24, accent = 'white', className }: IconPr
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
       <path d="M12 2 L20 6 L20 13 C20 17 16 20 12 22 C8 20 4 17 4 13 L4 6 Z"
-        fill="rgba(255,255,255,0.25)" stroke="white" strokeWidth="2" strokeLinejoin="round" />
+        fill={accent ? `${accent}40` : 'rgba(124,106,247,0.25)'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       {/* 3x3 dot grid */}
       {[8,12,16].flatMap(x => [8,12,16].map(y => (
-        <circle key={`${x}-${y}`} cx={x} cy={y} r="1" fill="white" />
+        <circle key={`${x}-${y}`} cx={x} cy={y} r="1" fill="currentColor" />
       )))}
     </svg>
   )
