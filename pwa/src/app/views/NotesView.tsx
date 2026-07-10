@@ -119,18 +119,19 @@ export default function NotesView() {
           <GlassCard>
             <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
 
-              {/* Tags row above search */}
-              {allTags.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {allTags.map(tag => (
+              {/* Tags row — always visible for filtering */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, minHeight: 28, alignItems: 'center' }}>
+                {allTags.length === 0
+                  ? <span style={{ fontSize: 12, color: '#8e8e93', fontFamily: 'Inter, sans-serif' }}>No tags yet — add tags when editing a note</span>
+                  : allTags.map(tag => (
                     <button key={tag} onClick={() => { const next = activeTag === tag ? null : tag; setActiveTag(next); setSelected(null); load(query, next) }}
                       style={{ padding: '4px 10px', borderRadius: 100, border: 'none', cursor: 'pointer', fontSize: 12, fontFamily: 'Inter, sans-serif',
                         background: activeTag === tag ? accent : `${accent}18`, color: activeTag === tag ? 'white' : accent }}>
                       #{tag}
                     </button>
-                  ))}
-                </div>
-              )}
+                  ))
+                }
+              </div>
 
               <GlassInput value={query} onChange={search} placeholder="Search notes…" />
 

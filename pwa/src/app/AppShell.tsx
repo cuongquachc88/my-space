@@ -35,24 +35,23 @@ export default function AppShell({ onLogout }: Props) {
       }}
         className="sm:ml-14"
       >
-        {/* Mobile hero — edge-to-edge, concave ears at bottom */}
-        <div className="mobile-hero" style={{ position: 'relative' }}>
+        {/* Mobile hero — edge-to-edge */}
+        <div className="mobile-hero">
           <div style={{
-            background: 'linear-gradient(160deg, #7c6af7 0%, #6d5ce7 50%, #5b4fcf 100%)',
-            padding: '24px 20px 36px',
-            position: 'relative',
-            overflow: 'visible',
+            background: 'linear-gradient(145deg, #6d5ce7 0%, #7c6af7 50%, #3b82f6 100%)',
+            padding: '20px 20px 24px',
+            borderBottomLeftRadius: 28,
+            borderBottomRightRadius: 28,
+            overflow: 'hidden',
             boxShadow: '0 8px 32px rgba(124,106,247,0.3)',
+            position: 'relative',
           }}>
-            {/* Decorative orbs inside banner */}
-            <div style={{ position: 'absolute', top: -30, right: -20, width: 110, height: 110, borderRadius: '50%', background: 'rgba(255,255,255,0.07)', pointerEvents: 'none' }} />
-            <div style={{ position: 'absolute', top: 10, left: -20, width: 70, height: 70, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', pointerEvents: 'none' }} />
-
+            <div style={{ position: 'absolute', top: -20, right: -10, width: 100, height: 100, borderRadius: '50%', background: 'rgba(255,255,255,0.07)', pointerEvents: 'none' }} />
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{
                   width: 36, height: 36, borderRadius: 10,
-                  background: 'linear-gradient(135deg,rgba(255,255,255,0.25),rgba(255,255,255,0.1))',
+                  background: 'rgba(255,255,255,0.2)',
                   border: '1px solid rgba(255,255,255,0.3)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                 }}>
@@ -60,28 +59,17 @@ export default function AppShell({ onLogout }: Props) {
                 </div>
                 <div>
                   <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 800, fontSize: 17, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.1 }}>My SPACE</div>
-                  <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 10, color: 'rgba(255,255,255,0.6)', marginTop: 1 }}>Offline · Encrypted · Private</div>
+                  <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 10, color: 'rgba(255,255,255,0.65)', marginTop: 2 }}>Offline · Encrypted · Private</div>
                 </div>
               </div>
-              {/* Secure pill with drawn lock */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.28)', borderRadius: 100, padding: '5px 12px' }}>
-                <svg width="12" height="14" viewBox="0 0 12 14" fill="none">
-                  <rect x="1" y="6" width="10" height="8" rx="2" fill="rgba(255,255,255,0.9)" />
-                  <path d="M3 6 V4 C3 2.3 4.3 1 6 1 C7.7 1 9 2.3 9 4 V6" stroke="rgba(255,255,255,0.9)" strokeWidth="1.6" strokeLinecap="round" fill="none" />
-                  <circle cx="6" cy="10" r="1.2" fill="rgba(124,106,247,0.7)" />
+                <svg width="11" height="13" viewBox="0 0 11 13" fill="none">
+                  <rect x="1" y="5.5" width="9" height="7" rx="1.5" fill="rgba(255,255,255,0.9)" />
+                  <path d="M2.5 5.5 V3.5 C2.5 2.1 3.6 1 5 1 C6.4 1 7.5 2.1 7.5 3.5 V5.5" stroke="rgba(255,255,255,0.9)" strokeWidth="1.5" strokeLinecap="round" fill="none" />
                 </svg>
                 <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 10, color: '#fff', fontWeight: 600 }}>Secure</span>
               </div>
             </div>
-          </div>
-
-          {/* Concave ear corners — page-colored circles sitting on bottom corners */}
-          <div style={{ position: 'relative', height: 28, overflow: 'hidden', pointerEvents: 'none' }}>
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(160deg, #7c6af7 0%, #6d5ce7 50%, #5b4fcf 100%)' }} />
-            {/* Left ear */}
-            <div style={{ position: 'absolute', left: -28, bottom: 0, width: 56, height: 56, borderRadius: '50%', background: '#c9d6ff' }} />
-            {/* Right ear */}
-            <div style={{ position: 'absolute', right: -28, bottom: 0, width: 56, height: 56, borderRadius: '50%', background: '#c9d6ff' }} />
           </div>
         </div>
 
