@@ -59,28 +59,58 @@ export async function authorize(): Promise<string> {
 
 function authorizeWeb(url: string): Promise<string> {
   return new Promise((resolve, reject) => {
+    const storedState = sessionStorage.getItem('oauth_state')
+
+    // Check if a pending token landed via redirect flow (no popup)
+    const pending = localStorage.getItem('oauth_pending')
+    if (pending) {
+      try {
+        const { token, state, ts } = JSON.parse(pending) as { token: string; state: string; ts: number }
+        localStorage.removeItem('oauth_pending')
+        if (Date.now() - ts > 5 * 60 * 1000) { reject(new Error('OAuth response expired')); return }
+        if (!storedState || storedState !== state) { reject(new Error('State mismatch')); return }
+        sessionStorage.setItem('drive_token', token)
+        sessionStorage.removeItem('oauth_state')
+        resolve(token)
+        return
+      } catch { localStorage.removeItem('oauth_pending') }
+    }
+
     const popup = window.open(url, 'google-auth', 'width=520,height=620,left=200,top=100')
-    if (!popup) { reject(new Error('Popup blocked — allow popups for this site')); return }
+    if (!popup) {
+      // Popup blocked — fall back to redirect
+      window.location.href = url
+      return
+    }
 
     const handler = (e: MessageEvent) => {
       if (e.origin !== location.origin) return
       if (e.data?.type === 'OAUTH_TOKEN') {
         window.removeEventListener('message', handler)
+        clearInterval(poll)
+        // Validate state in parent window (state lives here, not in popup)
+        if (!storedState || storedState !== e.data.state) {
+          reject(new Error('State mismatch'))
+          return
+        }
         sessionStorage.setItem('drive_token', e.data.token)
         sessionStorage.removeItem('oauth_state')
         resolve(e.data.token)
       } else if (e.data?.type === 'OAUTH_ERROR') {
         window.removeEventListener('message', handler)
+        clearInterval(poll)
         reject(new Error(`OAuth error: ${e.data.error}`))
       }
     }
     window.addEventListener('message', handler)
 
-    // fallback: poll if popup closed without postMessage
     const poll = setInterval(() => {
       if (popup.closed) {
         clearInterval(poll)
         window.removeEventListener('message', handler)
+        // Check if redirect flow landed while popup was open
+        const p = localStorage.getItem('oauth_pending')
+        if (p) { try { const { token, state } = JSON.parse(p); localStorage.removeItem('oauth_pending'); if (storedState && storedState === state) { sessionStorage.setItem('drive_token', token); sessionStorage.removeItem('oauth_state'); resolve(token); return } } catch { localStorage.removeItem('oauth_pending') } }
         const token = sessionStorage.getItem('drive_token')
         if (token) resolve(token)
         else reject(new Error('Authorization cancelled'))

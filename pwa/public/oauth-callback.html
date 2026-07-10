@@ -19,30 +19,26 @@
           window.opener.postMessage({ type: 'OAUTH_ERROR', error }, window.location.origin)
           window.close()
         } else {
-          sessionStorage.setItem('oauth_error', error)
+          window.location.href = '/?oauth_error=' + encodeURIComponent(error)
+        }
+        return
+      }
+
+      if (token && state) {
+        if (window.opener) {
+          // Popup flow: send token+state to parent for validation, parent closes us
+          window.opener.postMessage({ type: 'OAUTH_TOKEN', token, state }, window.location.origin)
+          window.close()
+        } else {
+          // Redirect flow (no popup): store in localStorage so main app can pick it up
+          localStorage.setItem('oauth_pending', JSON.stringify({ token, state, ts: Date.now() }))
           window.location.href = '/'
         }
         return
       }
 
-      if (token) {
-        const stored = sessionStorage.getItem('oauth_state')
-        // Fail closed: reject if no in-progress auth OR state mismatch
-        if (!stored || stored !== state) {
-          const msg = { type: 'OAUTH_ERROR', error: 'state_mismatch' }
-          if (window.opener) { window.opener.postMessage(msg, window.location.origin); window.close() }
-          else { window.location.href = '/' }
-          return
-        }
-        // Only accept token via postMessage to popup — direct navigation is unexpected
-        if (window.opener) {
-          window.opener.postMessage({ type: 'OAUTH_TOKEN', token }, window.location.origin)
-          window.close()
-        } else {
-          // No opener means this wasn't opened by our popup flow — reject
-          window.location.href = '/'
-        }
-      }
+      // No token and no error — likely landed here directly, go home
+      window.location.href = '/'
     })()
   </script>
 </body>
