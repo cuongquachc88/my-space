@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getDb } from '../../db'
-import { deriveKey, encryptWithKey, decryptWithKey, getKey } from '../../crypto'
+import { deriveKey, encryptWithKey, decryptWithKey } from '../../crypto'
 import { ACCENT } from '../../design/tokens'
 import ViewHeader from '../ViewHeader'
 import { IconSync } from '../../design/icons'
@@ -107,14 +107,6 @@ export function useSyncLogic() {
     const token = getStoredToken()
     if (!token) { log('Not connected — click Connect first', 'error'); setStatus('error'); return }
 
-    // Vault must be unlocked so we can re-encrypt secrets under the local key
-    let localKey: CryptoKey
-    try {
-      localKey = getKey()
-    } catch {
-      log('Unlock your vault before syncing', 'error'); setStatus('error'); return
-    }
-
     setStatus('busy'); log('Searching Drive for backup…')
     try {
       const fileId = await findFile(token)
@@ -131,11 +123,14 @@ export function useSyncLogic() {
       const plaintext = await decryptWithKey(payload.ciphertext, payload.iv, backupKey)
       const data = JSON.parse(plaintext) as Record<string, unknown[]>
 
-      // Detect same-device pull: if salts match, backupKey == localKey — skip re-encryption
+      // Derive local key from the typed password + local salt — no unlock required
       const localSaltB64 = localStorage.getItem('myspace_vault_salt')
-      const localSalt = localSaltB64 ? Uint8Array.from(atob(localSaltB64), c => c.charCodeAt(0)) : null
-      // When localSalt is null (fresh install), treat as cross-device — getKey() already validated the vault key is live
-      const sameSalt = localSalt && backupSalt.length === localSalt.length &&
+      if (!localSaltB64) { throw new Error('Vault not initialised on this device — unlock first to set a password') }
+      const localSalt = Uint8Array.from(atob(localSaltB64), c => c.charCodeAt(0))
+      const localKey = await deriveKey(syncPw, localSalt)
+
+      // Same-device pull: if salts match, backupKey == localKey — skip per-secret re-encryption
+      const sameSalt = backupSalt.length === localSalt.length &&
         backupSalt.every((b, i) => b === localSalt[i])
 
       log('Merging…')
