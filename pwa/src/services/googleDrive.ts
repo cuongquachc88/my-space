@@ -3,7 +3,7 @@ import { Browser } from '@capacitor/browser'
 import { App } from '@capacitor/app'
 
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata'
-const FILE_NAME = 'myspace-backup.json'
+const FILE_NAME = 'keyvault-backup.json'
 
 // On web: proxy endpoint keeps client_secret server-side (Cloudflare Pages Function).
 // On native (Capacitor): call Google directly — mobile OAuth clients are public clients.
