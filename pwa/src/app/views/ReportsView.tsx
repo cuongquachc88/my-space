@@ -78,7 +78,6 @@ export default function ReportsView() {
   })
 
   const maxVal = Math.max(...months.map(m => Math.max(m.expectedUSD, m.actualUSD)), 1)
-  const curMonthData = months[months.length - 1]
   const expectedTotal = subs.reduce((acc, s) => acc + expectedMonthlyUSD(s, curYear, curMonth), 0)
   const actualTotal = bills.filter(b => b.year === curYear && b.month === curMonth).reduce((acc, b) => acc + toUSD(parseFloat(b.amount), b.currency), 0)
   const delta = actualTotal - expectedTotal

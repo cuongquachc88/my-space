@@ -53,7 +53,7 @@ export default function GeneratorView() {
             <div style={{ padding: 32, textAlign: 'center' }}>
               {password ? (
                 <>
-                  <div style={{ fontFamily: 'Satoshi, sans-serif', fontWeight: 700, fontSize: 22, letterSpacing: '0.05em', color: '#1a1a2e', wordBreak: 'break-all', background: `${accent}10`, borderRadius: 12, padding: '16px 24px', userSelect: 'all' }}>
+                  <div style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 22, letterSpacing: '0.05em', color: '#1a1a2e', wordBreak: 'break-all', background: `${accent}10`, borderRadius: 12, padding: '16px 24px', userSelect: 'all' }}>
                     {password}
                   </div>
                   <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
