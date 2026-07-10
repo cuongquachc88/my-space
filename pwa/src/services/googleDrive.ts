@@ -64,7 +64,6 @@ function authorizeWeb(url: string): Promise<string> {
   // Promise never resolves here; app reloads after redirect
   return new Promise(() => {})
 }
-}
 
 function authorizeNative(url: string): Promise<string> {
   return new Promise((resolve, reject) => {
