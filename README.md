@@ -94,7 +94,7 @@ npm run preview      # Serve dist/ locally
 ### Testing
 
 ```bash
-npm test             # Unit tests (Vitest) — 125 tests
+npm test             # Unit tests (Vitest) — 132 tests
 npm run test:watch   # Watch mode
 npm run test:coverage # Coverage report
 npm run test:e2e     # E2E tests (Playwright)
@@ -106,8 +106,17 @@ npm run test:e2e     # E2E tests (Playwright)
 Root directory:        pwa
 Build command:         npm run build
 Build output directory: dist
-Environment variables: VITE_GOOGLE_CLIENT_ID=<your-client-id>
 ```
+
+Set these in Cloudflare Dashboard → Pages → Settings → Environment variables:
+
+| Variable | Where to find it |
+|---|---|
+| `VITE_GOOGLE_CLIENT_ID` | Google Cloud Console → Credentials → OAuth client |
+| `GOOGLE_CLIENT_ID` | Same value as above (used by the token exchange Function) |
+| `GOOGLE_CLIENT_SECRET` | Same OAuth client page — mark as **Secret** |
+
+The `GOOGLE_CLIENT_SECRET` is kept server-side in a [Cloudflare Pages Function](pwa/functions/api/token.js) at `/api/token` and is never bundled into the browser JavaScript.
 
 ### Mobile (Capacitor)
 
@@ -129,11 +138,19 @@ npm run cap:android  # Open Android Studio
 | Database | PGlite (PostgreSQL in WASM) → IndexedDB |
 | Crypto | Web Crypto API — AES-GCM-256, PBKDF2 600k iterations |
 | Mobile | Capacitor 7 (iOS + Android) |
-| Sync | Google Drive REST API (`drive.appdata` scope) |
+| Sync | Google Drive REST API (`drive.appdata` scope) — PKCE OAuth via Cloudflare proxy |
 | Build | Vite 6 + TypeScript + Tailwind 4 |
 | PWA | vite-plugin-pwa + Workbox (15MB cache) |
 
 **Desktop vs Mobile:** At ≥640px, each view renders a completely separate desktop dashboard component with sidebar navigation. Mobile keeps the bottom nav + bottom sheet layout.
+
+**Google Drive OAuth flow:**
+1. PWA opens a popup → Google consent screen (PKCE `response_type=code`)
+2. Google redirects to `/oauth-callback` → `postMessage` back to parent → popup closes
+3. Parent calls `/api/token` (Cloudflare Pages Function) which holds `client_secret` server-side
+4. Token stored in `localStorage` — app shows Connected without a page reload
+
+**Session management:** The master password is never persisted. The derived `CryptoKey` lives in memory only. Idle for 5 minutes → auto-lock. F5/reload → unlock screen (by design). Only new windows, idle timeout, or manual Lock trigger re-authentication.
 
 ---
 
