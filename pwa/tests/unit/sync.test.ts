@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 
 // We test the re-encryption logic in isolation by extracting the core transform.
 // The full pull() function wires together DB + Drive + crypto; we test the crypto transform here.

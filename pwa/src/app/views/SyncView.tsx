@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getDb } from '../../db'
-import { deriveKey, encryptWithKey, decryptWithKey, encrypt, getKey } from '../../crypto'
+import { deriveKey, encryptWithKey, decryptWithKey, getKey } from '../../crypto'
 import { ACCENT } from '../../design/tokens'
 import ViewHeader from '../ViewHeader'
 import { IconSync } from '../../design/icons'
@@ -134,6 +134,7 @@ export function useSyncLogic() {
       // Detect same-device pull: if salts match, backupKey == localKey — skip re-encryption
       const localSaltB64 = localStorage.getItem('myspace_vault_salt')
       const localSalt = localSaltB64 ? Uint8Array.from(atob(localSaltB64), c => c.charCodeAt(0)) : null
+      // When localSalt is null (fresh install), treat as cross-device — getKey() already validated the vault key is live
       const sameSalt = localSalt && backupSalt.length === localSalt.length &&
         backupSalt.every((b, i) => b === localSalt[i])
 
@@ -195,13 +196,14 @@ export function useSyncLogic() {
       }
 
       if (data.map_pins) {
-        for (const p of data.map_pins as { id: string; stack_id: string; label: string; lat: number; lng: number; url: string; note: string; priority: string; category: string; rating: number; review_note: string }[]) {
+        const pins = data.map_pins as { id: string; stack_id: string; label: string; lat: number; lng: number; url: string; note: string; priority: string; category: string; rating: number; review_note: string }[]
+        for (const p of pins) {
           await db.query(
             'INSERT INTO map_pins (id,stack_id,label,lat,lng,url,note,priority,category,rating,review_note) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ON CONFLICT (id) DO NOTHING',
             [p.id, p.stack_id, p.label, p.lat, p.lng, p.url ?? '', p.note ?? '', p.priority ?? 'none', p.category ?? '', p.rating ?? 0, p.review_note ?? '']
           )
         }
-        log(`Merged ${(data.map_pins as unknown[]).length} pins`)
+        log(`Merged ${pins.length} pins`)
       }
 
       log('Pull complete ✓', 'ok'); setStatus('ok')
