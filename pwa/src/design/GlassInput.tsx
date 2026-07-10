@@ -20,13 +20,13 @@ export default function GlassInput({ value, onChange, placeholder, type = 'text'
       autoFocus={autoFocus}
       className={className}
       style={{
-        background: 'rgba(255,255,255,0.4)',
-        border: '1px solid rgba(255,255,255,0.6)',
+        background: 'var(--glass-bg)',
+        border: '1px solid var(--glass-border)',
         borderRadius: 12,
         padding: '12px 16px',
         fontSize: 15,
         fontFamily: 'Satoshi, sans-serif',
-        color: '#1a1a2e',
+        color: 'var(--text-primary)',
         outline: 'none',
         width: '100%',
         transition: 'border-color 150ms, box-shadow 150ms',

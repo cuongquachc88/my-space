@@ -15,7 +15,7 @@ export default function PillButton({
   children, onClick, variant = 'primary', accent = '#7c6af7',
   className = '', type = 'button', disabled = false,
 }: Props) {
-  const base = 'inline-flex items-center justify-center gap-2 font-semibold transition-all active:scale-95 cursor-pointer border-0 outline-none'
+  const base = 'inline-flex items-center justify-center gap-2 font-semibold transition-all active:scale-[0.96] cursor-pointer border-0 outline-none'
   const radius = 'rounded-full'
   const padding = 'px-6 py-2.5'
   const font = 'text-[15px]'
@@ -31,10 +31,10 @@ export default function PillButton({
     }
   } else if (variant === 'secondary') {
     style = {
-      background: 'rgba(255,255,255,0.45)',
+      background: 'var(--glass-bg)',
       backdropFilter: 'blur(12px)',
-      border: '1px solid rgba(255,255,255,0.6)',
-      color: '#1a1a2e',
+      border: '1px solid var(--glass-border)',
+      color: 'var(--text-primary)',
     }
   } else {
     extraClass = 'text-[#4a4a6a] hover:text-[#1a1a2e]'
