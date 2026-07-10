@@ -1,11 +1,25 @@
-import { PGlite, IdbFs } from '@electric-sql/pglite'
+import { PGlite, IdbFs, MemoryFS } from '@electric-sql/pglite'
 
 let db: PGlite | null = null
+
+// For unit tests — pass a MemoryFS instance to avoid IndexedDB
+export async function resetDb(fs: MemoryFS): Promise<PGlite> {
+  db = null
+  const fresh = new PGlite({ fs })
+  await runSchema(fresh)
+  db = fresh
+  return db
+}
 
 export async function getDb(): Promise<PGlite> {
   if (db) return db
   db = new PGlite({ fs: new IdbFs('my-space-pwa-db') })
-  await db.exec(`
+  await runSchema(db)
+  return db
+}
+
+async function runSchema(instance: PGlite): Promise<void> {
+  await instance.exec(`
     CREATE TABLE IF NOT EXISTS notes (
       id          TEXT PRIMARY KEY DEFAULT gen_random_uuid(),
       title       TEXT NOT NULL,
@@ -95,5 +109,4 @@ export async function getDb(): Promise<PGlite> {
     ALTER TABLE notes         ADD COLUMN IF NOT EXISTS image_data  TEXT NOT NULL DEFAULT '[]';
     ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS active      BOOLEAN NOT NULL DEFAULT true;
   `)
-  return db
 }

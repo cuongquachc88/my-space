@@ -1,15 +1,23 @@
+// pwa/src/app/views/SettingsView.tsx
 import { useState } from 'react'
 import { getDb } from '../../db'
 import { lock } from '../../crypto'
 import DOMPurify from 'dompurify'
+import { ACCENT } from '../../design/tokens'
+import GlassCard from '../../design/GlassCard'
+import PillButton from '../../design/PillButton'
+import { BentoGrid, BentoCell } from '../../design/BentoGrid'
+import ViewHeader from '../ViewHeader'
+import { IconSettings, IconLock } from '../../design/icons'
 
 function sanitizeText(s: unknown): string {
   if (typeof s !== 'string') return ''
-  // Strip any HTML/script tags that could cause stored-XSS when rendered as markdown
   return DOMPurify.sanitize(s, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] })
 }
 
 interface Props { onLogout: () => void }
+
+const accent = ACCENT.settings
 
 export default function SettingsView({ onLogout }: Props) {
   const [exporting, setExporting] = useState(false)
@@ -32,14 +40,9 @@ export default function SettingsView({ onLogout }: Props) {
       ])
       const data = {
         exported_at: new Date().toISOString(),
-        notes: notes.rows,
-        secrets: secrets.rows,
-        subscriptions: subs.rows,
-        todo_lists: todoLists.rows,
-        todo_tasks: tasks.rows,
-        map_stacks: stacks.rows,
-        map_pins: pins.rows,
-        bills: bills.rows,
+        notes: notes.rows, secrets: secrets.rows, subscriptions: subs.rows,
+        todo_lists: todoLists.rows, todo_tasks: tasks.rows,
+        map_stacks: stacks.rows, map_pins: pins.rows, bills: bills.rows,
       }
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
@@ -58,7 +61,6 @@ export default function SettingsView({ onLogout }: Props) {
       const data = JSON.parse(text) as Record<string, unknown[]>
       const db = await getDb()
       let count = 0
-
       if (Array.isArray(data.notes)) {
         for (const n of data.notes as { id: string; title: string; content: string; tags: string[]; image_data: string }[]) {
           await db.query('INSERT INTO notes (id,title,content,tags,image_data) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (id) DO NOTHING',
@@ -88,46 +90,58 @@ export default function SettingsView({ onLogout }: Props) {
   function handleLogout() { lock(); onLogout() }
 
   return (
-    <div className="flex flex-col h-full bg-[#0f2020] p-4">
-      <h1 className="font-bold text-lg mb-6">Settings</h1>
-
-      <div className="flex flex-col gap-3">
-        <Section title="Data">
-          <button onClick={exportData} disabled={exporting} className="w-full text-left px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm hover:bg-white/10 transition-colors disabled:opacity-50">
-            Export all data (JSON)
-          </button>
-          <div className="px-4 py-3 bg-white/5 border border-white/10 rounded-xl">
-            <div className="text-sm mb-2">Import from JSON</div>
-            <input type="file" accept=".json" onChange={e => setImportFile(e.target.files?.[0] ?? null)} className="text-xs text-white/60 mb-2 block" />
-            {importFile && <button onClick={importData} className="text-xs bg-[#b4e645] text-[#0f2020] font-semibold px-4 py-1.5 rounded-full">Import</button>}
-          </div>
-        </Section>
-
-        <Section title="Account">
-          <button onClick={handleLogout} className="w-full text-left px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm text-red-400 hover:bg-red-900/20 transition-colors">
-            Lock vault &amp; return to landing
-          </button>
-        </Section>
-
-        <Section title="About">
-          <div className="px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm text-white/50 space-y-1">
-            <div>My SPACE v1.0.0</div>
-            <div>Privacy-first · No servers · No tracking</div>
-            <div>Data stored in PGlite (WASM Postgres) — offline-first PWA</div>
-          </div>
-        </Section>
-      </div>
-
-      {msg && <div className="mt-4 text-sm text-[#b4e645] bg-[#b4e645]/10 rounded-lg px-4 py-3">{msg}</div>}
-    </div>
-  )
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
     <div>
-      <div className="text-xs text-white/40 font-semibold uppercase tracking-wider mb-2 px-1">{title}</div>
-      <div className="flex flex-col gap-2">{children}</div>
+      <ViewHeader title="Settings" icon={<IconSettings size={22} accent={accent} filled />} accent={accent} />
+      <BentoGrid>
+        <BentoCell span="1">
+          <GlassCard accentBar accent={accent}>
+            <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 700, fontSize: 16, color: '#1a1a2e' }}>Security</div>
+              <button onClick={handleLogout}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 12, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', cursor: 'pointer', width: '100%', textAlign: 'left' }}>
+                <IconLock size={16} accent="#ef4444" filled />
+                <span style={{ fontFamily: 'Satoshi, sans-serif', fontSize: 14, color: '#ef4444', fontWeight: 500 }}>Lock & Sign Out</span>
+              </button>
+              <div style={{ fontFamily: 'Satoshi, sans-serif', fontSize: 12, color: '#94a3b8', lineHeight: 1.5 }}>
+                All data stays on this device. Encrypted with your master password via PBKDF2 + AES-GCM.
+              </div>
+            </div>
+          </GlassCard>
+        </BentoCell>
+
+        <BentoCell span="1">
+          <GlassCard>
+            <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 700, fontSize: 16, color: '#1a1a2e' }}>Data</div>
+              <PillButton onClick={exportData} accent={accent} disabled={exporting} style={{ width: '100%', justifyContent: 'center' }}>
+                {exporting ? 'Exporting…' : 'Export JSON'}
+              </PillButton>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ fontFamily: 'Satoshi, sans-serif', fontSize: 13, color: '#4a4a6a' }}>Import from JSON</div>
+                <input type="file" accept=".json" onChange={e => setImportFile(e.target.files?.[0] ?? null)}
+                  style={{ fontSize: 12, color: '#4a4a6a', fontFamily: 'Satoshi, sans-serif' }} />
+                {importFile && <PillButton onClick={importData} accent={accent}>Import</PillButton>}
+              </div>
+              {msg && <div style={{ fontFamily: 'Satoshi, sans-serif', fontSize: 13, color: '#34d399' }}>{msg}</div>}
+            </div>
+          </GlassCard>
+        </BentoCell>
+
+        <BentoCell span="1">
+          <GlassCard>
+            <div style={{ padding: 20 }}>
+              <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 700, fontSize: 16, color: '#1a1a2e', marginBottom: 12 }}>About</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ fontFamily: 'Satoshi, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e' }}>My SPACE v1.0.0</div>
+                <div style={{ fontFamily: 'Satoshi, sans-serif', fontSize: 13, color: '#4a4a6a' }}>Privacy-first · No servers · No tracking</div>
+                <div style={{ fontFamily: 'Satoshi, sans-serif', fontSize: 12, color: '#94a3b8', lineHeight: 1.5, marginTop: 4 }}>
+                  Data stored in PGlite (WASM Postgres) — offline-first PWA. Works without internet.
+                </div>
+              </div>
+            </div>
+          </GlassCard>
+        </BentoCell>
+      </BentoGrid>
     </div>
   )
 }

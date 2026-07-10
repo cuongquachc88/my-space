@@ -1,11 +1,21 @@
+// pwa/src/app/views/SyncView.tsx
 import { useState } from 'react'
 import { getDb } from '../../db'
 import { deriveKey, encryptWithKey, decryptWithKey } from '../../crypto'
+import { ACCENT } from '../../design/tokens'
+import GlassCard from '../../design/GlassCard'
+import GlassInput from '../../design/GlassInput'
+import PillButton from '../../design/PillButton'
+import { BentoGrid, BentoCell } from '../../design/BentoGrid'
+import ViewHeader from '../ViewHeader'
+import { IconSync } from '../../design/icons'
 
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata'
 const FILE_NAME = 'keyvault-backup.json'
 
 type Status = 'idle' | 'busy' | 'ok' | 'error'
+
+const accent = ACCENT.sync
 
 export default function SyncView() {
   const [status, setStatus] = useState<Status>('idle')
@@ -14,19 +24,15 @@ export default function SyncView() {
   const [showPw, setShowPw] = useState(false)
 
   async function getToken(): Promise<string | null> {
-    // Tokens stored in sessionStorage (cleared on tab close, never persisted to disk)
     return sessionStorage.getItem('drive_token')
   }
 
   async function authorize() {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
     if (!clientId) { setMsg('VITE_GOOGLE_CLIENT_ID not set'); setStatus('error'); return }
-
-    // Generate CSRF state token — verified on callback to prevent OAuth CSRF attacks
     const stateBytes = crypto.getRandomValues(new Uint8Array(16))
     const state = Array.from(stateBytes, b => b.toString(16).padStart(2, '0')).join('')
     sessionStorage.setItem('oauth_state', state)
-
     const params = new URLSearchParams({
       client_id: clientId,
       redirect_uri: location.origin + '/oauth-callback',
@@ -75,9 +81,7 @@ export default function SyncView() {
 
       await fetch(url, { method, headers: { Authorization: `Bearer ${token}` }, body: form })
       setMsg('Pushed to Drive ✓'); setStatus('ok')
-    } catch (e) {
-      setMsg(String(e)); setStatus('error')
-    }
+    } catch (e) { setMsg(String(e)); setStatus('error') }
   }
 
   async function pull() {
@@ -112,51 +116,62 @@ export default function SyncView() {
         }
       }
       setMsg('Pulled from Drive ✓ — data merged'); setStatus('ok')
-    } catch (e) {
-      setMsg(String(e)); setStatus('error')
-    }
+    } catch (e) { setMsg(String(e)); setStatus('error') }
   }
 
+  const statusColor = status === 'error' ? '#ef4444' : status === 'ok' ? '#34d399' : '#4a4a6a'
+
   return (
-    <div className="flex flex-col h-full bg-[#0f2020] p-4">
-      <h1 className="font-bold text-lg mb-6">Google Drive Sync</h1>
+    <div>
+      <ViewHeader title="Sync" icon={<IconSync size={22} accent={accent} filled />} accent={accent} />
+      <BentoGrid>
+        <BentoCell span="1">
+          <GlassCard accentBar accent={accent}>
+            <div style={{ padding: 20 }}>
+              <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 700, fontSize: 16, color: '#1a1a2e', marginBottom: 8 }}>Connection</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: sessionStorage.getItem('drive_token') ? '#34d399' : '#94a3b8' }} />
+                <span style={{ fontFamily: 'Satoshi, sans-serif', fontSize: 13, color: '#4a4a6a' }}>
+                  {sessionStorage.getItem('drive_token') ? 'Google Drive connected' : 'Not connected'}
+                </span>
+              </div>
+              <PillButton onClick={authorize} accent={accent} style={{ width: '100%', justifyContent: 'center' }}>
+                Authorize Google Drive
+              </PillButton>
+              <div style={{ marginTop: 12, fontFamily: 'Satoshi, sans-serif', fontSize: 12, color: '#94a3b8', lineHeight: 1.5 }}>
+                Data is encrypted locally before upload. Use the same sync password on all devices.
+              </div>
+            </div>
+          </GlassCard>
+        </BentoCell>
 
-      <div className="bg-[#152a2a] border border-white/10 rounded-xl p-4 mb-4">
-        <p className="text-sm text-white/60 mb-4">
-          Data is encrypted locally before upload. Use the same sync password on all devices.
-          Compatible with the My SPACE Chrome extension.
-        </p>
-        <div className="flex gap-2 mb-4">
-          <input
-            type={showPw ? 'text' : 'password'}
-            value={syncPw}
-            onChange={e => setSyncPw(e.target.value)}
-            placeholder="Sync password"
-            className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#b4e645]/50"
-          />
-          <button onClick={() => setShowPw(p => !p)} className="text-white/40 hover:text-white px-3 text-sm border border-white/10 rounded-lg">
-            {showPw ? 'Hide' : 'Show'}
-          </button>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={push} disabled={status === 'busy'} className="flex-1 bg-[#b4e645] text-[#0f2020] font-semibold py-2.5 rounded-full text-sm disabled:opacity-50">
-            Push to Drive
-          </button>
-          <button onClick={pull} disabled={status === 'busy'} className="flex-1 border border-[#b4e645]/40 text-[#b4e645] font-semibold py-2.5 rounded-full text-sm disabled:opacity-50">
-            Pull from Drive
-          </button>
-        </div>
-      </div>
-
-      {msg && (
-        <div className={`rounded-xl px-4 py-3 text-sm ${status === 'error' ? 'bg-red-900/30 text-red-300' : status === 'ok' ? 'bg-green-900/30 text-green-300' : 'bg-white/5 text-white/60'}`}>
-          {msg}
-        </div>
-      )}
-
-      <button onClick={authorize} className="mt-4 text-sm text-white/40 hover:text-white underline text-left">
-        Authorize Google Drive access
-      </button>
+        <BentoCell span="2">
+          <GlassCard style={{ height: '100%' }}>
+            <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 700, fontSize: 16, color: '#1a1a2e' }}>Backup & Restore</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ flex: 1 }}>
+                  <GlassInput value={syncPw} onChange={setSyncPw} placeholder="Sync password" type={showPw ? 'text' : 'password'} />
+                </div>
+                <PillButton variant="secondary" onClick={() => setShowPw(p => !p)}>{showPw ? 'Hide' : 'Show'}</PillButton>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <PillButton onClick={push} accent={accent} disabled={status === 'busy'} style={{ flex: 1, justifyContent: 'center' }}>
+                  Push to Drive
+                </PillButton>
+                <PillButton variant="secondary" onClick={pull} accent={accent} disabled={status === 'busy'} style={{ flex: 1, justifyContent: 'center' }}>
+                  Pull from Drive
+                </PillButton>
+              </div>
+              {msg && (
+                <div style={{ padding: '10px 14px', borderRadius: 10, background: status === 'error' ? 'rgba(239,68,68,0.1)' : status === 'ok' ? 'rgba(52,211,153,0.1)' : 'rgba(255,255,255,0.3)', fontFamily: 'Satoshi, sans-serif', fontSize: 13, color: statusColor }}>
+                  {msg}
+                </div>
+              )}
+            </div>
+          </GlassCard>
+        </BentoCell>
+      </BentoGrid>
     </div>
   )
 }
