@@ -52,12 +52,9 @@ async function makeCodeChallenge(verifier: string): Promise<string> {
 }
 
 function makeAuthUrl(state: string, codeChallenge: string): string {
-  const clientId = getClientId()
-  const redirectUri = getRedirectUri()
-  console.log('[OAuth] isNative:', Capacitor.isNativePlatform(), 'client:', clientId.slice(0, 30), 'redirect:', redirectUri)
   const params = new URLSearchParams({
-    client_id: clientId,
-    redirect_uri: redirectUri,
+    client_id: getClientId(),
+    redirect_uri: getRedirectUri(),
     response_type: 'code',
     scope: DRIVE_SCOPE,
     state,

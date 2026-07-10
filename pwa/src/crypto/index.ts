@@ -3,6 +3,9 @@ let _key: CryptoKey | null = null
 export const isLocked = () => _key === null
 export const getKey = () => { if (!_key) throw new Error('Vault locked'); return _key }
 
+const VERIFY_KEY = 'myspace_vault_verify'
+const VERIFY_PLAIN = 'myspace-ok'
+
 export async function deriveKey(password: string, salt: Uint8Array): Promise<CryptoKey> {
   const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey'])
   return crypto.subtle.deriveKey(
@@ -14,8 +17,27 @@ export async function deriveKey(password: string, salt: Uint8Array): Promise<Cry
   )
 }
 
+// Store an encrypted verification token after first successful setup
+export async function saveVerifyToken(key: CryptoKey): Promise<void> {
+  const iv = crypto.getRandomValues(new Uint8Array(12))
+  const buf = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(VERIFY_PLAIN))
+  localStorage.setItem(VERIFY_KEY, JSON.stringify({ c: b64(new Uint8Array(buf)), iv: b64(iv) }))
+}
+
 export async function unlock(password: string, salt: Uint8Array): Promise<void> {
-  _key = await deriveKey(password, salt)
+  const candidate = await deriveKey(password, salt)
+  // Verify the password is correct by decrypting the stored token
+  const stored = localStorage.getItem(VERIFY_KEY)
+  if (stored) {
+    try {
+      const { c, iv } = JSON.parse(stored) as { c: string; iv: string }
+      const buf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(iv) }, candidate, unb64(c))
+      if (new TextDecoder().decode(buf) !== VERIFY_PLAIN) throw new Error('bad')
+    } catch {
+      throw new Error('Incorrect password')
+    }
+  }
+  _key = candidate
 }
 
 export function lock(): void { _key = null }

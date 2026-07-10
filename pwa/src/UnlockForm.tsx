@@ -5,7 +5,7 @@ import GlassCard from './design/GlassCard'
 import GlassInput from './design/GlassInput'
 import PillButton from './design/PillButton'
 import { IconAppShield, IconLock } from './design/icons'
-import { unlock } from './crypto'
+import { unlock, saveVerifyToken, getKey } from './crypto'
 
 interface Props { onUnlocked: () => void }
 
@@ -57,6 +57,10 @@ export default function UnlockForm({ onUnlocked }: Props) {
     try {
       const salt = getSalt()
       await unlock(value, salt)
+      // On first setup, save verify token so future unlocks can validate the password
+      if (!localStorage.getItem('myspace_vault_verify')) {
+        await saveVerifyToken(getKey())
+      }
       setExiting(true)
       setTimeout(onUnlocked, 280)
     } catch {

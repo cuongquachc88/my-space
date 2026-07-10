@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getDb } from '../../db'
-import { deriveKey, encryptWithKey, decryptWithKey, unlock } from '../../crypto'
+import { deriveKey, encryptWithKey, decryptWithKey, saveVerifyToken } from '../../crypto'
 import { ACCENT } from '../../design/tokens'
 import ViewHeader from '../ViewHeader'
 import { IconSync } from '../../design/icons'
@@ -113,16 +113,17 @@ export function useSyncLogic() {
       log('Downloading…')
       const raw = await downloadFile(token, fileId)
       const payload = JSON.parse(raw) as { ciphertext: string; iv: string; salt: number[] }
+      log(`Backup fields: ${Object.keys(payload).join(', ')} | salt len: ${payload.salt?.length ?? 'none'}`)
       log('Decrypting…')
       const salt = Uint8Array.from(payload.salt)
       const key = await deriveKey(syncPw, salt)
       const plaintext = await decryptWithKey(payload.ciphertext, payload.iv, key)
       const data = JSON.parse(plaintext) as Record<string, unknown[]>
-      log('Merging…')
-      // Restore vault salt + re-derive in-memory vault key so reveal works immediately
+      // Update vault salt + verify token to match the backup's key
       const saltB64 = btoa(Array.from(salt, c => String.fromCharCode(c)).join(''))
       localStorage.setItem('myspace_vault_salt', saltB64)
-      await unlock(syncPw, salt)
+      await saveVerifyToken(key)
+      log('Merging…')
       const db = await getDb()
       if (data.notes) {
         for (const n of data.notes as { id: string; title: string; content: string; tags: string[]; image_data: string }[]) {
