@@ -24,7 +24,13 @@ function getClientId(): string {
 }
 
 function getRedirectUri(): string {
-  if (Capacitor.isNativePlatform()) return 'com.myspace.app:/oauth-callback'
+  if (Capacitor.isNativePlatform()) {
+    // Google Android OAuth requires reverse-client-id scheme:
+    // e.g. 564441755508-xxx.apps.googleusercontent.com → com.googleusercontent.apps.564441755508-xxx
+    const clientId = getClientId()
+    const id = clientId.replace('.apps.googleusercontent.com', '')
+    return `com.googleusercontent.apps.${id}:/oauth2redirect`
+  }
   return `${location.origin}/oauth-callback`
 }
 
@@ -46,16 +52,18 @@ async function makeCodeChallenge(verifier: string): Promise<string> {
 }
 
 function makeAuthUrl(state: string, codeChallenge: string): string {
+  const clientId = getClientId()
+  const redirectUri = getRedirectUri()
+  console.log('[OAuth] isNative:', Capacitor.isNativePlatform(), 'client:', clientId.slice(0, 30), 'redirect:', redirectUri)
   const params = new URLSearchParams({
-    client_id: getClientId(),
-    redirect_uri: getRedirectUri(),
+    client_id: clientId,
+    redirect_uri: redirectUri,
     response_type: 'code',
     scope: DRIVE_SCOPE,
     state,
     code_challenge: codeChallenge,
     code_challenge_method: 'S256',
-    access_type: 'offline',
-    prompt: 'select_account',
+    ...(Capacitor.isNativePlatform() ? {} : { access_type: 'offline', prompt: 'select_account' }),
   })
   return `https://accounts.google.com/o/oauth2/v2/auth?${params}`
 }
@@ -167,7 +175,7 @@ function authorizeWeb(url: string): Promise<string> {
 function authorizeNative(url: string): Promise<string> {
   return new Promise((resolve, reject) => {
     App.addListener('appUrlOpen', async (event: { url: string }) => {
-      if (!event.url.startsWith('com.myspace.app:/oauth-callback')) return
+      if (!event.url.startsWith('com.googleusercontent.apps.')) return
       App.removeAllListeners()
       Browser.close()
       const params = new URLSearchParams(event.url.split('?')[1] ?? '')

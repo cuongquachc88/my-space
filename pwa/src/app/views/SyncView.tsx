@@ -72,7 +72,7 @@ export function useSyncLogic() {
   }
 
   async function push() {
-    if (!syncPw.trim()) { log('Enter a sync password', 'error'); setStatus('error'); return }
+    if (!syncPw.trim()) { log('Enter your vault password', 'error'); setStatus('error'); return }
     const token = getStoredToken()
     if (!token) { log('Not connected — click Connect first', 'error'); setStatus('error'); return }
     setStatus('busy'); log('Exporting data…')
@@ -86,12 +86,15 @@ export function useSyncLogic() {
         db.query('SELECT * FROM map_pins'),
       ])
       log(`${notes.rows.length} notes, ${secrets.rows.length} secrets, ${todos.rows.length} todos`)
+      // Use vault salt + vault password — same format as Chrome extension
+      const vaultSaltB64 = localStorage.getItem('myspace_vault_salt')
+      if (!vaultSaltB64) { log('Vault not initialised — unlock first', 'error'); setStatus('error'); return }
+      const vaultSalt = Uint8Array.from(atob(vaultSaltB64), c => c.charCodeAt(0))
+      const key = await deriveKey(syncPw, vaultSalt)
       const plaintext = JSON.stringify({ notes: notes.rows, secrets: secrets.rows, subscriptions: subs.rows, todo_tasks: todos.rows, map_pins: pins.rows })
       log('Encrypting…')
-      const salt = crypto.getRandomValues(new Uint8Array(32))
-      const key = await deriveKey(syncPw, salt)
       const { ciphertext, iv } = await encryptWithKey(plaintext, key)
-      const payload = JSON.stringify({ ciphertext, iv, salt: Array.from(salt), v: 1 })
+      const payload = JSON.stringify({ ciphertext, iv, salt: Array.from(vaultSalt) })
       log('Uploading to Drive…')
       const existingId = await findFile(token)
       await uploadFile(token, payload, existingId)
@@ -100,7 +103,7 @@ export function useSyncLogic() {
   }
 
   async function pull() {
-    if (!syncPw.trim()) { log('Enter a sync password', 'error'); setStatus('error'); return }
+    if (!syncPw.trim()) { log('Enter your vault password', 'error'); setStatus('error'); return }
     const token = getStoredToken()
     if (!token) { log('Not connected — click Connect first', 'error'); setStatus('error'); return }
     setStatus('busy'); log('Searching Drive for backup…')
@@ -116,6 +119,9 @@ export function useSyncLogic() {
       const plaintext = await decryptWithKey(payload.ciphertext, payload.iv, key)
       const data = JSON.parse(plaintext) as Record<string, unknown[]>
       log('Merging…')
+      // Restore vault salt so secrets encrypted with the backup key work locally
+      const saltB64 = btoa(Array.from(salt, c => String.fromCharCode(c)).join(''))
+      localStorage.setItem('myspace_vault_salt', saltB64)
       const db = await getDb()
       if (data.notes) {
         for (const n of data.notes as { id: string; title: string; content: string; tags: string[]; image_data: string }[]) {
@@ -196,7 +202,7 @@ export default function SyncView() {
           </div>
         </div>
         <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 11, color: '#94a3b8', lineHeight: 1.5, borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: 12 }}>
-          Data is encrypted locally before upload. Use the same sync password on all devices.
+          Data is encrypted with your vault password. Compatible with the Chrome extension — use the same password everywhere.
         </div>
       </div>
 
@@ -207,7 +213,7 @@ export default function SyncView() {
           <input
             value={syncPw} onChange={e => setSyncPw(e.target.value)}
             type={showPw ? 'text' : 'password'}
-            placeholder="Sync password"
+            placeholder="Vault password (same as unlock password)"
             style={{ flex: 1, padding: '10px 14px', borderRadius: 12, border: '1.5px solid rgba(255,255,255,0.6)', background: 'rgba(255,255,255,0.5)', fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#1a1a2e', outline: 'none' }}
           />
           <button onClick={() => setShowPw(p => !p)} style={{

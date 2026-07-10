@@ -91,7 +91,7 @@ export default function DesktopSyncView() {
           <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#94a3b8', marginBottom: 20 }}>Use the same sync password on all devices.</div>
 
           <div style={{ marginBottom: 14 }}>
-            <label style={{ display: 'block', fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 600, color: '#4a4a6a', marginBottom: 6 }}>Sync password</label>
+            <label style={{ display: 'block', fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 600, color: '#4a4a6a', marginBottom: 6 }}>Vault password</label>
             <div style={{ display: 'flex', gap: 8 }}>
               <input
                 value={syncPw} onChange={e => setSyncPw(e.target.value)}

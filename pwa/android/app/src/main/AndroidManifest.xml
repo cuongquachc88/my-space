@@ -26,7 +26,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="com.myspace.app" android:host="oauth-callback" />
+                <data android:scheme="com.googleusercontent.apps.564441755508-1fv05o0sfqga3pt4sf9receceheb3d76" />
             </intent-filter>
 
         </activity>

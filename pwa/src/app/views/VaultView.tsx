@@ -10,7 +10,6 @@ import { BentoGrid, BentoCell } from '../../design/BentoGrid'
 import ViewHeader from '../ViewHeader'
 import { IconVault, IconTrash } from '../../design/icons'
 import TagInput from '../components/TagInput'
-import SwipeToDelete from '../../design/SwipeToDelete'
 import { useIsDesktop } from '../useIsDesktop'
 import DesktopVaultView from './desktop/DesktopVaultView'
 
@@ -33,6 +32,7 @@ export default function VaultView() {
   const [editDesc, setEditDesc] = useState('')
   const [revealId, setRevealId] = useState<string | null>(null)
   const [revealValue, setRevealValue] = useState('')
+  const [revealError, setRevealError] = useState('')
   const [saving, setSaving] = useState(false)
   const [showAdd, setShowAdd] = useState(false)
   const [detailVisible, setDetailVisible] = useState(false)
@@ -99,7 +99,8 @@ export default function VaultView() {
   }
 
   async function reveal(s: SecretMeta) {
-    if (revealId === s.id) { setRevealId(null); setRevealValue(''); return }
+    if (revealId === s.id) { setRevealId(null); setRevealValue(''); setRevealError(''); return }
+    setRevealError('')
     try {
       const db = await getDb()
       const row = await db.query<{ ciphertext: string; iv: string }>('SELECT ciphertext,iv FROM secrets WHERE id=$1', [s.id])
@@ -107,7 +108,10 @@ export default function VaultView() {
         const val = await decrypt(row.rows[0].ciphertext, row.rows[0].iv)
         setRevealId(s.id); setRevealValue(val)
       }
-    } catch (e) { console.error('[vault] reveal failed:', e) }
+    } catch (e) {
+      console.error('[vault] reveal failed:', e)
+      setRevealError(String(e))
+    }
   }
 
   async function deleteSecret(id: string) {
@@ -154,30 +158,35 @@ export default function VaultView() {
                   <div style={{ textAlign: 'center', color: '#4a4a6a', padding: 24, fontFamily: 'Inter, sans-serif', fontSize: 14 }}>No secrets yet.</div>
                 )}
                 {secrets.map(s => (
-                  <SwipeToDelete key={s.id} onDelete={() => deleteSecret(s.id)}>
-                    <div style={{ padding: '10px 12px', borderRadius: 12, background: 'rgba(255,255,255,0.4)', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e' }}>{s.label}</span>
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <PillButton variant="secondary" accent={accent} onClick={() => reveal(s)}>{revealId === s.id ? 'Hide' : 'Reveal'}</PillButton>
-                          <PillButton variant="ghost" onClick={() => startEdit(s)}>Edit</PillButton>
-                        </div>
+                  <div key={s.id} style={{ borderRadius: 12, background: 'rgba(255,255,255,0.4)', display: 'flex', flexDirection: 'column', gap: 3, padding: '8px 10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 13, color: '#1a1a2e', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.label}</span>
+                      <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                        <button onClick={() => reveal(s)} style={{ padding: '4px 10px', borderRadius: 100, border: `1px solid ${accent}`, background: revealId === s.id ? accent : 'transparent', color: revealId === s.id ? '#fff' : accent, fontFamily: 'Inter, sans-serif', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                          {revealId === s.id ? 'Hide' : 'Reveal'}
+                        </button>
+                        <button onClick={() => startEdit(s)} style={{ padding: '4px 10px', borderRadius: 100, border: '1px solid rgba(0,0,0,0.15)', background: 'transparent', color: '#4a4a6a', fontFamily: 'Inter, sans-serif', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                          Edit
+                        </button>
+                        <button onClick={() => deleteSecret(s.id)} style={{ width: 26, height: 26, borderRadius: 100, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <IconTrash size={12} accent="#ef4444" />
+                        </button>
                       </div>
-                      {revealId === s.id && (
-                        <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, background: `${accent}15`, borderRadius: 8, padding: '6px 10px', color: '#1a1a2e', wordBreak: 'break-all' }}>{revealValue}</div>
-                      )}
-                      {s.url && <div style={{ fontSize: 12, color: '#4a4a6a' }}>{s.url}</div>}
-                      {(s.tags ?? []).length > 0 && (
-                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                          {(s.tags ?? []).map(t => (
-                            <span key={t} style={{ fontSize: 11, fontFamily: 'Inter, sans-serif', color: accent, background: `${accent}14`, borderRadius: 100, padding: '2px 7px' }}>#{t}</span>
-                          ))}
-                        </div>
-                      )}
                     </div>
-                  </SwipeToDelete>
+                    {revealId === s.id && (
+                      <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, background: `${accent}15`, borderRadius: 8, padding: '5px 8px', color: '#1a1a2e', wordBreak: 'break-all' }}>{revealValue}</div>
+                    )}
+                    {(s.tags ?? []).length > 0 && (
+                      <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                        {(s.tags ?? []).map(t => (
+                          <span key={t} style={{ fontSize: 10, fontFamily: 'Inter, sans-serif', color: accent, background: `${accent}14`, borderRadius: 100, padding: '1px 6px' }}>#{t}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
+              {revealError && <div style={{ fontSize: 11, color: '#ef4444', fontFamily: 'Inter, sans-serif', padding: '4px 2px', wordBreak: 'break-all' }}>Reveal error: {revealError}</div>}
             </div>
           </GlassCard>
         </BentoCell>

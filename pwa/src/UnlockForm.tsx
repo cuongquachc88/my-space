@@ -42,6 +42,7 @@ export default function UnlockForm({ onUnlocked }: Props) {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [exiting, setExiting] = useState(false)
+  const [pressedKey, setPressedKey] = useState<string | null>(null)
 
   function switchMode(m: 'password'|'pin') {
     setMode(m)
@@ -173,17 +174,21 @@ export default function UnlockForm({ onUnlocked }: Props) {
               {/* PIN pad */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, width: '100%', maxWidth: 240 }}>
                 {PIN_DIGITS.flat().map((key, i) => (
-                  <button key={i} onClick={() => key && handlePinKey(key)}
+                  <button key={i}
+                    onPointerDown={() => { if (key && !loading) { setPressedKey(key); handlePinKey(key) } }}
+                    onPointerUp={() => setPressedKey(null)}
+                    onPointerLeave={() => setPressedKey(null)}
                     disabled={!key || loading}
                     style={{
                       height: 56, borderRadius: 14, border: '1px solid rgba(255,255,255,0.5)',
-                      background: key ? 'rgba(255,255,255,0.5)' : 'transparent',
+                      background: pressedKey === key && key ? 'rgba(124,106,247,0.25)' : key ? 'rgba(255,255,255,0.5)' : 'transparent',
                       cursor: key ? 'pointer' : 'default',
                       fontFamily: 'Montserrat, sans-serif',
                       fontSize: key === '⌫' ? 20 : 22, fontWeight: 600, color: '#1a1a2e',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      transition: 'background 100ms',
-                      boxShadow: key ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
+                      transform: pressedKey === key && key ? 'scale(0.92)' : 'scale(1)',
+                      transition: 'background 80ms, transform 80ms',
+                      boxShadow: pressedKey === key && key ? '0 1px 4px rgba(124,106,247,0.2)' : key ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
                     }}>
                     {key}
                   </button>
