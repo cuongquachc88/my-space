@@ -1,6 +1,6 @@
 // pwa/src/app/NavRail.tsx
 import { useState } from 'react'
-import { IconNotes, IconVault, IconTodo, IconSubs, IconMaps, IconGen, IconReports, IconSync, IconSettings, IconAppShield } from '../design/icons'
+import { IconNotes, IconVault, IconTodo, IconSubs, IconMaps, IconGen, IconReports, IconSync, IconSettings, IconAppShield, IconLock } from '../design/icons'
 import { ACCENT } from '../design/tokens'
 
 export type Tab = 'notes'|'vault'|'todo'|'subs'|'maps'|'gen'|'reports'|'sync'|'settings'
@@ -19,7 +19,7 @@ const TABS: { id: Tab; label: string; Icon: React.ComponentType<{ size?: number;
 
 interface Props { tab: Tab; onTab: (t: Tab) => void; onLogout: () => void }
 
-export default function NavRail({ tab, onTab }: Props) {
+export default function NavRail({ tab, onTab, onLogout }: Props) {
   const [hovered, setHovered] = useState(false)
 
   return (
@@ -49,30 +49,68 @@ export default function NavRail({ tab, onTab }: Props) {
         </span>
       </div>
 
-      <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2, padding: '8px 6px' }}>
-        {TABS.map(t => {
-          const active = tab === t.id
-          const accent = ACCENT[t.id]
-          return (
-            <button
-              key={t.id}
-              onClick={() => onTab(t.id)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                padding: '10px 10px', borderRadius: 12, border: 'none', cursor: 'pointer',
-                background: active ? `${accent}20` : 'transparent',
-                color: active ? accent : '#4a4a6a',
-                transition: 'background 150ms, color 150ms',
-                minWidth: 0, whiteSpace: 'nowrap', width: '100%',
-              }}
-            >
-              <t.Icon size={22} accent={accent} filled={active} />
-              <span style={{ fontFamily: 'Satoshi, sans-serif', fontWeight: active ? 600 : 400, fontSize: 14, opacity: hovered ? 1 : 0, transition: 'opacity 150ms ease' }}>
-                {t.label}
-              </span>
-            </button>
-          )
-        })}
+      <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '8px 6px' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {TABS.filter(t => t.id !== 'settings').map(t => {
+            const active = tab === t.id
+            const accent = ACCENT[t.id]
+            return (
+              <button
+                key={t.id}
+                onClick={() => onTab(t.id)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '10px 10px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                  background: active ? `${accent}20` : 'transparent',
+                  color: active ? accent : '#4a4a6a',
+                  opacity: active ? 1 : 0.6,
+                  transition: 'background 150ms, color 150ms, opacity 150ms',
+                  minWidth: 0, whiteSpace: 'nowrap', width: '100%',
+                }}
+              >
+                <t.Icon size={22} accent={accent} filled={active} />
+                <span style={{ fontFamily: 'Satoshi, sans-serif', fontWeight: active ? 600 : 400, fontSize: 14, opacity: hovered ? 1 : 0, transition: 'opacity 150ms ease' }}>
+                  {t.label}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Settings pinned at bottom */}
+        <div style={{ marginTop: 8 }}>
+          {TABS.filter(t => t.id === 'settings').map(t => {
+            const active = tab === t.id
+            const accent = ACCENT[t.id]
+            return (
+              <button
+                key={t.id}
+                onClick={() => onTab(t.id)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '10px 10px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                  background: active ? `${accent}20` : 'transparent',
+                  color: active ? accent : '#4a4a6a',
+                  opacity: active ? 1 : 0.6,
+                  transition: 'background 150ms, color 150ms, opacity 150ms',
+                  minWidth: 0, whiteSpace: 'nowrap', width: '100%',
+                }}
+              >
+                <t.Icon size={22} accent={accent} filled={active} />
+                <span style={{ fontFamily: 'Satoshi, sans-serif', fontWeight: active ? 600 : 400, fontSize: 14, opacity: hovered ? 1 : 0, transition: 'opacity 150ms ease' }}>
+                  {t.label}
+                </span>
+              </button>
+            )
+          })}
+          <button
+            onClick={onLogout}
+            style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 10px', borderRadius: 12, border: 'none', cursor: 'pointer', background: 'transparent', color: '#ef4444', opacity: 0.7, width: '100%', marginTop: 4, transition: 'opacity 150ms' }}
+          >
+            <IconLock size={20} />
+            <span style={{ fontFamily: 'Satoshi, sans-serif', fontSize: 13, opacity: hovered ? 1 : 0, transition: 'opacity 150ms ease', whiteSpace: 'nowrap' }}>Lock</span>
+          </button>
+        </div>
       </nav>
     </aside>
   )

@@ -39,7 +39,7 @@ export default function NavPill({ tab, onTab }: Props) {
             const active = tab === t
             return (
               <button key={t} onClick={() => { onTab(t); setOverflowOpen(false) }}
-                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 12px', borderRadius: 12, border: 'none', cursor: 'pointer', background: active ? `${accent}20` : 'transparent', color: active ? accent : '#4a4a6a' }}>
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 12px', borderRadius: 12, border: 'none', cursor: 'pointer', background: active ? `${accent}20` : 'transparent', color: active ? accent : '#4a4a6a', opacity: active ? 1 : 0.6, transition: 'opacity 150ms' }}>
                 <Ic size={22} accent={accent} filled={active} />
                 <span style={{ fontSize: 11, fontFamily: 'Satoshi, sans-serif' }}>{LABEL_MAP[t]}</span>
               </button>
@@ -65,14 +65,14 @@ export default function NavPill({ tab, onTab }: Props) {
           const active = tab === t
           return (
             <button key={t} onClick={() => onTab(t)}
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px 12px', borderRadius: 80, border: 'none', cursor: 'pointer', background: active ? `${accent}20` : 'transparent', color: active ? accent : '#4a4a6a', transition: 'background 150ms' }}>
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px 12px', borderRadius: 80, border: 'none', cursor: 'pointer', background: active ? `${accent}20` : 'transparent', color: active ? accent : '#4a4a6a', opacity: active ? 1 : 0.6, transition: 'background 150ms, opacity 150ms' }}>
               <Ic size={22} accent={accent} filled={active} />
             </button>
           )
         })}
         {/* overflow */}
         <button onClick={() => setOverflowOpen(o => !o)}
-          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px 12px', borderRadius: 80, border: 'none', cursor: 'pointer', background: OVERFLOW.includes(tab) ? 'rgba(124,106,247,0.15)' : 'transparent', color: '#4a4a6a', fontSize: 18, fontWeight: 700 }}>
+          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px 12px', borderRadius: 80, border: 'none', cursor: 'pointer', background: OVERFLOW.includes(tab) ? 'rgba(124,106,247,0.15)' : 'transparent', color: '#4a4a6a', fontSize: 18, fontWeight: 700, opacity: OVERFLOW.includes(tab) ? 1 : 0.6, transition: 'opacity 150ms' }}>
           ···
         </button>
       </div>
