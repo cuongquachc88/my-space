@@ -135,6 +135,18 @@ export function IconSettings({ size = 24, accent = '#94a3b8', filled = false, cl
   )
 }
 
+export function IconTrash({ size = 24, accent = '#ef4444', className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6 L18.1 19a2 2 0 0 1-2 1.9H7.9a2 2 0 0 1-2-1.9L5 6" />
+      <path d="M10 11 L10 17" />
+      <path d="M14 11 L14 17" />
+      <path d="M9 6 L9 4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+    </svg>
+  )
+}
+
 export function IconLock({ size = 24, accent = '#7c6af7', filled = false, className }: IconProps) {
   return (
     <Icon size={size} className={className}>
@@ -147,14 +159,25 @@ export function IconLock({ size = 24, accent = '#7c6af7', filled = false, classN
 }
 
 export function IconAppShield({ size = 24, accent = 'white', className }: IconProps) {
+  const isWhite = accent === 'white' || accent === '#fff'
+  const shieldFill = isWhite ? 'rgba(255,255,255,0.18)' : '#d97706'
+  const shieldStroke = isWhite ? 'rgba(255,255,255,0.7)' : '#b45309'
+  const innerFill = isWhite ? '#fff' : '#7c2d12'
+  const innerBg = isWhite ? 'rgba(255,255,255,0.12)' : '#fbbf24'
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
-      <path d="M12 2 L20 6 L20 13 C20 17 16 20 12 22 C8 20 4 17 4 13 L4 6 Z"
-        fill={accent ? `${accent}40` : 'rgba(124,106,247,0.25)'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      {/* 3x3 dot grid */}
-      {[8,12,16].flatMap(x => [8,12,16].map(y => (
-        <circle key={`${x}-${y}`} cx={x} cy={y} r="1" fill="currentColor" />
-      )))}
+      {/* Amber shield body */}
+      <path d="M12 2.5 L19.5 6 L19.5 13 C19.5 17.2 16.2 20.5 12 22 C7.8 20.5 4.5 17.2 4.5 13 L4.5 6 Z"
+        fill={shieldFill} stroke={shieldStroke} strokeWidth="1.5" strokeLinejoin="round" />
+      {/* Inner circle bg */}
+      <circle cx="12" cy="13" r="4" fill={innerBg} />
+      {/* Lock shackle */}
+      <path d="M9.5 13 L9.5 11.5 C9.5 10.1 10.7 9 12 9 C13.3 9 14.5 10.1 14.5 11.5 L14.5 13"
+        stroke={innerFill} strokeWidth="1.5" strokeLinecap="round" fill="none" />
+      {/* Lock body */}
+      <rect x="9" y="12.5" width="6" height="4.5" rx="1.2" fill={innerFill} />
+      {/* Keyhole */}
+      <circle cx="12" cy="14.2" r="0.9" fill={isWhite ? 'rgba(255,255,255,0.3)' : '#fbbf24'} />
     </svg>
   )
 }

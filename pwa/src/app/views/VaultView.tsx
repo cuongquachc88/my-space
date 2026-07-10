@@ -138,7 +138,7 @@ export default function VaultView() {
         <BentoCell span="1">
           <GlassCard style={{ height: '100%' }}>
             <div style={{ padding: 16 }}>
-              <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e', marginBottom: 10 }}>Tags</div>
+              <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e', marginBottom: 10 }}>Tags</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {allTags.map(tag => (
                   <button key={tag} onClick={() => setActiveTag(activeTag === tag ? null : tag)}
@@ -155,7 +155,7 @@ export default function VaultView() {
           <BentoCell span="full">
             <GlassCard accentBar accent={accent}>
               <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: 18, color: '#1a1a2e' }}>
+                <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 18, color: '#1a1a2e' }}>
                   {editing ? 'Edit Secret' : 'New Secret'}
                 </div>
                 <GlassInput value={editLabel} onChange={setEditLabel} placeholder="Label (e.g. Gmail password)" />

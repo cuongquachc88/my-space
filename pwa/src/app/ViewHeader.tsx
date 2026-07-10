@@ -19,7 +19,7 @@ export default function ViewHeader({ title, icon, accent, stats, action, onActio
           {icon}
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: 24, letterSpacing: '-0.01em', lineHeight: 1.2, background: `linear-gradient(135deg, ${accent}, ${accent}99)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>{title}</div>
+          <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 24, letterSpacing: '-0.01em', lineHeight: 1.2, background: `linear-gradient(135deg, ${accent}, ${accent}99)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>{title}</div>
           {stats && <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#4a4a6a', marginTop: 2 }}>{stats}</div>}
         </div>
         {action && onAction && (

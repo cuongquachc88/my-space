@@ -44,7 +44,7 @@ export default function NavRail({ tab, onTab, onLogout }: Props) {
         <div style={{ width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg,#7c6af7,#38bdf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <IconAppShield size={18} />
         </div>
-        <span style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: 16, color: '#1a1a2e', whiteSpace: 'nowrap', opacity: hovered ? 1 : 0, transition: 'opacity 150ms ease' }}>
+        <span style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 16, color: '#1a1a2e', whiteSpace: 'nowrap', opacity: hovered ? 1 : 0, transition: 'opacity 150ms ease' }}>
           My <span style={{ color: '#7c6af7' }}>SPACE</span>
         </span>
       </div>

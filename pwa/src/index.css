@@ -23,7 +23,8 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-weight: 700;
 }
 
 .glass {
@@ -58,8 +59,8 @@ h1, h2, h3, h4, h5, h6 {
 @media (max-width: 639px) { .mobile-hero { display: block; } }
 
 /* Markdown */
-.prose h1 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1.5rem; font-weight: 700; margin: 0.5rem 0; color: var(--text-primary); }
-.prose h2 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 1.25rem; font-weight: 600; margin: 0.5rem 0; color: var(--text-primary); }
+.prose h1 { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; font-weight: 700; margin: 0.5rem 0; color: var(--text-primary); }
+.prose h2 { font-family: 'Space Grotesk', sans-serif; font-size: 1.25rem; font-weight: 600; margin: 0.5rem 0; color: var(--text-primary); }
 .prose h3 { font-size: 1.1rem; font-weight: 600; margin: 0.4rem 0; color: var(--text-primary); }
 .prose p  { margin: 0.25rem 0; line-height: 1.6; color: var(--text-primary); }
 .prose ul, .prose ol { padding-left: 1.25rem; margin: 0.25rem 0; }

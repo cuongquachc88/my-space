@@ -116,7 +116,7 @@ export default function UnlockForm({ onUnlocked }: Props) {
           </div>
 
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: 22, color: '#1a1a2e', letterSpacing: '-0.01em' }}>
+            <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 22, color: '#1a1a2e', letterSpacing: '-0.01em' }}>
               My <span style={{ color: '#7c6af7' }}>SPACE</span>
             </div>
             <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#4a4a6a', marginTop: 4 }}>
@@ -179,7 +179,7 @@ export default function UnlockForm({ onUnlocked }: Props) {
                       height: 56, borderRadius: 14, border: '1px solid rgba(255,255,255,0.5)',
                       background: key ? 'rgba(255,255,255,0.5)' : 'transparent',
                       cursor: key ? 'pointer' : 'default',
-                      fontFamily: key === '⌫' ? 'Inter, sans-serif' : 'Plus Jakarta Sans, sans-serif',
+                      fontFamily: key === '⌫' ? 'Inter, sans-serif' : 'Space Grotesk, sans-serif',
                       fontSize: key === '⌫' ? 20 : 22, fontWeight: 600, color: '#1a1a2e',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       transition: 'background 100ms',

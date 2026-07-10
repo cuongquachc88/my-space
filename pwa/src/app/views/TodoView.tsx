@@ -91,7 +91,7 @@ export default function TodoView() {
         <BentoCell span="1">
           <GlassCard style={{ height: '100%' }}>
             <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e', marginBottom: 4 }}>Lists</div>
+              <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e', marginBottom: 4 }}>Lists</div>
               {showNewList && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 8 }}>
                   <GlassInput value={newListName} onChange={setNewListName} placeholder="List name" autoFocus />
@@ -110,7 +110,7 @@ export default function TodoView() {
               {lists.map(l => (
                 <button key={l.id} onClick={() => setActiveList(l)}
                   style={{ textAlign: 'left', padding: '8px 12px', borderRadius: 10, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
-                    background: activeList?.id === l.id ? `${l.color}20` : 'rgba(255,255,255,0.4)', borderLeft: `3px solid ${l.color}` }}>
+                    background: activeList?.id === l.id ? `${l.color}20` : 'rgba(255,255,255,0.4)', boxShadow: activeList?.id === l.id ? `0 0 0 1.5px ${l.color}60` : 'none' }}>
                   <span style={{ width: 10, height: 10, borderRadius: '50%', background: l.color, flexShrink: 0 }} />
                   <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: 14, color: '#1a1a2e' }}>{l.name}</span>
                 </button>
@@ -127,7 +127,7 @@ export default function TodoView() {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: 18, color: '#1a1a2e' }}>{activeList.name}</div>
+                    <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 18, color: '#1a1a2e' }}>{activeList.name}</div>
                     <PillButton variant="ghost" onClick={() => deleteList(activeList.id)} style={{ color: '#ef4444', fontSize: 12 }}>Delete list</PillButton>
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
@@ -157,7 +157,7 @@ export default function TodoView() {
           <BentoCell span="full">
             <GlassCard accentBar accent={ACCENT.todo}>
               <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: 18, color: '#1a1a2e' }}>Edit Task</div>
+                <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 18, color: '#1a1a2e' }}>Edit Task</div>
                 <GlassInput value={tf.title} onChange={v => setTf(p => ({ ...p, title: v }))} placeholder="Task title" />
                 <GlassInput value={tf.note} onChange={v => setTf(p => ({ ...p, note: v }))} placeholder="Note" />
                 <div style={{ display: 'flex', gap: 8 }}>

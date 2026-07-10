@@ -110,7 +110,7 @@ export default function MapView() {
         <BentoCell span="1">
           <GlassCard style={{ height: '100%' }}>
             <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e', marginBottom: 4 }}>Stacks</div>
+              <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e', marginBottom: 4 }}>Stacks</div>
               {showNewStack && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 8 }}>
                   <GlassInput value={newStackName} onChange={setNewStackName} placeholder="Stack name" autoFocus />
@@ -130,7 +130,7 @@ export default function MapView() {
               {stacks.map(s => (
                 <button key={s.id} onClick={() => setActiveStack(s)}
                   style={{ textAlign: 'left', padding: '8px 12px', borderRadius: 10, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
-                    background: activeStack?.id === s.id ? `${s.color}20` : 'rgba(255,255,255,0.4)', borderLeft: `3px solid ${s.color}` }}>
+                    background: activeStack?.id === s.id ? `${s.color}20` : 'rgba(255,255,255,0.4)', boxShadow: activeStack?.id === s.id ? `0 0 0 1.5px ${s.color}60` : 'none' }}>
                   <span style={{ width: 10, height: 10, borderRadius: '50%', background: s.color, flexShrink: 0 }} />
                   <span style={{ flex: 1, fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: 14, color: '#1a1a2e' }}>{s.name}</span>
                   <button onClick={e => { e.stopPropagation(); deleteStack(s.id) }}
@@ -149,7 +149,7 @@ export default function MapView() {
               ) : (
                 <>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <span style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: 16, color: '#1a1a2e' }}>{activeStack.name}</span>
+                    <span style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 16, color: '#1a1a2e' }}>{activeStack.name}</span>
                     <PillButton onClick={openNewPin} accent={accent}>+ Pin</PillButton>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 280, overflowY: 'auto' }}>
@@ -178,7 +178,7 @@ export default function MapView() {
           <BentoCell span="full">
             <GlassCard accentBar accent={accent}>
               <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: 18, color: '#1a1a2e' }}>{isNewPin ? 'New Pin' : 'Edit Pin'}</div>
+                <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 18, color: '#1a1a2e' }}>{isNewPin ? 'New Pin' : 'Edit Pin'}</div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <div style={{ flex: '1 1 200px' }}><GlassInput value={pf.label} onChange={v => setPf(p=>({...p,label:v}))} placeholder="Label" /></div>
                   <div style={{ flex: '0 0 120px' }}><GlassInput value={String(pf.lat)} onChange={v => setPf(p=>({...p,lat:v}))} placeholder="Latitude" type="number" /></div>

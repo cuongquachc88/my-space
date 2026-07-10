@@ -133,7 +133,7 @@ export default function SyncView() {
         <BentoCell span="1">
           <GlassCard accentBar accent={accent}>
             <div style={{ padding: 20 }}>
-              <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: 16, color: '#1a1a2e', marginBottom: 8 }}>Connection</div>
+              <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 16, color: '#1a1a2e', marginBottom: 8 }}>Connection</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: connected ? '#34d399' : '#94a3b8' }} />
                 <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#4a4a6a' }}>
@@ -153,7 +153,7 @@ export default function SyncView() {
         <BentoCell span="2">
           <GlassCard style={{ height: '100%' }}>
             <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: 16, color: '#1a1a2e' }}>Backup & Restore</div>
+              <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 16, color: '#1a1a2e' }}>Backup & Restore</div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <div style={{ flex: 1 }}>
                   <GlassInput value={syncPw} onChange={setSyncPw} placeholder="Sync password" type={showPw ? 'text' : 'password'} />

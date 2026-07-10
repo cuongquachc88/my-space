@@ -87,7 +87,7 @@ export default function SubscriptionsView() {
         <BentoCell span="1">
           <GlassCard accentBar accent={accent} style={{ height: '100%' }}>
             <div style={{ padding: 20, textAlign: 'center' }}>
-              <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: 36, color: accent }}>{fmt(totalUSD, display)}</div>
+              <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 36, color: accent }}>{fmt(totalUSD, display)}</div>
               <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#4a4a6a', marginTop: 4 }}>Monthly total</div>
               <select value={display} onChange={e => setDisplay(e.target.value)}
                 style={{ marginTop: 12, background: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.6)', borderRadius: 8, padding: '4px 8px', fontSize: 12, color: '#1a1a2e', outline: 'none', cursor: 'pointer' }}>
@@ -122,7 +122,7 @@ export default function SubscriptionsView() {
           <BentoCell span="full">
             <GlassCard accentBar accent={accent}>
               <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: 18, color: '#1a1a2e' }}>{isNew ? 'New Subscription' : 'Edit Subscription'}</div>
+                <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 18, color: '#1a1a2e' }}>{isNew ? 'New Subscription' : 'Edit Subscription'}</div>
                 <GlassInput value={ef.name} onChange={v => setEf(p=>({...p,name:v}))} placeholder="Name (e.g. Netflix)" />
                 <div style={{ display: 'flex', gap: 8 }}>
                   <GlassInput value={ef.amount} onChange={v => setEf(p=>({...p,amount:v}))} placeholder="Amount" type="number" />

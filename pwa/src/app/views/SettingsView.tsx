@@ -96,7 +96,7 @@ export default function SettingsView({ onLogout }: Props) {
         <BentoCell span="1">
           <GlassCard accentBar accent={accent}>
             <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: 16, color: '#1a1a2e' }}>Security</div>
+              <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 16, color: '#1a1a2e' }}>Security</div>
               <button onClick={handleLogout}
                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 12, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', cursor: 'pointer', width: '100%', textAlign: 'left' }}>
                 <IconLock size={16} accent="#ef4444" filled />
@@ -112,7 +112,7 @@ export default function SettingsView({ onLogout }: Props) {
         <BentoCell span="1">
           <GlassCard>
             <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: 16, color: '#1a1a2e' }}>Data</div>
+              <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 16, color: '#1a1a2e' }}>Data</div>
               <PillButton onClick={exportData} accent={accent} disabled={exporting} style={{ width: '100%', justifyContent: 'center' }}>
                 {exporting ? 'Exporting…' : 'Export JSON'}
               </PillButton>
@@ -130,7 +130,7 @@ export default function SettingsView({ onLogout }: Props) {
         <BentoCell span="1">
           <GlassCard>
             <div style={{ padding: 20 }}>
-              <div style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: 700, fontSize: 16, color: '#1a1a2e', marginBottom: 12 }}>About</div>
+              <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 16, color: '#1a1a2e', marginBottom: 12 }}>About</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <div style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e' }}>My SPACE v1.0.0</div>
                 <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#4a4a6a' }}>Privacy-first · No servers · No tracking</div>
