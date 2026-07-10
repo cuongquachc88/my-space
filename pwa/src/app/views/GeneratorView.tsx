@@ -1,5 +1,14 @@
+// pwa/src/app/views/GeneratorView.tsx
 import { useState } from 'react'
 import { generatePassword } from '../../lib/generatePassword'
+import { ACCENT } from '../../design/tokens'
+import GlassCard from '../../design/GlassCard'
+import PillButton from '../../design/PillButton'
+import { BentoGrid, BentoCell } from '../../design/BentoGrid'
+import ViewHeader from '../ViewHeader'
+import { IconGen } from '../../design/icons'
+
+const accent = ACCENT.gen
 
 export default function GeneratorView() {
   const [length, setLength] = useState(20)
@@ -9,67 +18,101 @@ export default function GeneratorView() {
   const [symbols, setSymbols] = useState(false)
   const [password, setPassword] = useState('')
   const [copied, setCopied] = useState(false)
+  const [history, setHistory] = useState<string[]>([])
 
   function generate() {
     try {
-      setPassword(generatePassword({ length, upper, lower, digits, symbols }))
+      const pw = generatePassword({ length, upper, lower, digits, symbols })
+      setPassword(pw)
       setCopied(false)
-    } catch (e) {
-      setPassword(String(e))
-    }
+      setHistory(h => [pw, ...h].slice(0, 10))
+    } catch (e) { setPassword(String(e)) }
   }
 
-  async function copy() {
+  async function copyPassword() {
     if (!password) return
     await navigator.clipboard.writeText(password)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
 
+  async function copyFromHistory(pw: string) {
+    await navigator.clipboard.writeText(pw)
+  }
+
   const strength = [upper, lower, digits, symbols].filter(Boolean).length
   const strengthLabel = strength <= 1 ? 'Weak' : strength === 2 ? 'Fair' : strength === 3 ? 'Good' : 'Strong'
-  const strengthColor = strength <= 1 ? 'text-red-400' : strength === 2 ? 'text-yellow-400' : strength === 3 ? 'text-blue-400' : 'text-[#b4e645]'
+  const strengthColor = strength <= 1 ? '#ef4444' : strength === 2 ? '#f59e0b' : strength === 3 ? '#60a5fa' : '#34d399'
 
   return (
-    <div className="flex flex-col h-full bg-[#0f2020] p-4">
-      <h1 className="font-bold text-lg mb-6">Password Generator</h1>
-
-      {password && (
-        <div className="bg-[#152a2a] border border-white/10 rounded-xl p-4 mb-6">
-          <div className="font-mono text-base break-all text-white/90 mb-3 select-all">{password}</div>
-          <div className="flex items-center justify-between">
-            <span className={`text-sm font-medium ${strengthColor}`}>{strengthLabel}</span>
-            <button onClick={copy} className={`text-sm px-4 py-1.5 rounded-full font-semibold transition-colors ${copied ? 'bg-green-500 text-white' : 'bg-[#b4e645] text-[#0f2020]'}`}>
-              {copied ? 'Copied!' : 'Copy'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div className="flex flex-col gap-4 bg-[#152a2a] border border-white/10 rounded-xl p-4">
-        <div>
-          <div className="flex justify-between text-sm mb-2">
-            <span className="text-white/60">Length</span>
-            <span className="font-mono font-semibold">{length}</span>
-          </div>
-          <input type="range" min={8} max={64} value={length} onChange={e => setLength(+e.target.value)}
-            className="w-full accent-[#b4e645]" />
-        </div>
-
-        {([['Uppercase A–Z', upper, setUpper], ['Lowercase a–z', lower, setLower],
-           ['Digits 0–9', digits, setDigits], ['Symbols !@#…', symbols, setSymbols]] as const).map(([label, val, set]) => (
-          <label key={label} className="flex items-center justify-between cursor-pointer">
-            <span className="text-sm text-white/70">{label}</span>
-            <div onClick={() => set(!val)} className={`w-10 h-5 rounded-full transition-colors relative ${val ? 'bg-[#b4e645]' : 'bg-white/20'}`}>
-              <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${val ? 'translate-x-5' : 'translate-x-0.5'}`} />
+    <div>
+      <ViewHeader title="Generator" icon={<IconGen size={22} accent={accent} filled />} accent={accent} />
+      <BentoGrid>
+        <BentoCell span="full">
+          <GlassCard accentBar accent={accent}>
+            <div style={{ padding: 32, textAlign: 'center' }}>
+              {password ? (
+                <>
+                  <div style={{ fontFamily: 'Satoshi, sans-serif', fontWeight: 700, fontSize: 22, letterSpacing: '0.05em', color: '#1a1a2e', wordBreak: 'break-all', background: `${accent}10`, borderRadius: 12, padding: '16px 24px', userSelect: 'all' }}>
+                    {password}
+                  </div>
+                  <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+                    <span style={{ fontFamily: 'Satoshi, sans-serif', fontSize: 13, color: strengthColor, fontWeight: 600 }}>{strengthLabel}</span>
+                    <PillButton onClick={copyPassword} accent={accent}>{copied ? 'Copied!' : 'Copy'}</PillButton>
+                  </div>
+                </>
+              ) : (
+                <div style={{ color: '#4a4a6a', fontFamily: 'Satoshi, sans-serif', fontSize: 15 }}>Press Generate to create a password</div>
+              )}
             </div>
-          </label>
-        ))}
-      </div>
+          </GlassCard>
+        </BentoCell>
 
-      <button onClick={generate} className="mt-6 bg-[#b4e645] text-[#0f2020] font-bold py-3 rounded-full text-base">
-        Generate
-      </button>
+        <BentoCell span="2">
+          <GlassCard>
+            <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'Satoshi, sans-serif', fontSize: 14, color: '#4a4a6a', marginBottom: 8 }}>
+                  <span>Length</span>
+                  <span style={{ fontWeight: 700, color: '#1a1a2e', fontFamily: 'monospace' }}>{length}</span>
+                </div>
+                <input type="range" min={8} max={64} value={length} onChange={e => setLength(+e.target.value)}
+                  style={{ width: '100%', accentColor: accent }} />
+              </div>
+              {([['Uppercase A–Z', upper, (v: boolean) => setUpper(v)] as const,
+                 ['Lowercase a–z', lower, (v: boolean) => setLower(v)] as const,
+                 ['Digits 0–9', digits, (v: boolean) => setDigits(v)] as const,
+                 ['Symbols !@#…', symbols, (v: boolean) => setSymbols(v)] as const]).map(([label, val, set]) => (
+                <label key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+                  <span style={{ fontFamily: 'Satoshi, sans-serif', fontSize: 14, color: '#4a4a6a' }}>{label}</span>
+                  <div onClick={() => set(!val)}
+                    style={{ width: 40, height: 20, borderRadius: 100, background: val ? accent : 'rgba(148,163,184,0.3)', position: 'relative', cursor: 'pointer', transition: 'background 150ms' }}>
+                    <div style={{ position: 'absolute', top: 2, left: val ? 22 : 2, width: 16, height: 16, borderRadius: '50%', background: 'white', transition: 'left 150ms', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                  </div>
+                </label>
+              ))}
+              <PillButton onClick={generate} accent={accent} style={{ marginTop: 4 }}>Generate</PillButton>
+            </div>
+          </GlassCard>
+        </BentoCell>
+
+        <BentoCell span="1">
+          <GlassCard style={{ height: '100%' }}>
+            <div style={{ padding: 16 }}>
+              <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e', marginBottom: 10 }}>History</div>
+              {history.length === 0 && <div style={{ color: '#94a3b8', fontSize: 13, fontFamily: 'Satoshi, sans-serif' }}>No history yet.</div>}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 300, overflowY: 'auto' }}>
+                {history.map((pw, i) => (
+                  <div key={i} style={{ padding: '6px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ flex: 1, fontFamily: 'monospace', fontSize: 11, color: '#1a1a2e', wordBreak: 'break-all' }}>{pw}</span>
+                    <button onClick={() => copyFromHistory(pw)} style={{ fontSize: 11, color: accent, background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 }}>Copy</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </GlassCard>
+        </BentoCell>
+      </BentoGrid>
     </div>
   )
 }

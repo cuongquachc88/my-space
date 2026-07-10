@@ -1,6 +1,14 @@
+// pwa/src/app/views/ReportsView.tsx
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { getDb } from '../../db'
 import { toUSD, convertFromUSD } from '../../lib/currency'
+import { ACCENT } from '../../design/tokens'
+import GlassCard from '../../design/GlassCard'
+import GlassInput from '../../design/GlassInput'
+import PillButton from '../../design/PillButton'
+import { BentoGrid, BentoCell } from '../../design/BentoGrid'
+import ViewHeader from '../ViewHeader'
+import { IconReports } from '../../design/icons'
 
 interface Sub { id: string; name: string; amount: string; currency: string; cycle: string; start_date: string; active: boolean }
 interface Bill { sub_id: string; year: number; month: number; amount: string; currency: string; notes: string }
@@ -37,6 +45,8 @@ function getLast6Months(): MonthPoint[] {
   })
 }
 
+const accent = ACCENT.reports
+
 export default function ReportsView() {
   const [subs, setSubs] = useState<Sub[]>([])
   const [bills, setBills] = useState<Bill[]>([])
@@ -68,6 +78,10 @@ export default function ReportsView() {
   })
 
   const maxVal = Math.max(...months.map(m => Math.max(m.expectedUSD, m.actualUSD)), 1)
+  const curMonthData = months[months.length - 1]
+  const expectedTotal = subs.reduce((acc, s) => acc + expectedMonthlyUSD(s, curYear, curMonth), 0)
+  const actualTotal = bills.filter(b => b.year === curYear && b.month === curMonth).reduce((acc, b) => acc + toUSD(parseFloat(b.amount), b.currency), 0)
+  const delta = actualTotal - expectedTotal
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -77,24 +91,16 @@ export default function ReportsView() {
     const W = canvas.width, H = canvas.height
     const BAR_W = Math.floor(W / months.length / 3)
     const PAD = 24
-
     ctx.clearRect(0, 0, W, H)
-
     months.forEach((m, i) => {
       const x = Math.floor(i * (W / months.length) + (W / months.length) / 2)
       const expH = Math.floor((m.expectedUSD / maxVal) * (H - PAD * 2))
       const actH = Math.floor((m.actualUSD / maxVal) * (H - PAD * 2))
-
-      // Expected bar
-      ctx.fillStyle = 'rgba(255,255,255,0.1)'
+      ctx.fillStyle = 'rgba(255,255,255,0.15)'
       ctx.fillRect(x - BAR_W - 2, H - PAD - expH, BAR_W, expH)
-
-      // Actual bar
-      ctx.fillStyle = m.actualUSD > m.expectedUSD * 1.05 ? 'rgba(248,113,113,0.7)' : 'rgba(180,230,69,0.7)'
+      ctx.fillStyle = m.actualUSD > m.expectedUSD * 1.05 ? 'rgba(248,113,113,0.7)' : `${accent}b0`
       ctx.fillRect(x + 2, H - PAD - actH, BAR_W, actH)
-
-      // Label
-      ctx.fillStyle = 'rgba(255,255,255,0.4)'
+      ctx.fillStyle = 'rgba(74,74,106,0.6)'
       ctx.font = '10px system-ui'
       ctx.textAlign = 'center'
       ctx.fillText(m.label, x, H - 4)
@@ -104,11 +110,13 @@ export default function ReportsView() {
   async function saveBill() {
     if (!editingBill || !billAmt) return
     const db = await getDb()
-    await db.query(
-      'INSERT INTO bills (sub_id,year,month,amount,currency,notes,updated_at) VALUES ($1,$2,$3,$4,$5,$6,now()) ON CONFLICT (sub_id,year,month) DO UPDATE SET amount=EXCLUDED.amount, currency=EXCLUDED.currency, notes=EXCLUDED.notes, updated_at=now()',
-      [editingBill.sub.id, editingBill.year, editingBill.month, parseFloat(billAmt), billCurrency, billNotes]
-    )
-    setEditingBill(null); await load()
+    try {
+      await db.query(
+        'INSERT INTO bills (sub_id,year,month,amount,currency,notes,updated_at) VALUES ($1,$2,$3,$4,$5,$6,now()) ON CONFLICT (sub_id,year,month) DO UPDATE SET amount=EXCLUDED.amount, currency=EXCLUDED.currency, notes=EXCLUDED.notes, updated_at=now()',
+        [editingBill.sub.id, editingBill.year, editingBill.month, parseFloat(billAmt), billCurrency, billNotes]
+      )
+      setEditingBill(null); await load()
+    } catch (e) { console.error('[reports] saveBill failed:', e) }
   }
 
   async function deleteBill() {
@@ -126,78 +134,121 @@ export default function ReportsView() {
     setBillNotes(existing?.notes ?? '')
   }
 
-  if (editingBill) {
-    const { sub, year, month } = editingBill
-    return (
-      <div className="flex flex-col h-full bg-[#0f2020]">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10 bg-[#0d1f1f]">
-          <button onClick={() => setEditingBill(null)} className="text-white/50 hover:text-white mr-1">←</button>
-          <span className="font-semibold flex-1">{sub.name} — {MONTH_SHORT[month-1]} {year}</span>
-          <button onClick={saveBill} className="text-xs bg-[#b4e645] text-[#0f2020] font-semibold px-3 py-1 rounded-full">Save</button>
-        </div>
-        <div className="flex-1 p-4 flex flex-col gap-3">
-          <div className="flex gap-2">
-            <input value={billAmt} onChange={e => setBillAmt(e.target.value)} placeholder="Amount paid" type="number" min="0" step="0.01" className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none" />
-            <select value={billCurrency} onChange={e => setBillCurrency(e.target.value)} className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none">
+  return (
+    <div>
+      <ViewHeader
+        title="Reports" icon={<IconReports size={22} accent={accent} filled />}
+        accent={accent}
+        stats={
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            6-month overview
+            <select value={display} onChange={e => setDisplay(e.target.value)}
+              style={{ background: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.6)', borderRadius: 8, padding: '2px 6px', fontSize: 12, color: '#1a1a2e', outline: 'none', cursor: 'pointer' }}>
               {DISPLAY_CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
-          </div>
-          <textarea value={billNotes} onChange={e => setBillNotes(e.target.value)} placeholder="Notes" rows={2} className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none resize-none" />
-          {editingBill.existing && <button onClick={deleteBill} className="text-red-400 text-sm text-left">Remove bill record</button>}
-        </div>
-      </div>
-    )
-  }
+          </span>
+        }
+      />
+      <BentoGrid>
+        <BentoCell span="full">
+          <GlassCard accentBar accent={accent}>
+            <div style={{ padding: 20 }}>
+              <div style={{ display: 'flex', gap: 16, marginBottom: 8 }}>
+                <span style={{ fontFamily: 'Satoshi, sans-serif', fontSize: 12, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: 'rgba(255,255,255,0.3)' }} />Expected
+                </span>
+                <span style={{ fontFamily: 'Satoshi, sans-serif', fontSize: 12, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2, background: accent }} />Actual
+                </span>
+              </div>
+              <canvas ref={canvasRef} width={760} height={120} style={{ width: '100%', borderRadius: 8, background: 'rgba(255,255,255,0.2)' }} />
+            </div>
+          </GlassCard>
+        </BentoCell>
 
-  return (
-    <div className="flex flex-col h-full bg-[#0f2020]">
-      <div className="px-4 pt-4 pb-3 border-b border-white/10 bg-[#0d1f1f]">
-        <div className="flex items-center justify-between mb-1">
-          <h1 className="font-bold text-lg">Reports</h1>
-          <select value={display} onChange={e => setDisplay(e.target.value)} className="bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white outline-none">
-            {DISPLAY_CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
-        <div className="text-xs text-white/40 flex gap-4">
-          <span><span className="inline-block w-2 h-2 rounded-sm bg-white/20 mr-1" />Expected</span>
-          <span><span className="inline-block w-2 h-2 rounded-sm bg-[#b4e645]/70 mr-1" />Actual</span>
-        </div>
-      </div>
+        <BentoCell span="1">
+          <GlassCard accentBar accent={accent}>
+            <div style={{ padding: 20, textAlign: 'center' }}>
+              <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 700, fontSize: 28, color: accent }}>{fmtUSD(actualTotal, display)}</div>
+              <div style={{ fontSize: 13, color: '#4a4a6a', fontFamily: 'Satoshi, sans-serif', marginTop: 4 }}>This month</div>
+            </div>
+          </GlassCard>
+        </BentoCell>
 
-      {/* Chart */}
-      <div className="px-4 pt-4">
-        <canvas ref={canvasRef} width={340} height={120} className="w-full rounded-lg bg-[#152a2a]" />
-      </div>
+        <BentoCell span="1">
+          <GlassCard>
+            <div style={{ padding: 20, textAlign: 'center' }}>
+              <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 700, fontSize: 28, color: '#1a1a2e' }}>{fmtUSD(expectedTotal, display)}</div>
+              <div style={{ fontSize: 13, color: '#4a4a6a', fontFamily: 'Satoshi, sans-serif', marginTop: 4 }}>Expected</div>
+            </div>
+          </GlassCard>
+        </BentoCell>
 
-      {/* Per-subscription breakdown for current month */}
-      <div className="flex-1 overflow-y-auto mt-4">
-        <div className="px-4 py-2 text-xs text-white/40 font-semibold uppercase tracking-wider">
-          {MONTH_SHORT[curMonth-1]} {curYear}
-        </div>
-        {subs.length === 0 ? (
-          <div className="text-center text-white/30 py-8 text-sm">No active subscriptions</div>
-        ) : subs.map(s => {
-          const exp = expectedMonthlyUSD(s, curYear, curMonth)
-          const bill = bills.find(b => b.sub_id === s.id && b.year === curYear && b.month === curMonth)
-          const act = bill ? toUSD(parseFloat(bill.amount), bill.currency) : null
-          const over = act !== null && act > exp * 1.05
-          return (
-            <button key={s.id} onClick={() => openBill(s, curYear, curMonth)} className="w-full text-left px-4 py-3 border-b border-white/5 hover:bg-white/5 transition-colors">
-              <div className="flex items-center justify-between">
-                <span className="font-medium text-sm">{s.name}</span>
-                <div className="text-right text-xs">
-                  <div className="text-white/40">Exp {fmtUSD(exp, display)}</div>
-                  {act !== null ? (
-                    <div className={over ? 'text-red-400' : 'text-[#b4e645]'}>Act {fmtUSD(act, display)}</div>
-                  ) : (
-                    <div className="text-white/20">Not recorded</div>
-                  )}
+        <BentoCell span="1">
+          <GlassCard>
+            <div style={{ padding: 20, textAlign: 'center' }}>
+              <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 700, fontSize: 28, color: delta > 0 ? '#ef4444' : '#34d399' }}>{delta >= 0 ? '+' : ''}{fmtUSD(Math.abs(delta), display)}</div>
+              <div style={{ fontSize: 13, color: '#4a4a6a', fontFamily: 'Satoshi, sans-serif', marginTop: 4 }}>Delta</div>
+            </div>
+          </GlassCard>
+        </BentoCell>
+
+        <BentoCell span="full">
+          <GlassCard>
+            <div style={{ padding: 16 }}>
+              <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e', marginBottom: 10 }}>
+                {MONTH_SHORT[curMonth-1]} {curYear}
+              </div>
+              {subs.length === 0 && <div style={{ color: '#4a4a6a', fontSize: 13, fontFamily: 'Satoshi, sans-serif' }}>No active subscriptions.</div>}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {subs.map(s => {
+                  const exp = expectedMonthlyUSD(s, curYear, curMonth)
+                  const bill = bills.find(b => b.sub_id === s.id && b.year === curYear && b.month === curMonth)
+                  const act = bill ? toUSD(parseFloat(bill.amount), bill.currency) : null
+                  const over = act !== null && act > exp * 1.05
+                  return (
+                    <button key={s.id} onClick={() => openBill(s, curYear, curMonth)}
+                      style={{ textAlign: 'left', padding: '8px 12px', borderRadius: 10, border: 'none', cursor: 'pointer', background: editingBill?.sub.id === s.id ? `${accent}15` : 'rgba(255,255,255,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontFamily: 'Satoshi, sans-serif', fontWeight: 500, fontSize: 14, color: '#1a1a2e' }}>{s.name}</span>
+                      <div style={{ textAlign: 'right', fontSize: 12, fontFamily: 'Satoshi, sans-serif' }}>
+                        <div style={{ color: '#94a3b8' }}>Exp {fmtUSD(exp, display)}</div>
+                        {act !== null
+                          ? <div style={{ color: over ? '#ef4444' : '#34d399' }}>Act {fmtUSD(act, display)}</div>
+                          : <div style={{ color: '#cbd5e1' }}>Not recorded</div>}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </GlassCard>
+        </BentoCell>
+
+        {editingBill && (
+          <BentoCell span="full">
+            <GlassCard accentBar accent={accent}>
+              <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 700, fontSize: 18, color: '#1a1a2e' }}>
+                  {editingBill.sub.name} — {MONTH_SHORT[editingBill.month-1]} {editingBill.year}
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <GlassInput value={billAmt} onChange={setBillAmt} placeholder="Amount paid" type="number" />
+                  <select value={billCurrency} onChange={e => setBillCurrency(e.target.value)}
+                    style={{ background: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.6)', borderRadius: 12, padding: '12px 16px', fontSize: 14, color: '#1a1a2e', outline: 'none', cursor: 'pointer' }}>
+                    {DISPLAY_CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <GlassInput value={billNotes} onChange={setBillNotes} placeholder="Notes" />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <PillButton onClick={saveBill} accent={accent}>Save</PillButton>
+                  <PillButton variant="ghost" onClick={() => setEditingBill(null)}>Cancel</PillButton>
+                  {editingBill.existing && <PillButton variant="ghost" onClick={deleteBill} style={{ color: '#ef4444' }}>Remove</PillButton>}
                 </div>
               </div>
-            </button>
-          )
-        })}
-      </div>
+            </GlassCard>
+          </BentoCell>
+        )}
+      </BentoGrid>
     </div>
   )
 }

@@ -1,12 +1,22 @@
+// pwa/src/app/views/MapView.tsx
 import { useEffect, useState, useCallback } from 'react'
 import { getDb } from '../../db'
+import { ACCENT } from '../../design/tokens'
+import GlassCard from '../../design/GlassCard'
+import GlassInput from '../../design/GlassInput'
+import PillButton from '../../design/PillButton'
+import { BentoGrid, BentoCell } from '../../design/BentoGrid'
+import ViewHeader from '../ViewHeader'
+import { IconMaps } from '../../design/icons'
 
 interface MapStack { id: string; name: string; color: string; icon: string }
 interface MapPin { id: string; stack_id: string; label: string; lat: number; lng: number; url: string; note: string; priority: string; category: string; rating: number; review_note: string; created_at: string }
 
 const COLORS = ['#34d399','#818cf8','#f59e0b','#f87171','#60a5fa','#a78bfa','#fb923c']
 const PRIORITIES = ['none','low','medium','high']
-const PRIORITY_COLOR: Record<string, string> = { none:'text-white/30', low:'text-blue-400', medium:'text-yellow-400', high:'text-red-400' }
+const PRIORITY_COLOR: Record<string, string> = { none: '#94a3b8', low: '#60a5fa', medium: '#f59e0b', high: '#ef4444' }
+
+const accent = ACCENT.maps
 
 export default function MapView() {
   const [stacks, setStacks] = useState<MapStack[]>([])
@@ -61,14 +71,16 @@ export default function MapView() {
     if (!pf.label.trim() || !pf.lat || !pf.lng) return
     const db = await getDb()
     const lat = parseFloat(pf.lat), lng = parseFloat(pf.lng)
-    if (isNewPin) {
-      await db.query('INSERT INTO map_pins (stack_id,label,lat,lng,url,note,priority,category,rating,review_note) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
-        [activeStack!.id, pf.label, lat, lng, pf.url, pf.note, pf.priority, pf.category, pf.rating, pf.review_note])
-    } else {
-      await db.query('UPDATE map_pins SET label=$1,lat=$2,lng=$3,url=$4,note=$5,priority=$6,category=$7,rating=$8,review_note=$9 WHERE id=$10',
-        [pf.label, lat, lng, pf.url, pf.note, pf.priority, pf.category, pf.rating, pf.review_note, editingPin!.id])
-    }
-    setEditingPin(null); await loadPins(activeStack!.id)
+    try {
+      if (isNewPin) {
+        await db.query('INSERT INTO map_pins (stack_id,label,lat,lng,url,note,priority,category,rating,review_note) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
+          [activeStack!.id, pf.label, lat, lng, pf.url, pf.note, pf.priority, pf.category, pf.rating, pf.review_note])
+      } else {
+        await db.query('UPDATE map_pins SET label=$1,lat=$2,lng=$3,url=$4,note=$5,priority=$6,category=$7,rating=$8,review_note=$9 WHERE id=$10',
+          [pf.label, lat, lng, pf.url, pf.note, pf.priority, pf.category, pf.rating, pf.review_note, editingPin!.id])
+      }
+      setEditingPin(null); await loadPins(activeStack!.id)
+    } catch (e) { console.error('[maps] savePin failed:', e) }
   }
 
   async function deletePin(id: string) {
@@ -82,121 +94,120 @@ export default function MapView() {
     if (p.url) {
       try {
         const u = new URL(p.url)
-        if (u.protocol === 'http:' || u.protocol === 'https:') {
-          window.open(p.url, '_blank', 'noopener,noreferrer')
-          return
-        }
-      } catch { /* invalid URL — fall through to Google Maps */ }
+        if (u.protocol === 'http:' || u.protocol === 'https:') { window.open(p.url, '_blank', 'noopener,noreferrer'); return }
+      } catch { /* fall through */ }
     }
     window.open(fallback, '_blank', 'noopener,noreferrer')
   }
 
-  if (editingPin !== null) {
-    return (
-      <div className="flex flex-col h-full bg-[#0f2020]">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10 bg-[#0d1f1f]">
-          <button onClick={() => setEditingPin(null)} className="text-white/50 hover:text-white mr-1">←</button>
-          <span className="font-semibold flex-1">{isNewPin ? 'New Pin' : 'Edit Pin'}</span>
-          <button onClick={savePin} className="text-xs bg-[#b4e645] text-[#0f2020] font-semibold px-3 py-1 rounded-full">Save</button>
-        </div>
-        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
-          <input value={pf.label} onChange={e => setPf(p=>({...p,label:e.target.value}))} placeholder="Label" className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none" />
-          <div className="flex gap-2">
-            <input value={pf.lat} onChange={e => setPf(p=>({...p,lat:e.target.value}))} placeholder="Latitude" type="number" step="any" className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none" />
-            <input value={pf.lng} onChange={e => setPf(p=>({...p,lng:e.target.value}))} placeholder="Longitude" type="number" step="any" className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none" />
-          </div>
-          <input value={pf.url} onChange={e => setPf(p=>({...p,url:e.target.value}))} placeholder="Map URL (optional)" className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none" />
-          <textarea value={pf.note} onChange={e => setPf(p=>({...p,note:e.target.value}))} placeholder="Note" rows={2} className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none resize-none" />
-          <input value={pf.category} onChange={e => setPf(p=>({...p,category:e.target.value}))} placeholder="Category (e.g. Restaurant)" className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none" />
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <div className="text-xs text-white/40 mb-1">Priority</div>
-              <select value={pf.priority} onChange={e => setPf(p=>({...p,priority:e.target.value}))} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none">
-                {PRIORITIES.map(p => <option key={p} value={p}>{p.charAt(0).toUpperCase()+p.slice(1)}</option>)}
-              </select>
-            </div>
-            <div className="flex-1">
-              <div className="text-xs text-white/40 mb-1">Rating (0–5)</div>
-              <input value={pf.rating} onChange={e => setPf(p=>({...p,rating:Math.min(5, Math.max(0, +e.target.value))}))} type="number" min={0} max={5} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none" />
-            </div>
-          </div>
-          <textarea value={pf.review_note} onChange={e => setPf(p=>({...p,review_note:e.target.value}))} placeholder="Review note" rows={2} className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none resize-none" />
-          {!isNewPin && <button onClick={() => deletePin(editingPin.id)} className="text-red-400 text-sm text-left mt-2">Delete pin</button>}
-        </div>
-      </div>
-    )
-  }
-
-  if (activeStack) {
-    return (
-      <div className="flex flex-col h-full bg-[#0f2020]">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10 bg-[#0d1f1f]">
-          <button onClick={() => setActiveStack(null)} className="text-white/50 hover:text-white mr-1">←</button>
-          <span className="w-3 h-3 rounded-full shrink-0" style={{ background: activeStack.color }} />
-          <span className="font-semibold flex-1">{activeStack.name}</span>
-          <button onClick={openNewPin} className="bg-[#b4e645] text-[#0f2020] font-bold px-4 py-1.5 rounded-full text-sm">+ Pin</button>
-          <button onClick={() => deleteStack(activeStack.id)} className="text-white/30 hover:text-red-400 text-xs ml-1">Delete</button>
-        </div>
-        <div className="flex-1 overflow-y-auto">
-          {pins.length === 0 ? (
-            <div className="text-center text-white/30 py-12 text-sm">No pins yet</div>
-          ) : pins.map(p => (
-            <div key={p.id} className="px-4 py-3 border-b border-white/5">
-              <div className="flex items-start gap-2">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-sm">{p.label}</span>
-                    {p.rating > 0 && <span className="text-xs text-yellow-400">{'★'.repeat(p.rating)}</span>}
-                    {p.priority !== 'none' && <span className={`text-xs ${PRIORITY_COLOR[p.priority]}`}>●</span>}
+  return (
+    <div>
+      <ViewHeader
+        title="Maps" icon={<IconMaps size={22} accent={accent} filled />}
+        accent={accent} stats={`${stacks.length} stacks · ${pins.length} pins`}
+        action="+ Stack" onAction={() => setShowNewStack(true)}
+      />
+      <BentoGrid>
+        <BentoCell span="1">
+          <GlassCard style={{ height: '100%' }}>
+            <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e', marginBottom: 4 }}>Stacks</div>
+              {showNewStack && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 8 }}>
+                  <GlassInput value={newStackName} onChange={setNewStackName} placeholder="Stack name" autoFocus />
+                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                    {COLORS.map(c => (
+                      <button key={c} onClick={() => setNewStackColor(c)}
+                        style={{ width: 24, height: 24, borderRadius: '50%', background: c, border: newStackColor === c ? '2px solid #1a1a2e' : '2px solid transparent', cursor: 'pointer' }} />
+                    ))}
                   </div>
-                  {p.category && <div className="text-xs text-white/40">{p.category}</div>}
-                  {p.note && <div className="text-xs text-white/50 mt-0.5 line-clamp-2">{p.note}</div>}
-                  <div className="text-xs text-white/25 mt-0.5 font-mono">{p.lat.toFixed(5)}, {p.lng.toFixed(5)}</div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <PillButton onClick={createStack} accent={accent}>Create</PillButton>
+                    <PillButton variant="ghost" onClick={() => setShowNewStack(false)}>Cancel</PillButton>
+                  </div>
                 </div>
-                <div className="flex gap-1 shrink-0">
-                  <button onClick={() => openMaps(p)} className="text-xs text-white/40 hover:text-[#b4e645] border border-white/10 px-2 py-1 rounded">Open</button>
-                  <button onClick={() => openEditPin(p)} className="text-xs text-white/40 hover:text-white border border-white/10 px-2 py-1 rounded">Edit</button>
+              )}
+              {stacks.length === 0 && <div style={{ color: '#4a4a6a', fontSize: 13, fontFamily: 'Satoshi, sans-serif', padding: '8px 0' }}>No stacks yet.</div>}
+              {stacks.map(s => (
+                <button key={s.id} onClick={() => setActiveStack(s)}
+                  style={{ textAlign: 'left', padding: '8px 12px', borderRadius: 10, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+                    background: activeStack?.id === s.id ? `${s.color}20` : 'rgba(255,255,255,0.4)', borderLeft: `3px solid ${s.color}` }}>
+                  <span style={{ width: 10, height: 10, borderRadius: '50%', background: s.color, flexShrink: 0 }} />
+                  <span style={{ flex: 1, fontFamily: 'Satoshi, sans-serif', fontWeight: 500, fontSize: 14, color: '#1a1a2e' }}>{s.name}</span>
+                  <button onClick={e => { e.stopPropagation(); deleteStack(s.id) }}
+                    style={{ fontSize: 11, color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer', padding: 2 }}>✕</button>
+                </button>
+              ))}
+            </div>
+          </GlassCard>
+        </BentoCell>
+
+        <BentoCell span="2">
+          <GlassCard style={{ height: '100%', minHeight: 320 }}>
+            <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {!activeStack ? (
+                <div style={{ textAlign: 'center', color: '#4a4a6a', padding: 32, fontFamily: 'Satoshi, sans-serif' }}>Select a stack</div>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <span style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 700, fontSize: 16, color: '#1a1a2e' }}>{activeStack.name}</span>
+                    <PillButton onClick={openNewPin} accent={accent}>+ Pin</PillButton>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 280, overflowY: 'auto' }}>
+                    {pins.length === 0 && <div style={{ color: '#4a4a6a', fontSize: 13, fontFamily: 'Satoshi, sans-serif', padding: 8 }}>No pins yet.</div>}
+                    {pins.map(p => (
+                      <div key={p.id} style={{ padding: '8px 12px', borderRadius: 10, background: editingPin?.id === p.id ? `${accent}18` : 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontFamily: 'Satoshi, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e' }}>{p.label}</div>
+                          {p.category && <div style={{ fontSize: 11, color: '#4a4a6a' }}>{p.category}</div>}
+                          <div style={{ fontSize: 11, fontFamily: 'monospace', color: '#94a3b8' }}>{p.lat.toFixed(4)}, {p.lng.toFixed(4)}</div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                          <PillButton variant="ghost" onClick={() => openMaps(p)}>Open</PillButton>
+                          <PillButton variant="ghost" onClick={() => openEditPin(p)}>Edit</PillButton>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </GlassCard>
+        </BentoCell>
+
+        {editingPin !== null && (
+          <BentoCell span="full">
+            <GlassCard accentBar accent={accent}>
+              <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ fontFamily: 'Clash Display, sans-serif', fontWeight: 700, fontSize: 18, color: '#1a1a2e' }}>{isNewPin ? 'New Pin' : 'Edit Pin'}</div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <div style={{ flex: '1 1 200px' }}><GlassInput value={pf.label} onChange={v => setPf(p=>({...p,label:v}))} placeholder="Label" /></div>
+                  <div style={{ flex: '0 0 120px' }}><GlassInput value={String(pf.lat)} onChange={v => setPf(p=>({...p,lat:v}))} placeholder="Latitude" type="number" /></div>
+                  <div style={{ flex: '0 0 120px' }}><GlassInput value={String(pf.lng)} onChange={v => setPf(p=>({...p,lng:v}))} placeholder="Longitude" type="number" /></div>
+                </div>
+                <GlassInput value={pf.url} onChange={v => setPf(p=>({...p,url:v}))} placeholder="Map URL (optional)" />
+                <GlassInput value={pf.note} onChange={v => setPf(p=>({...p,note:v}))} placeholder="Note" />
+                <GlassInput value={pf.category} onChange={v => setPf(p=>({...p,category:v}))} placeholder="Category" />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <select value={pf.priority} onChange={e => setPf(p=>({...p,priority:e.target.value}))}
+                    style={{ flex: 1, background: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.6)', borderRadius: 12, padding: '12px 16px', fontSize: 14, color: '#1a1a2e', outline: 'none' }}>
+                    {PRIORITIES.map(pr => <option key={pr} value={pr}>{pr.charAt(0).toUpperCase()+pr.slice(1)}</option>)}
+                  </select>
+                  <div style={{ flex: 1 }}>
+                    <GlassInput value={String(pf.rating)} onChange={v => setPf(p=>({...p,rating:Math.min(5, Math.max(0, +v))}))} placeholder="Rating (0-5)" type="number" />
+                  </div>
+                </div>
+                <GlassInput value={pf.review_note} onChange={v => setPf(p=>({...p,review_note:v}))} placeholder="Review note" />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <PillButton onClick={savePin} accent={accent}>Save</PillButton>
+                  <PillButton variant="ghost" onClick={() => setEditingPin(null)}>Cancel</PillButton>
+                  {!isNewPin && <PillButton variant="ghost" onClick={() => deletePin(editingPin.id)} style={{ color: '#ef4444' }}>Delete</PillButton>}
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="flex flex-col h-full bg-[#0f2020]">
-      <div className="px-4 pt-4 pb-3 border-b border-white/10 bg-[#0d1f1f]">
-        <div className="flex items-center justify-between">
-          <h1 className="font-bold text-lg">Map Pins</h1>
-          <button onClick={() => setShowNewStack(true)} className="bg-[#b4e645] text-[#0f2020] font-bold px-4 py-1.5 rounded-full text-sm">+ Stack</button>
-        </div>
-      </div>
-
-      {showNewStack && (
-        <div className="px-4 py-3 border-b border-white/10 bg-[#152a2a] flex flex-col gap-2">
-          <input value={newStackName} onChange={e => setNewStackName(e.target.value)} onKeyDown={e => e.key === 'Enter' && createStack()} placeholder="Stack name" autoFocus className="bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none" />
-          <div className="flex gap-1.5">
-            {COLORS.map(c => <button key={c} onClick={() => setNewStackColor(c)} className={`w-6 h-6 rounded-full border-2 transition-all ${newStackColor===c ? 'border-white scale-125' : 'border-transparent'}`} style={{ background:c }} />)}
-          </div>
-          <div className="flex gap-2">
-            <button onClick={createStack} className="bg-[#b4e645] text-[#0f2020] font-semibold px-4 py-1.5 rounded-full text-sm">Create</button>
-            <button onClick={() => setShowNewStack(false)} className="text-white/40 text-sm px-3">Cancel</button>
-          </div>
-        </div>
-      )}
-
-      <div className="flex-1 overflow-y-auto">
-        {stacks.length === 0 ? (
-          <div className="text-center text-white/30 py-16 text-sm">No stacks yet — create one above</div>
-        ) : stacks.map(s => (
-          <button key={s.id} onClick={() => setActiveStack(s)} className="w-full text-left px-4 py-4 border-b border-white/5 hover:bg-white/5 transition-colors flex items-center gap-3">
-            <span className="w-3 h-3 rounded-full shrink-0" style={{ background:s.color }} />
-            <span className="font-medium">{s.name}</span>
-          </button>
-        ))}
-      </div>
+            </GlassCard>
+          </BentoCell>
+        )}
+      </BentoGrid>
     </div>
   )
 }

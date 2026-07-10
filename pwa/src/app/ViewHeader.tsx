@@ -6,7 +6,7 @@ interface Props {
   title: string
   icon: React.ReactNode
   accent: string
-  stats?: string
+  stats?: React.ReactNode
   action?: string
   onAction?: () => void
 }
