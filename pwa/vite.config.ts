@@ -2,11 +2,28 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import fs from 'fs'
+import path from 'path'
 
 export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    // Serve oauth-callback.html at /oauth-callback during dev
+    {
+      name: 'oauth-callback',
+      configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          if (req.url?.startsWith('/oauth-callback')) {
+            const html = fs.readFileSync(path.resolve(__dirname, 'public/oauth-callback.html'), 'utf-8')
+            res.setHeader('Content-Type', 'text/html')
+            res.end(html)
+            return
+          }
+          next()
+        })
+      },
+    },
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
