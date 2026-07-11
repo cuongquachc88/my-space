@@ -8,7 +8,7 @@ vi.mock('@capacitor/app', () => ({ App: { addListener: vi.fn(), removeAllListene
 // ── Mock import.meta.env ────────────────────────────────────────────────────
 vi.stubGlobal('import', { meta: { env: { VITE_GOOGLE_CLIENT_ID: 'test-client-id.apps.googleusercontent.com' } } })
 
-import { getStoredToken, clearToken, findFile, uploadFile, downloadFile } from '../../src/services/googleDrive'
+import { authorize, getStoredToken, clearToken, findFile, uploadFile, downloadFile } from '../../src/services/googleDrive'
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -237,5 +237,117 @@ describe('OAuth state validation', () => {
   it('verifier is also stored in localStorage', () => {
     localStorage.setItem('oauth_verifier', 'pkce-verifier-xyz')
     expect(localStorage.getItem('oauth_verifier')).toBe('pkce-verifier-xyz')
+  })
+})
+
+// ── authorize() popup flow ────────────────────────────────────────────────
+
+describe('authorize — web popup flow', () => {
+  beforeEach(() => localStorage.clear())
+  afterEach(() => { localStorage.clear(); vi.restoreAllMocks() })
+
+  function makePopupSpy() {
+    let locationHref = ''
+    const popup = {
+      get closed() { return false },
+      location: { set href(v: string) { locationHref = v } },
+      get _href() { return locationHref },
+    } as unknown as Window & { _href: string }
+    return popup
+  }
+
+  // Dispatch a postMessage that passes the origin guard in authorizeWeb
+  function sendOAuthMessage(data: unknown) {
+    // happy-dom sets location.origin to 'about://' — match whatever it is
+    window.dispatchEvent(new MessageEvent('message', { origin: location.origin, data }))
+  }
+
+  // Wait for authorize() to set localStorage (happens after async PKCE generation)
+  async function waitForState(): Promise<string> {
+    await new Promise(r => setTimeout(r, 10))
+    return localStorage.getItem('oauth_state')!
+  }
+
+  it('stores oauth_state and oauth_verifier after PKCE generation', async () => {
+    const popup = makePopupSpy()
+    const authPromise = authorize(popup)
+    const state = await waitForState()
+
+    expect(state).toBeTruthy()
+    expect(localStorage.getItem('oauth_verifier')).toBeTruthy()
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true, status: 200,
+      json: async () => ({ access_token: 'tok' }),
+      text: async () => JSON.stringify({ access_token: 'tok' }),
+    } as Response)
+    sendOAuthMessage({ type: 'OAUTH_CODE', code: 'code', state })
+    await authPromise
+  })
+
+  it('navigates pre-opened popup to Google OAuth URL', async () => {
+    const popup = makePopupSpy()
+    const authPromise = authorize(popup)
+    const state = await waitForState()
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true, status: 200,
+      json: async () => ({ access_token: 'tok-xyz' }),
+      text: async () => JSON.stringify({ access_token: 'tok-xyz' }),
+    } as Response)
+    sendOAuthMessage({ type: 'OAUTH_CODE', code: 'code', state })
+    await authPromise
+
+    expect(popup._href).toContain('accounts.google.com')
+    expect(popup._href).toContain('code_challenge_method=S256')
+  })
+
+  it('rejects when popup is closed before completing auth', async () => {
+    let isClosed = false
+    const popup = {
+      get closed() { return isClosed },
+      location: { set href(_v: string) {} },
+    } as unknown as Window
+
+    const authPromise = authorize(popup)
+    await waitForState()
+    isClosed = true
+    await expect(authPromise).rejects.toThrow('Authorization cancelled')
+  })
+
+  it('rejects on state mismatch in postMessage', async () => {
+    const popup = makePopupSpy()
+    const authPromise = authorize(popup)
+    await waitForState()
+
+    sendOAuthMessage({ type: 'OAUTH_CODE', code: 'code', state: 'wrong-state' })
+    await expect(authPromise).rejects.toThrow('State mismatch')
+  })
+
+  it('rejects on OAUTH_ERROR message', async () => {
+    const popup = makePopupSpy()
+    const authPromise = authorize(popup)
+    await waitForState()
+
+    sendOAuthMessage({ type: 'OAUTH_ERROR', error: 'access_denied' })
+    await expect(authPromise).rejects.toThrow('OAuth error: access_denied')
+  })
+
+  it('stores drive_token and clears oauth state after success', async () => {
+    const popup = makePopupSpy()
+    const authPromise = authorize(popup)
+    const state = await waitForState()
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true, status: 200,
+      json: async () => ({ access_token: 'final-token' }),
+      text: async () => JSON.stringify({ access_token: 'final-token' }),
+    } as Response)
+    sendOAuthMessage({ type: 'OAUTH_CODE', code: 'code', state })
+    await authPromise
+
+    expect(localStorage.getItem('drive_token')).toBe('final-token')
+    expect(localStorage.getItem('oauth_state')).toBeNull()
+    expect(localStorage.getItem('oauth_verifier')).toBeNull()
   })
 })
