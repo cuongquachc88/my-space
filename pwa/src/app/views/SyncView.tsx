@@ -81,18 +81,20 @@ export function useSyncLogic() {
     setStatus('busy'); log('Exporting data…')
     try {
       const db = await getDb()
-      const [notes, secrets, subs, todos, pins] = await Promise.all([
+      const [notes, secrets, subs, todoLists, todos, mapStacks, pins] = await Promise.all([
         db.query('SELECT * FROM notes'),
         db.query('SELECT * FROM secrets'),
         db.query('SELECT * FROM subscriptions'),
+        db.query('SELECT * FROM todo_lists'),
         db.query('SELECT * FROM todo_tasks'),
+        db.query('SELECT * FROM map_stacks'),
         db.query('SELECT * FROM map_pins'),
       ])
-      log(`${notes.rows.length} notes, ${secrets.rows.length} secrets, ${todos.rows.length} todos`)
+      log(`${notes.rows.length} notes, ${secrets.rows.length} secrets, ${subs.rows.length} subs, ${todos.rows.length} todos, ${pins.rows.length} pins`)
       const vaultSaltB64 = localStorage.getItem('myspace_vault_salt')
       if (!vaultSaltB64) { log('Vault not initialised — unlock first', 'error'); setStatus('error'); return }
       const vaultSalt = Uint8Array.from(atob(vaultSaltB64), c => c.charCodeAt(0))
-      const plaintext = JSON.stringify({ notes: notes.rows, secrets: secrets.rows, subscriptions: subs.rows, todo_tasks: todos.rows, map_pins: pins.rows })
+      const plaintext = JSON.stringify({ notes: notes.rows, secrets: secrets.rows, subscriptions: subs.rows, todo_lists: todoLists.rows, todo_tasks: todos.rows, map_stacks: mapStacks.rows, map_pins: pins.rows })
       log('Encrypting…')
       const { ciphertext, iv } = await encryptWithKey(plaintext, getKey())
       const payload = JSON.stringify({ ciphertext, iv, salt: Array.from(vaultSalt) })
@@ -164,7 +166,9 @@ export function useSyncLogic() {
       try {
         plaintext = await decryptWithKey(pendingPull.ciphertext, pendingPull.iv, backupKey)
       } catch {
-        throw new Error('Wrong password — decryption failed')
+        log('Wrong password — decryption failed', 'error')
+        setStatus('error')
+        return
       }
       setPendingPull(null)
       setPullPassword('')
@@ -181,7 +185,7 @@ export function useSyncLogic() {
       for (const n of data.notes as { id: string; title: string; content: string; tags: string[]; image_data: string }[]) {
         await db.query(
           'INSERT INTO notes (id,title,content,tags,image_data) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (id) DO UPDATE SET title=EXCLUDED.title, content=EXCLUDED.content, tags=EXCLUDED.tags, image_data=EXCLUDED.image_data, updated_at=now()',
-          [n.id, n.title, n.content, n.tags, n.image_data]
+          [n.id, n.title, n.content, n.tags, n.image_data ?? '[]']
         )
       }
       log(`Merged ${data.notes.length} notes`)
@@ -193,7 +197,6 @@ export function useSyncLogic() {
         let finalCt = s.ciphertext
         let finalIv = s.iv
         if (backupKey && localKey) {
-          // Cross-device: decrypt with backup key, re-encrypt with local vault key
           const plainValue = await decryptWithKey(s.ciphertext, s.iv, backupKey)
           const enc = await encryptWithKey(plainValue, localKey)
           finalCt = enc.ciphertext
@@ -201,7 +204,7 @@ export function useSyncLogic() {
         }
         await db.query(
           'INSERT INTO secrets (id,label,ciphertext,iv,tags,url,description) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET label=EXCLUDED.label, ciphertext=EXCLUDED.ciphertext, iv=EXCLUDED.iv, tags=EXCLUDED.tags, url=EXCLUDED.url, description=EXCLUDED.description, updated_at=now()',
-          [s.id, s.label, finalCt, finalIv, s.tags, s.url ?? '', s.description ?? '']
+          [s.id, s.label, finalCt, finalIv, s.tags ?? [], s.url ?? '', s.description ?? '']
         )
       }
       log(`Merged ${secrets.length} secrets`)
@@ -211,27 +214,49 @@ export function useSyncLogic() {
       for (const s of data.subscriptions as { id: string; name: string; amount: number; currency: string; cycle: string; start_date: string; notes: string; active: boolean; tags: string[] }[]) {
         await db.query(
           'INSERT INTO subscriptions (id,name,amount,currency,cycle,start_date,notes,active,tags) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, amount=EXCLUDED.amount, currency=EXCLUDED.currency, cycle=EXCLUDED.cycle, start_date=EXCLUDED.start_date, notes=EXCLUDED.notes, active=EXCLUDED.active, tags=EXCLUDED.tags, updated_at=now()',
-          [s.id, s.name, s.amount, s.currency, s.cycle, s.start_date, s.notes ?? '', s.active, s.tags]
+          [s.id, s.name, s.amount, s.currency, s.cycle, s.start_date, s.notes ?? '', s.active ?? true, s.tags ?? []]
         )
       }
       log(`Merged ${data.subscriptions.length} subscriptions`)
     }
 
-    if (data.todo_tasks) {
-      for (const t of data.todo_tasks as { id: string; list_id: string; title: string; done: boolean; priority: string; due_date: string; notes: string }[]) {
+    // todo_lists must be inserted before todo_tasks (foreign key constraint)
+    if (data.todo_lists) {
+      for (const l of data.todo_lists as { id: string; name: string; color: string; icon: string }[]) {
         await db.query(
-          'INSERT INTO todo_tasks (id,list_id,title,done,priority,due_date,notes) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO UPDATE SET title=EXCLUDED.title, done=EXCLUDED.done, priority=EXCLUDED.priority, due_date=EXCLUDED.due_date, notes=EXCLUDED.notes',
-          [t.id, t.list_id, t.title, t.done, t.priority, t.due_date, t.notes]
+          'INSERT INTO todo_lists (id,name,color,icon) VALUES ($1,$2,$3,$4) ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, color=EXCLUDED.color, icon=EXCLUDED.icon',
+          [l.id, l.name, l.color ?? '#818cf8', l.icon ?? '']
+        )
+      }
+      log(`Merged ${data.todo_lists.length} todo lists`)
+    }
+
+    if (data.todo_tasks) {
+      for (const t of data.todo_tasks as { id: string; list_id: string; title: string; done: boolean; priority: string; due_date: string; note: string; recurrence: string }[]) {
+        await db.query(
+          'INSERT INTO todo_tasks (id,list_id,title,done,priority,due_date,note,recurrence) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT (id) DO UPDATE SET title=EXCLUDED.title, done=EXCLUDED.done, priority=EXCLUDED.priority, due_date=EXCLUDED.due_date, note=EXCLUDED.note, recurrence=EXCLUDED.recurrence, updated_at=now()',
+          [t.id, t.list_id, t.title, t.done ?? false, t.priority ?? 'medium', t.due_date ?? null, t.note ?? '', t.recurrence ?? 'none']
         )
       }
       log(`Merged ${data.todo_tasks.length} tasks`)
+    }
+
+    // map_stacks must be inserted before map_pins (foreign key constraint)
+    if (data.map_stacks) {
+      for (const s of data.map_stacks as { id: string; name: string; color: string; icon: string }[]) {
+        await db.query(
+          'INSERT INTO map_stacks (id,name,color,icon) VALUES ($1,$2,$3,$4) ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, color=EXCLUDED.color, icon=EXCLUDED.icon',
+          [s.id, s.name, s.color ?? '#34d399', s.icon ?? '']
+        )
+      }
+      log(`Merged ${data.map_stacks.length} map stacks`)
     }
 
     if (data.map_pins) {
       const pins = data.map_pins as { id: string; stack_id: string; label: string; lat: number; lng: number; url: string; note: string; priority: string; category: string; rating: number; review_note: string }[]
       for (const p of pins) {
         await db.query(
-          'INSERT INTO map_pins (id,stack_id,label,lat,lng,url,note,priority,category,rating,review_note) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ON CONFLICT (id) DO NOTHING',
+          'INSERT INTO map_pins (id,stack_id,label,lat,lng,url,note,priority,category,rating,review_note) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ON CONFLICT (id) DO UPDATE SET label=EXCLUDED.label, lat=EXCLUDED.lat, lng=EXCLUDED.lng, url=EXCLUDED.url, note=EXCLUDED.note, priority=EXCLUDED.priority, category=EXCLUDED.category, rating=EXCLUDED.rating, review_note=EXCLUDED.review_note',
           [p.id, p.stack_id, p.label, p.lat, p.lng, p.url ?? '', p.note ?? '', p.priority ?? 'none', p.category ?? '', p.rating ?? 0, p.review_note ?? '']
         )
       }
