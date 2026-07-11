@@ -34,6 +34,7 @@ export default function VaultView() {
   const [revealValue, setRevealValue] = useState('')
   const [revealError, setRevealError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
   const [showAdd, setShowAdd] = useState(false)
   const [detailVisible, setDetailVisible] = useState(false)
 
@@ -96,6 +97,22 @@ export default function VaultView() {
       goBack()
     } catch (e) { console.error('[vault] save failed:', e) }
     finally { setSaving(false) }
+  }
+
+  async function copySecret(id: string, value: string) {
+    try {
+      await navigator.clipboard.writeText(value)
+    } catch {
+      const ta = document.createElement('textarea')
+      ta.value = value
+      ta.style.position = 'fixed'; ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.focus(); ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+    }
+    setCopiedId(id)
+    setTimeout(() => setCopiedId(null), 2000)
   }
 
   async function reveal(s: SecretMeta) {
@@ -165,6 +182,11 @@ export default function VaultView() {
                         <button onClick={() => reveal(s)} style={{ padding: '4px 10px', borderRadius: 100, border: `1px solid ${accent}`, background: revealId === s.id ? accent : 'transparent', color: revealId === s.id ? '#fff' : accent, fontFamily: 'Inter, sans-serif', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
                           {revealId === s.id ? 'Hide' : 'Reveal'}
                         </button>
+                        {revealId === s.id && (
+                          <button onClick={() => copySecret(s.id, revealValue)} style={{ padding: '4px 10px', borderRadius: 100, border: `1px solid ${copiedId === s.id ? '#10b981' : accent}`, background: copiedId === s.id ? '#10b981' : 'transparent', color: copiedId === s.id ? '#fff' : accent, fontFamily: 'Inter, sans-serif', fontSize: 11, fontWeight: 600, cursor: 'pointer', transition: 'all 150ms' }}>
+                            {copiedId === s.id ? '✓ Copied' : 'Copy'}
+                          </button>
+                        )}
                         <button onClick={() => startEdit(s)} style={{ padding: '4px 10px', borderRadius: 100, border: '1px solid rgba(0,0,0,0.15)', background: 'transparent', color: '#4a4a6a', fontFamily: 'Inter, sans-serif', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
                           Edit
                         </button>
