@@ -8,11 +8,12 @@ import PillButton from '../../design/PillButton'
 import { BentoGrid, BentoCell } from '../../design/BentoGrid'
 import ViewHeader from '../ViewHeader'
 import { IconTodo, IconTrash } from '../../design/icons'
+import TagInput from '../components/TagInput'
 import { useIsDesktop } from '../useIsDesktop'
 import DesktopTodoView from './desktop/DesktopTodoView'
 
 interface TodoList { id: string; name: string; color: string; icon: string }
-interface TodoTask { id: string; list_id: string; title: string; note: string; priority: 'low'|'medium'|'high'; due_date: string|null; recurrence: string; done: boolean; created_at: string }
+interface TodoTask { id: string; list_id: string; title: string; note: string; priority: 'low'|'medium'|'high'; due_date: string|null; recurrence: string; done: boolean; tags: string[]; created_at: string }
 
 const COLORS = [
   '#7c6af7','#6366f1',
@@ -31,6 +32,8 @@ export default function TodoView() {
   const [lists, setLists] = useState<TodoList[]>([])
   const [activeList, setActiveList] = useState<TodoList | null>(null)
   const [tasks, setTasks] = useState<TodoTask[]>([])
+  const [activeTag, setActiveTag] = useState<string | null>(null)
+  const [allTags, setAllTags] = useState<string[]>([])
   const [showNewList, setShowNewList] = useState(false)
   const [newListName, setNewListName] = useState('')
   const [newListColor, setNewListColor] = useState(COLORS[0])
@@ -40,7 +43,7 @@ export default function TodoView() {
   const [editingTask, setEditingTask] = useState<TodoTask | null>(null)
   const [showTaskDetail, setShowTaskDetail] = useState(false)
   const [taskDetailVisible, setTaskDetailVisible] = useState(false)
-  const [tf, setTf] = useState({ title:'', note:'', priority:'medium' as 'low'|'medium'|'high', due_date:'', recurrence:'none' })
+  const [tf, setTf] = useState({ title:'', note:'', priority:'medium' as 'low'|'medium'|'high', due_date:'', recurrence:'none', tags: [] as string[] })
 
   const loadLists = useCallback(async () => {
     const db = await getDb()
@@ -48,14 +51,20 @@ export default function TodoView() {
     setLists(res.rows)
   }, [])
 
-  const loadTasks = useCallback(async (listId: string) => {
+  const loadTasks = useCallback(async (listId: string, tag?: string | null) => {
     const db = await getDb()
-    const res = await db.query<TodoTask>('SELECT * FROM todo_tasks WHERE list_id=$1 ORDER BY done ASC, created_at DESC', [listId])
+    const res = await db.query<TodoTask>(
+      tag
+        ? 'SELECT * FROM todo_tasks WHERE list_id=$1 AND $2=ANY(tags) ORDER BY done ASC, created_at DESC'
+        : 'SELECT * FROM todo_tasks WHERE list_id=$1 ORDER BY done ASC, created_at DESC',
+      tag ? [listId, tag] : [listId]
+    )
     setTasks(res.rows)
+    setAllTags([...new Set(res.rows.flatMap(t => t.tags ?? []))].sort())
   }, [])
 
   useEffect(() => { loadLists() }, [loadLists])
-  useEffect(() => { if (activeList) loadTasks(activeList.id) }, [activeList, loadTasks])
+  useEffect(() => { if (activeList) loadTasks(activeList.id, activeTag) }, [activeList, activeTag, loadTasks])
 
   async function createList() {
     if (!newListName.trim()) return
@@ -86,7 +95,7 @@ export default function TodoView() {
 
   function openTaskDetail(t: TodoTask) {
     setEditingTask(t)
-    setTf({ title: t.title, note: t.note, priority: t.priority, due_date: t.due_date ?? '', recurrence: t.recurrence })
+    setTf({ title: t.title, note: t.note, priority: t.priority, due_date: t.due_date ?? '', recurrence: t.recurrence, tags: t.tags ?? [] })
     setShowTaskDetail(true)
     setTimeout(() => setTaskDetailVisible(true), 10)
   }
@@ -99,8 +108,8 @@ export default function TodoView() {
   async function saveTask() {
     if (!editingTask) return
     const db = await getDb()
-    await db.query('UPDATE todo_tasks SET title=$1,note=$2,priority=$3,due_date=$4,recurrence=$5,updated_at=now() WHERE id=$6',
-      [tf.title, tf.note, tf.priority, tf.due_date || null, tf.recurrence, editingTask.id])
+    await db.query('UPDATE todo_tasks SET title=$1,note=$2,priority=$3,due_date=$4,recurrence=$5,tags=$6,updated_at=now() WHERE id=$7',
+      [tf.title, tf.note, tf.priority, tf.due_date || null, tf.recurrence, tf.tags, editingTask.id])
     await loadTasks(activeList!.id)
     closeTaskDetail()
   }
@@ -178,14 +187,33 @@ export default function TodoView() {
                     <GlassInput value={newTaskTitle} onChange={setNewTaskTitle} placeholder="New task…" />
                     <PillButton onClick={addTask} accent={accent}>Add</PillButton>
                   </div>
+                  {allTags.length > 0 && (
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {allTags.map(tag => (
+                        <button key={tag} onClick={() => setActiveTag(activeTag === tag ? null : tag)} style={{
+                          padding: '4px 10px', borderRadius: 100, border: 'none', cursor: 'pointer',
+                          fontSize: 12, fontFamily: 'Inter, sans-serif',
+                          background: activeTag === tag ? listColor : `${listColor}18`,
+                          color: activeTag === tag ? '#fff' : listColor,
+                        }}>#{tag}</button>
+                      ))}
+                    </div>
+                  )}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {tasks.map(t => (
                       <div key={t.id} style={{ padding: '8px 12px', borderRadius: 10, background: 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', gap: 10 }}>
                         <button onClick={() => toggleDone(t)} style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${activeList.color}`, background: t.done ? activeList.color : 'transparent', cursor: 'pointer', flexShrink: 0 }} />
-                        <span
-                          onClick={() => openTaskDetail(t)}
-                          style={{ flex: 1, fontFamily: 'Inter, sans-serif', fontSize: 14, color: '#1a1a2e', textDecoration: t.done ? 'line-through' : 'none', opacity: t.done ? 0.5 : 1, cursor: 'pointer' }}>{t.title}</span>
-                        <span style={{ fontSize: 11, fontFamily: 'Inter, sans-serif', color: t.priority === 'high' ? '#ef4444' : t.priority === 'medium' ? '#f59e0b' : '#94a3b8' }}>{t.priority}</span>
+                        <div onClick={() => openTaskDetail(t)} style={{ flex: 1, cursor: 'pointer', minWidth: 0 }}>
+                          <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 14, color: '#1a1a2e', textDecoration: t.done ? 'line-through' : 'none', opacity: t.done ? 0.5 : 1 }}>{t.title}</div>
+                          {(t.tags ?? []).length > 0 && (
+                            <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginTop: 3 }}>
+                              {(t.tags ?? []).map(tag => (
+                                <span key={tag} style={{ fontSize: 10, fontFamily: 'Inter, sans-serif', color: listColor, background: `${listColor}14`, borderRadius: 100, padding: '1px 6px' }}>#{tag}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <span style={{ fontSize: 11, fontFamily: 'Inter, sans-serif', color: t.priority === 'high' ? '#ef4444' : t.priority === 'medium' ? '#f59e0b' : '#94a3b8', flexShrink: 0 }}>{t.priority}</span>
                       </div>
                     ))}
                     {tasks.length === 0 && <div style={{ textAlign: 'center', color: '#4a4a6a', padding: 16, fontFamily: 'Inter, sans-serif', fontSize: 14 }}>No tasks yet</div>}
@@ -254,6 +282,7 @@ export default function TodoView() {
           <div style={{ padding: '20px 20px 80px', display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <GlassInput value={tf.note} onChange={v => setTf(p => ({ ...p, note: v }))} placeholder="Note (optional)" />
+              <TagInput tags={tf.tags} onChange={v => setTf(p => ({ ...p, tags: v }))} />
 
               <div style={{ display: 'flex', gap: 8 }}>
                 <div style={{ flex: 1 }}>

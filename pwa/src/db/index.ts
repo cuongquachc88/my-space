@@ -79,9 +79,11 @@ async function runSchema(instance: PGlite): Promise<void> {
       due_date   TEXT,
       recurrence TEXT NOT NULL DEFAULT 'none',
       done       BOOLEAN NOT NULL DEFAULT false,
+      tags       TEXT[] NOT NULL DEFAULT '{}',
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+    ALTER TABLE todo_tasks ADD COLUMN IF NOT EXISTS tags TEXT[] NOT NULL DEFAULT '{}';
     CREATE TABLE IF NOT EXISTS map_stacks (
       id         TEXT PRIMARY KEY DEFAULT gen_random_uuid(),
       name       TEXT NOT NULL,

@@ -2,9 +2,10 @@ import { useEffect, useState, useCallback } from 'react'
 import { getDb } from '../../../db'
 import { ACCENT } from '../../../design/tokens'
 import { IconTodo, IconTrash } from '../../../design/icons'
+import TagInput from '../../components/TagInput'
 
 interface TodoList { id: string; name: string; color: string; icon: string }
-interface TodoTask { id: string; list_id: string; title: string; note: string; priority: 'low'|'medium'|'high'; due_date: string|null; recurrence: string; done: boolean; created_at: string }
+interface TodoTask { id: string; list_id: string; title: string; note: string; priority: 'low'|'medium'|'high'; due_date: string|null; recurrence: string; done: boolean; tags: string[]; created_at: string }
 
 const COLORS = ['#7c6af7','#6366f1','#3b82f6','#06b6d4','#10b981','#84cc16','#f59e0b','#f97316','#ef4444','#ec4899','#8b5cf6','#d946ef']
 const accent = ACCENT.todo
@@ -28,6 +29,8 @@ export default function DesktopTodoView() {
   const [lists, setLists] = useState<TodoList[]>([])
   const [activeList, setActiveList] = useState<TodoList | null>(null)
   const [tasks, setTasks] = useState<TodoTask[]>([])
+  const [activeTag, setActiveTag] = useState<string | null>(null)
+  const [allTags, setAllTags] = useState<string[]>([])
   const [newTaskTitle, setNewTaskTitle] = useState('')
 
   // New list modal
@@ -38,7 +41,7 @@ export default function DesktopTodoView() {
   // Task detail modal
   const [taskModalOpen, setTaskModalOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<TodoTask | null>(null)
-  const [tf, setTf] = useState({ title: '', note: '', priority: 'medium' as 'low'|'medium'|'high', due_date: '', recurrence: 'none' })
+  const [tf, setTf] = useState({ title: '', note: '', priority: 'medium' as 'low'|'medium'|'high', due_date: '', recurrence: 'none', tags: [] as string[] })
 
   const loadLists = useCallback(async () => {
     const db = await getDb()
@@ -46,14 +49,20 @@ export default function DesktopTodoView() {
     setLists(res.rows)
   }, [])
 
-  const loadTasks = useCallback(async (listId: string) => {
+  const loadTasks = useCallback(async (listId: string, tag?: string | null) => {
     const db = await getDb()
-    const res = await db.query<TodoTask>('SELECT * FROM todo_tasks WHERE list_id=$1 ORDER BY done ASC, created_at DESC', [listId])
+    const res = await db.query<TodoTask>(
+      tag
+        ? 'SELECT * FROM todo_tasks WHERE list_id=$1 AND $2=ANY(tags) ORDER BY done ASC, created_at DESC'
+        : 'SELECT * FROM todo_tasks WHERE list_id=$1 ORDER BY done ASC, created_at DESC',
+      tag ? [listId, tag] : [listId]
+    )
     setTasks(res.rows)
+    setAllTags([...new Set(res.rows.flatMap(t => t.tags ?? []))].sort())
   }, [])
 
   useEffect(() => { loadLists() }, [loadLists])
-  useEffect(() => { if (activeList) loadTasks(activeList.id) }, [activeList, loadTasks])
+  useEffect(() => { if (activeList) loadTasks(activeList.id, activeTag) }, [activeList, activeTag, loadTasks])
 
   async function createList() {
     if (!newListName.trim()) return
@@ -84,15 +93,15 @@ export default function DesktopTodoView() {
 
   function openTaskEdit(t: TodoTask) {
     setEditingTask(t)
-    setTf({ title: t.title, note: t.note, priority: t.priority, due_date: t.due_date ?? '', recurrence: t.recurrence })
+    setTf({ title: t.title, note: t.note, priority: t.priority, due_date: t.due_date ?? '', recurrence: t.recurrence, tags: t.tags ?? [] })
     setTaskModalOpen(true)
   }
 
   async function saveTask() {
     if (!editingTask) return
     const db = await getDb()
-    await db.query('UPDATE todo_tasks SET title=$1,note=$2,priority=$3,due_date=$4,recurrence=$5,updated_at=now() WHERE id=$6',
-      [tf.title, tf.note, tf.priority, tf.due_date || null, tf.recurrence, editingTask.id])
+    await db.query('UPDATE todo_tasks SET title=$1,note=$2,priority=$3,due_date=$4,recurrence=$5,tags=$6,updated_at=now() WHERE id=$7',
+      [tf.title, tf.note, tf.priority, tf.due_date || null, tf.recurrence, tf.tags, editingTask.id])
     await loadTasks(activeList!.id)
     setTaskModalOpen(false); setEditingTask(null)
   }
@@ -181,6 +190,20 @@ export default function DesktopTodoView() {
                 </div>
               )}
 
+              {/* Tag filter */}
+              {allTags.length > 0 && (
+                <div style={{ padding: '8px 20px', borderBottom: '1px solid rgba(124,106,247,0.06)', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {allTags.map(tag => (
+                    <button key={tag} onClick={() => setActiveTag(activeTag === tag ? null : tag)} style={{
+                      padding: '4px 10px', borderRadius: 100, border: 'none', cursor: 'pointer',
+                      fontSize: 12, fontFamily: 'Inter, sans-serif',
+                      background: activeTag === tag ? listColor : `${listColor}14`,
+                      color: activeTag === tag ? '#fff' : listColor, transition: 'all 150ms',
+                    }}>#{tag}</button>
+                  ))}
+                </div>
+              )}
+
               {/* Add task */}
               <div style={{ padding: '12px 20px', borderBottom: '1px solid rgba(124,106,247,0.06)', display: 'flex', gap: 8, alignItems: 'center' }}>
                 <input
@@ -215,7 +238,16 @@ export default function DesktopTodoView() {
                     }}>
                       {t.done && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                     </button>
-                    <span onClick={() => openTaskEdit(t)} style={{ flex: 1, fontFamily: 'Inter, sans-serif', fontSize: 14, color: '#1a1a2e', textDecoration: t.done ? 'line-through' : 'none', opacity: t.done ? 0.45 : 1, cursor: 'pointer' }}>{t.title}</span>
+                    <div onClick={() => openTaskEdit(t)} style={{ flex: 1, cursor: 'pointer', minWidth: 0 }}>
+                      <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 14, color: '#1a1a2e', textDecoration: t.done ? 'line-through' : 'none', opacity: t.done ? 0.45 : 1 }}>{t.title}</div>
+                      {(t.tags ?? []).length > 0 && (
+                        <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginTop: 3 }}>
+                          {(t.tags ?? []).map(tag => (
+                            <span key={tag} style={{ fontSize: 10, fontFamily: 'Inter, sans-serif', color: listColor, background: `${listColor}14`, borderRadius: 100, padding: '1px 6px' }}>#{tag}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     {t.due_date && <span style={{ fontSize: 11, color: '#94a3b8', fontFamily: 'Inter, sans-serif', flexShrink: 0 }}>{new Date(t.due_date).toLocaleDateString()}</span>}
                     <span style={{ fontSize: 11, fontFamily: 'Inter, sans-serif', fontWeight: 600, padding: '2px 8px', borderRadius: 100, background: PRIORITY_BG[t.priority], color: PRIORITY_COLOR[t.priority], flexShrink: 0 }}>{t.priority}</span>
                     <button onClick={() => openTaskEdit(t)} style={{ width: 26, height: 26, borderRadius: 7, border: 'none', cursor: 'pointer', background: 'rgba(0,0,0,0.04)', color: '#94a3b8', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>⋯</button>
@@ -313,6 +345,7 @@ export default function DesktopTodoView() {
                 <label style={{ display: 'block', fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 600, color: '#4a4a6a', marginBottom: 6 }}>Note</label>
                 <input value={tf.note} onChange={e => setTf(p => ({ ...p, note: e.target.value }))} placeholder="Optional note" style={inputStyle} />
               </div>
+              <TagInput tags={tf.tags} onChange={v => setTf(p => ({ ...p, tags: v }))} />
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <div>
                   <label style={{ display: 'block', fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 600, color: '#4a4a6a', marginBottom: 6 }}>Due date</label>
