@@ -116,8 +116,34 @@ export function clearToken(): void {
 
 // ── Authorize ──────────────────────────────────────────────────────────────
 
+// Called on app boot if sessionStorage has oauth_code from a mobile browser redirect.
+// Returns token on success, null if no pending redirect auth, throws on error.
+export async function resumeRedirectAuth(): Promise<string | null> {
+  const code = sessionStorage.getItem('oauth_code')
+  const returnState = sessionStorage.getItem('oauth_state_return')
+  const error = sessionStorage.getItem('oauth_error')
+
+  // Clear immediately — only process once regardless of outcome
+  sessionStorage.removeItem('oauth_code')
+  sessionStorage.removeItem('oauth_state_return')
+  sessionStorage.removeItem('oauth_error')
+
+  if (error) throw new Error(`OAuth error: ${error}`)
+  if (!code || !returnState) return null
+
+  const storedState = localStorage.getItem('oauth_state')
+  if (!storedState || storedState !== returnState) throw new Error('State mismatch — possible CSRF')
+
+  const token = await exchangeCode(code)
+  localStorage.setItem('drive_token', token)
+  localStorage.removeItem('oauth_state')
+  localStorage.removeItem('oauth_verifier')
+  return token
+}
+
 // authorize() must be called with a pre-opened popup window to survive Safari's popup blocker.
 // Open the popup synchronously in the click handler BEFORE any async work, then pass it here.
+// On mobile browsers (no popup support), pass null — caller should use redirect flow instead.
 export async function authorize(preOpenedPopup?: Window | null): Promise<string> {
   const state = makeState()
   const verifier = await makeCodeVerifier()
@@ -129,6 +155,14 @@ export async function authorize(preOpenedPopup?: Window | null): Promise<string>
   if (Capacitor.isNativePlatform()) {
     return authorizeNative(url)
   }
+
+  // Mobile browsers block popups — use redirect flow instead
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) && !window.matchMedia('(min-width: 1024px)').matches
+  if (isMobile) {
+    window.location.href = url
+    return new Promise(() => { /* page will navigate away */ })
+  }
+
   return authorizeWeb(url, preOpenedPopup)
 }
 

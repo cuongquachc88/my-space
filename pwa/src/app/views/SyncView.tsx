@@ -8,7 +8,7 @@ import { useIsDesktop } from '../useIsDesktop'
 import DesktopSyncView from './desktop/DesktopSyncView'
 import { Capacitor } from '@capacitor/core'
 import {
-  authorize, getStoredToken, clearToken,
+  authorize, resumeRedirectAuth, getStoredToken, clearToken,
   findFile, uploadFile, downloadFile,
 } from '../../services/googleDrive'
 
@@ -39,17 +39,21 @@ export function useSyncLogic() {
   const [pullPassword, setPullPassword] = useState('')
 
   useEffect(() => {
-    const error = localStorage.getItem('oauth_error')
-    if (error) {
-      localStorage.removeItem('oauth_error')
-      log(`OAuth failed: ${error}`, 'error')
-      setStatus('error')
-      return
-    }
-    if (getStoredToken() && !connected) {
-      setConnected(true)
-      log('Connected to Google Drive ✓', 'ok')
-    }
+    // Handle mobile browser redirect-flow OAuth return
+    resumeRedirectAuth()
+      .then(token => {
+        if (token) {
+          setConnected(true)
+          log('Connected to Google Drive ✓', 'ok')
+        } else if (getStoredToken() && !connected) {
+          setConnected(true)
+          log('Connected to Google Drive ✓', 'ok')
+        }
+      })
+      .catch(err => {
+        log(`OAuth failed: ${String(err)}`, 'error')
+        setStatus('error')
+      })
   }, [])
 
   function log(msg: string, type: 'info' | 'ok' | 'error' = 'info') {

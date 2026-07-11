@@ -14,7 +14,16 @@
       const error = params.get('error')
 
       if (!window.opener) {
-        window.location.href = '/'
+        // Mobile browser redirect flow: store code in sessionStorage, redirect back to app
+        if (error) {
+          sessionStorage.setItem('oauth_error', error)
+        } else if (code && state) {
+          sessionStorage.setItem('oauth_code', code)
+          sessionStorage.setItem('oauth_state_return', state)
+        } else {
+          sessionStorage.setItem('oauth_error', 'no_code')
+        }
+        window.location.replace('/')
         return
       }
 
