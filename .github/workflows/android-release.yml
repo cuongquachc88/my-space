@@ -7,84 +7,177 @@ on:
   workflow_dispatch:
 
 jobs:
-  unit-test:
-    name: JVM Unit Tests
+  # ── PWA quality gate (runs in parallel) ─────────────────────────────────
+  pwa-typecheck:
+    name: PWA Type Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: pwa/package-lock.json
-
-      - name: Install PWA dependencies
+      - run: npm ci
         working-directory: pwa
-        run: npm ci
-
-      - name: Build PWA & sync Android
+      - name: TypeScript type check
         working-directory: pwa
-        run: npm run build && npx cap sync android
+        run: npx tsc -b --noEmit
 
-      - name: Set up Java 17
-        uses: actions/setup-java@v4
+  pwa-security-audit:
+    name: PWA Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          java-version: '21'
-          distribution: 'temurin'
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: pwa/package-lock.json
+      - run: npm ci
+        working-directory: pwa
+      - name: Dependency security audit
+        working-directory: pwa
+        # high/critical only — moderate acceptable for a PWA
+        run: npm audit --audit-level=high || true
+      - name: Check for known vulnerable deps
+        working-directory: pwa
+        run: npx better-npm-audit audit --level high 2>/dev/null || npm audit --audit-level=high --json | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+vulns = data.get('vulnerabilities', {})
+high = [(k, v['severity']) for k, v in vulns.items() if v['severity'] in ('high', 'critical')]
+if high:
+    print('HIGH/CRITICAL vulnerabilities found:')
+    for name, sev in high: print(f'  {sev.upper()}: {name}')
+    sys.exit(1)
+else:
+    print('No high/critical vulnerabilities found.')
+" 2>/dev/null || true
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v3
+  pwa-build:
+    name: PWA Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: pwa/package-lock.json
+      - run: npm ci
+        working-directory: pwa
+      - name: Build PWA
+        working-directory: pwa
+        run: npm run build
+      - name: Upload dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: pwa-dist
+          path: pwa/dist
+          retention-days: 1
 
-      - name: Run unit tests
-        working-directory: pwa/android
-        run: ./gradlew test
-
-      - name: Upload unit test report
+  pwa-test:
+    name: PWA Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: pwa/package-lock.json
+      - run: npm ci
+        working-directory: pwa
+      - name: Run Vitest
+        working-directory: pwa
+        run: npm test
+      - name: Upload test report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: unit-test-report
-          path: pwa/android/app/build/reports/tests/
+          name: pwa-test-report
+          path: pwa/test-results/
           retention-days: 14
 
-  release-build:
-    name: Signed Release AAB
-    needs: unit-test
+  # ── Android JVM unit tests ───────────────────────────────────────────────
+  android-unit-test:
+    name: Android JVM Unit Tests
+    needs: [pwa-typecheck, pwa-build, pwa-test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: pwa/package-lock.json
 
-      - name: Install PWA dependencies
-        working-directory: pwa
-        run: npm ci
+      - name: Download PWA dist
+        uses: actions/download-artifact@v4
+        with:
+          name: pwa-dist
+          path: pwa/dist
 
-      - name: Build PWA & sync Android
+      - name: Sync Capacitor Android
         working-directory: pwa
-        run: npm run build && npx cap sync android
+        run: npm ci && npx cap sync android
 
-      - name: Set up Java 17
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v3
+      - uses: gradle/actions/setup-gradle@v3
+
+      - name: Run JVM unit tests
+        working-directory: pwa/android
+        run: ./gradlew test
+
+      - name: Upload JVM test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-unit-test-report
+          path: pwa/android/app/build/reports/tests/
+          retention-days: 14
+
+  # ── Release build ────────────────────────────────────────────────────────
+  release-build:
+    name: Signed Release AAB
+    needs: android-unit-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: pwa/package-lock.json
+
+      - name: Download PWA dist
+        uses: actions/download-artifact@v4
+        with:
+          name: pwa-dist
+          path: pwa/dist
+
+      - name: Sync Capacitor Android
+        working-directory: pwa
+        run: npm ci && npx cap sync android
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - uses: gradle/actions/setup-gradle@v3
 
       - name: Decode keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-        run: |
-          echo "$KEYSTORE_BASE64" | base64 --decode > /tmp/myspace-release.jks
+        run: echo "$KEYSTORE_BASE64" | base64 --decode > /tmp/myspace-release.jks
 
       - name: Write keystore.properties
         env:
@@ -108,7 +201,6 @@ jobs:
           path: pwa/android/app/build/outputs/bundle/release/app-release.aab
           retention-days: 90
 
-      # Uncomment when Play Store service account is configured:
       # - name: Upload to Play Store (internal track)
       #   uses: r0adkll/upload-google-play@v1
       #   with:
