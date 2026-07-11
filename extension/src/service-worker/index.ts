@@ -433,9 +433,17 @@ async function handlePullConfirm(password: string): Promise<{ ok: boolean; data?
 }
 
 async function finishImport(plaintext: string, backupPassword: string | null, backupSalt: number[] | null): Promise<{ ok: boolean; data?: { syncedAt: string; notesUpdated: number; secretsAdded: number; subsUpdated: number; mapsUpdated: number; todosUpdated: number; totalNotes: number; totalSecrets: number; totalSubs: number; totalMaps: number; totalTodos: number }; error?: string }> {
-  const parsed = JSON.parse(plaintext) as { notes: unknown[]; secrets: { id: string; label: string; ciphertext: string; iv: string; tags: string[]; url: string; description: string }[]; subscriptions: unknown[]; bills: unknown[]; mapStacks: unknown[]; mapPins: unknown[]; todoLists: unknown[]; todoTasks: unknown[] }
-  const { notes, subscriptions, bills, mapStacks, mapPins, todoLists, todoTasks } = parsed
+  const parsed = JSON.parse(plaintext) as Record<string, unknown[]> & { secrets: { id: string; label: string; ciphertext: string; iv: string; tags: string[]; url: string; description: string }[] }
+  const notes         = parsed.notes         ?? []
+  const subscriptions = parsed.subscriptions ?? []
+  const bills         = parsed.bills         ?? []
+  // support both PWA snake_case keys and extension camelCase keys
+  const todoLists  = parsed.todo_lists  ?? parsed.todoLists  ?? []
+  const todoTasks  = parsed.todo_tasks  ?? parsed.todoTasks  ?? []
+  const mapStacks  = parsed.map_stacks  ?? parsed.mapStacks  ?? []
+  const mapPins    = parsed.map_pins    ?? parsed.mapPins    ?? []
   let { secrets } = parsed
+  secrets = secrets ?? []
 
   // Cross-device pull: re-encrypt each secret from backup key → local vault key
   if (backupPassword && backupSalt) {
