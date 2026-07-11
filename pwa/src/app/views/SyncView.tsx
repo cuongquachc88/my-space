@@ -8,7 +8,7 @@ import { useIsDesktop } from '../useIsDesktop'
 import DesktopSyncView from './desktop/DesktopSyncView'
 import { Capacitor } from '@capacitor/core'
 import {
-  authorize, resumeRedirectAuth, getStoredToken, clearToken,
+  authorize, resumeRedirectAuth, isMobileBrowser, getStoredToken, clearToken,
   findFile, uploadFile, downloadFile,
 } from '../../services/googleDrive'
 
@@ -64,9 +64,8 @@ export function useSyncLogic() {
   async function connect() {
     try {
       log('Opening Google authorization…')
-      // Native Capacitor uses its own Browser plugin — never open a popup.
-      // Web: open popup synchronously in click handler so Safari doesn't block it.
-      const popup = Capacitor.isNativePlatform()
+      // Native: no popup. Mobile browser: no popup (redirect flow). Desktop: pre-open popup synchronously.
+      const popup = (Capacitor.isNativePlatform() || isMobileBrowser())
         ? null
         : window.open('', 'google-auth', 'width=520,height=620,left=200,top=100')
       await authorize(popup)

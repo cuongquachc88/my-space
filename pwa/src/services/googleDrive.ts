@@ -114,6 +114,12 @@ export function clearToken(): void {
   localStorage.removeItem('oauth_verifier')
 }
 
+export function isMobileBrowser(): boolean {
+  return !Capacitor.isNativePlatform() &&
+    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) &&
+    !window.matchMedia('(min-width: 1024px)').matches
+}
+
 // ── Authorize ──────────────────────────────────────────────────────────────
 
 // Called on app boot if sessionStorage has oauth_code from a mobile browser redirect.
@@ -156,9 +162,7 @@ export async function authorize(preOpenedPopup?: Window | null): Promise<string>
     return authorizeNative(url)
   }
 
-  // Mobile browsers block popups — use redirect flow instead
-  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) && !window.matchMedia('(min-width: 1024px)').matches
-  if (isMobile) {
+  if (isMobileBrowser()) {
     window.location.href = url
     return new Promise(() => { /* page will navigate away */ })
   }
