@@ -116,7 +116,9 @@ export function clearToken(): void {
 
 // ── Authorize ──────────────────────────────────────────────────────────────
 
-export async function authorize(): Promise<string> {
+// authorize() must be called with a pre-opened popup window to survive Safari's popup blocker.
+// Open the popup synchronously in the click handler BEFORE any async work, then pass it here.
+export async function authorize(preOpenedPopup?: Window | null): Promise<string> {
   const state = makeState()
   const verifier = await makeCodeVerifier()
   const challenge = await makeCodeChallenge(verifier)
@@ -126,16 +128,20 @@ export async function authorize(): Promise<string> {
 
   if (Capacitor.isNativePlatform()) {
     return authorizeNative(url)
-  } else {
-    return authorizeWeb(url)
   }
+  return authorizeWeb(url, preOpenedPopup)
 }
 
-function authorizeWeb(url: string): Promise<string> {
+function authorizeWeb(url: string, preOpenedPopup?: Window | null): Promise<string> {
   return new Promise((resolve, reject) => {
     const storedState = localStorage.getItem('oauth_state')
 
-    const popup = window.open(url, 'google-auth', 'width=520,height=620,left=200,top=100')
+    // Use pre-opened popup (passed from click handler to survive Safari blocker),
+    // or open a new one for desktop browsers where async open still works.
+    if (preOpenedPopup) {
+      preOpenedPopup.location.href = url
+    }
+    const popup = preOpenedPopup ?? window.open(url, 'google-auth', 'width=520,height=620,left=200,top=100')
     if (!popup) { reject(new Error('Popup blocked — allow popups for this site')); return }
 
     const handler = async (e: MessageEvent) => {

@@ -59,7 +59,10 @@ export function useSyncLogic() {
   async function connect() {
     try {
       log('Opening Google authorization…')
-      await authorize()
+      // Open popup synchronously in the click handler so Safari doesn't block it,
+      // then authorize() navigates the already-open window to the Google URL.
+      const popup = window.open('', 'google-auth', 'width=520,height=620,left=200,top=100')
+      await authorize(popup)
       setConnected(true)
       log('Connected to Google Drive ✓', 'ok')
     } catch (e) {

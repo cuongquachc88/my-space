@@ -1,7 +1,7 @@
 export const ACCENT: Record<string, string> = {
   notes:   '#6366f1',
   vault:   '#f59e0b',
-  todo:    '#38bdf8',
+  todo:    '#f43f5e',
   subs:    '#34d399',
   maps:    '#fb923c',
   gen:     '#a78bfa',

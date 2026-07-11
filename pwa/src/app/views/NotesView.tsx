@@ -124,22 +124,23 @@ export default function NotesView() {
           action="+ New" onAction={create}
         />
         <BentoGrid>
+          {allTags.length > 0 && (
+            <BentoCell span="full">
+              <div style={{ background: 'rgba(255,255,255,0.6)', borderRadius: 18, padding: '14px 16px', display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', boxShadow: '0 1px 8px rgba(0,0,0,0.06)' }}>
+                <span style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 11, color: '#8e8e93', letterSpacing: '0.07em', textTransform: 'uppercase' }}>Tags</span>
+                {allTags.map(tag => (
+                  <button key={tag} onClick={() => { const next = activeTag === tag ? null : tag; setActiveTag(next); load(query, next) }}
+                    style={{ padding: '5px 12px', borderRadius: 100, border: 'none', cursor: 'pointer', fontSize: 13, fontFamily: 'Inter, sans-serif', fontWeight: 500,
+                      background: activeTag === tag ? accent : `${accent}18`, color: activeTag === tag ? 'white' : accent }}>
+                    #{tag}
+                  </button>
+                ))}
+              </div>
+            </BentoCell>
+          )}
           <BentoCell span="full">
             <GlassCard>
               <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, minHeight: 28, alignItems: 'center' }}>
-                  {allTags.length === 0
-                    ? <span style={{ fontSize: 12, color: '#8e8e93', fontFamily: 'Inter, sans-serif' }}>No tags yet — add tags when editing a note</span>
-                    : allTags.map(tag => (
-                      <button key={tag} onClick={() => { const next = activeTag === tag ? null : tag; setActiveTag(next); load(query, next) }}
-                        style={{ padding: '4px 10px', borderRadius: 100, border: 'none', cursor: 'pointer', fontSize: 12, fontFamily: 'Inter, sans-serif',
-                          background: activeTag === tag ? accent : `${accent}18`, color: activeTag === tag ? 'white' : accent }}>
-                        #{tag}
-                      </button>
-                    ))
-                  }
-                </div>
 
                 <GlassInput value={query} onChange={search} placeholder="Search notes…" />
 
@@ -159,6 +160,13 @@ export default function NotesView() {
                           }}>
                           <div style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e', marginBottom: 2 }}>{n.title || 'Untitled'}</div>
                           <div style={{ fontSize: 12, color: '#4a4a6a' }}>{new Date(n.updated_at).toLocaleDateString()}</div>
+                          {(n.tags ?? []).length > 0 && (
+                            <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginTop: 4 }}>
+                              {(n.tags ?? []).map(t => (
+                                <span key={t} style={{ fontSize: 10, fontFamily: 'Inter, sans-serif', color: accent, background: `${accent}14`, borderRadius: 100, padding: '1px 6px' }}>#{t}</span>
+                              ))}
+                            </div>
+                          )}
                         </button>
                         <button
                           onClick={e => { e.stopPropagation(); deleteNote(n) }}
@@ -225,7 +233,11 @@ export default function NotesView() {
           {/* Content area */}
           <div style={{ padding: '20px 20px 80px' }}>
 
-            <TagInput tags={editTags} onChange={setEditTags} />
+            {/* Tags box */}
+            <div style={{ background: 'rgba(255,255,255,0.6)', borderRadius: 18, padding: '14px 16px', display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', boxShadow: '0 1px 8px rgba(0,0,0,0.06)', marginBottom: 16 }}>
+              <span style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 11, color: '#8e8e93', letterSpacing: '0.07em', textTransform: 'uppercase', flexShrink: 0 }}>Tags</span>
+              <TagInput tags={editTags} onChange={setEditTags} flat />
+            </div>
 
             {/* Edit/Preview pill */}
             <div style={{ display: 'flex', background: 'rgba(255,255,255,0.4)', borderRadius: 100, padding: 3, gap: 2, marginTop: 16, marginBottom: 16, width: 'fit-content', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.06)' }}>

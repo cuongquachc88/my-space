@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { getDb } from '../../../db'
 import { encrypt, decrypt } from '../../../crypto'
 import { ACCENT } from '../../../design/tokens'
-import { IconVault, IconTrash } from '../../../design/icons'
+import { IconVault, IconTrash, IconCopy, IconCheck } from '../../../design/icons'
 import TagInput from '../../components/TagInput'
 
 interface SecretMeta { id: string; label: string; tags: string[]; url: string; description: string; updated_at: string }
@@ -113,6 +113,21 @@ export default function DesktopVaultView() {
     }
     setCopiedId(id)
     setTimeout(() => setCopiedId(null), 2000)
+  }
+
+  async function copyDirect(s: SecretMeta) {
+    setRevealError(null)
+    try {
+      const db = await getDb()
+      const row = await db.query<{ ciphertext: string; iv: string }>('SELECT ciphertext,iv FROM secrets WHERE id=$1', [s.id])
+      if (row.rows[0]) {
+        const val = await decrypt(row.rows[0].ciphertext, row.rows[0].iv)
+        await copySecret(s.id, val)
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      setRevealError(msg.includes('locked') ? 'Vault is locked — unlock first' : 'Decryption failed')
+    }
   }
 
   async function reveal(s: SecretMeta) {
@@ -235,16 +250,16 @@ export default function DesktopVaultView() {
                     background: revealId === s.id ? `${accent}18` : 'transparent',
                     color: accent, fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
                   }}>{revealId === s.id ? 'Hide' : 'Reveal'}</button>
-                  {revealId === s.id && (
-                    <button onClick={e => { e.stopPropagation(); copySecret(s.id, revealValue) }} style={{
-                      padding: '5px 10px', borderRadius: 8, cursor: 'pointer', whiteSpace: 'nowrap',
-                      border: `1px solid ${copiedId === s.id ? '#10b981' : accent}30`,
-                      background: copiedId === s.id ? '#10b981' : 'transparent',
-                      color: copiedId === s.id ? '#fff' : accent,
-                      fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 600,
-                      transition: 'all 150ms',
-                    }}>{copiedId === s.id ? '✓ Copied' : 'Copy'}</button>
-                  )}
+                  <button onClick={e => { e.stopPropagation(); revealId === s.id ? copySecret(s.id, revealValue) : copyDirect(s) }} style={{
+                    padding: '5px 10px', borderRadius: 8, cursor: 'pointer',
+                    border: `1px solid ${copiedId === s.id ? '#10b981' : accent}30`,
+                    background: copiedId === s.id ? 'rgba(16,185,129,0.08)' : 'transparent',
+                    color: copiedId === s.id ? '#10b981' : accent,
+                    fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
+                    flexShrink: 0, transition: 'all 150ms',
+                  }}>
+                    {copiedId === s.id ? 'Copied!' : 'Copy'}
+                  </button>
                   <button onClick={e => { e.stopPropagation(); openEdit(s) }} style={{
                     padding: '5px 10px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.08)', cursor: 'pointer',
                     background: 'transparent', color: '#4a4a6a', fontFamily: 'Inter, sans-serif', fontSize: 12, whiteSpace: 'nowrap',

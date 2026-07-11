@@ -4,11 +4,12 @@ interface Props {
   tags: string[]
   onChange: (tags: string[]) => void
   placeholder?: string
+  flat?: boolean  // render pills inline without the wrapper box (use inside a parent container)
 }
 
 const ACCENT = '#7c6af7'
 
-export default function TagInput({ tags, onChange, placeholder = 'Add tag…' }: Props) {
+export default function TagInput({ tags, onChange, placeholder = 'Add tag…', flat = false }: Props) {
   const [input, setInput] = useState('')
   const [focused, setFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -27,7 +28,9 @@ export default function TagInput({ tags, onChange, placeholder = 'Add tag…' }:
   return (
     <div
       onClick={() => inputRef.current?.focus()}
-      style={{
+      style={flat ? {
+        display: 'contents',
+      } : {
         display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6,
         padding: '8px 12px',
         background: focused ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.45)',

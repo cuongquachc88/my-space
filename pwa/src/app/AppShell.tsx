@@ -31,13 +31,7 @@ const VIEW = ({ tab, onLogout }: { tab: Tab; onLogout: () => void }) => (
 )
 
 export default function AppShell({ onLogout }: Props) {
-  const [tab, setTab] = useState<Tab>(() => {
-    // If returning from OAuth redirect, go straight to Sync tab
-    if (localStorage.getItem('drive_token') && !localStorage.getItem('oauth_state')) {
-      return 'sync'
-    }
-    return 'notes'
-  })
+  const [tab, setTab] = useState<Tab>('notes')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   return (
