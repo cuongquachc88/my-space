@@ -167,10 +167,12 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           echo "$KEYSTORE_BASE64" | base64 --decode > /tmp/myspace-release.jks
-          install -m 600 /dev/null pwa/android/local.properties
-          printf 'MYSPACE_KEYSTORE_PATH=/tmp/myspace-release.jks\nMYSPACE_KEYSTORE_PASSWORD=%s\nMYSPACE_KEY_ALIAS=%s\nMYSPACE_KEY_PASSWORD=%s\n' \
-            "$STORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" \
-            > pwa/android/local.properties
+          cat >> pwa/android/local.properties <<EOF
+          MYSPACE_KEYSTORE_PATH=/tmp/myspace-release.jks
+          MYSPACE_KEYSTORE_PASSWORD=$STORE_PASSWORD
+          MYSPACE_KEY_ALIAS=$KEY_ALIAS
+          MYSPACE_KEY_PASSWORD=$KEY_PASSWORD
+          EOF
 
       - name: Build release AAB
         working-directory: pwa/android
