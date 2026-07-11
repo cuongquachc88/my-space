@@ -6,6 +6,7 @@ import GlassInput from './design/GlassInput'
 import PillButton from './design/PillButton'
 import { IconAppShield, IconLock } from './design/icons'
 import { unlock, saveVerifyToken, getKey } from './crypto'
+import { useIsDesktop } from './app/useIsDesktop'
 
 interface Props { onUnlocked: () => void }
 
@@ -30,6 +31,7 @@ const PIN_DIGITS = [
 ]
 
 export default function UnlockForm({ onUnlocked }: Props) {
+  const isDesktop = useIsDesktop()
   const [firstTime] = useState(isFirstTime)
   const [mode, setMode] = useState<'password'|'pin'>(() =>
     (localStorage.getItem(MODE_KEY) as 'password'|'pin') ?? 'password'
@@ -102,6 +104,99 @@ export default function UnlockForm({ onUnlocked }: Props) {
 
   const displayPin = pinStep === 'confirm' ? confirmPin : pin
   const dots = Array.from({ length: 6 }, (_, i) => i < displayPin.length)
+
+  // Mobile: full screen. Desktop: centered card.
+  if (!isDesktop) {
+    return (
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 50,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        padding: '40px 24px',
+        opacity: exiting ? 0 : 1,
+        transform: exiting ? 'scale(0.97)' : 'scale(1)',
+        transition: 'opacity 250ms ease, transform 250ms ease',
+      }}>
+        <AppBackground />
+        <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 360, display: 'flex', flexDirection: 'column', gap: 20, alignItems: 'center' }}>
+          {/* Logo */}
+          <div style={{ width: 64, height: 64, borderRadius: 16, background: 'linear-gradient(135deg, #7c6af7, #38bdf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 24px rgba(124,106,247,0.35)' }}>
+            <IconAppShield size={36} />
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 800, fontSize: 26, color: '#1a1a2e', letterSpacing: '-0.02em' }}>
+              My <span style={{ color: '#7c6af7' }}>SPACE</span>
+            </div>
+            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#4a4a6a', marginTop: 4 }}>
+              {firstTime
+                ? (mode === 'pin' ? (pinStep === 'confirm' ? 'Confirm your PIN' : 'Create a 4–6 digit PIN') : 'Create your master password')
+                : (mode === 'pin' ? 'Enter your PIN' : 'Enter your master password')}
+            </div>
+          </div>
+          {/* Mode toggle */}
+          <div style={{ display: 'flex', background: 'rgba(255,255,255,0.4)', borderRadius: 100, padding: 3, gap: 2 }}>
+            {(['password', 'pin'] as const).map(m => (
+              <button key={m} onClick={() => switchMode(m)} style={{
+                padding: '5px 16px', borderRadius: 100, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 600,
+                background: mode === m ? '#7c6af7' : 'transparent',
+                color: mode === m ? '#fff' : '#4a4a6a',
+                transition: 'all 150ms',
+              }}>
+                {m === 'password' ? '⌨ Password' : '# PIN'}
+              </button>
+            ))}
+          </div>
+          {mode === 'password' && (
+            <form onSubmit={handlePasswordSubmit} style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <GlassInput value={password} onChange={setPassword} placeholder="Master password" type="password" autoFocus />
+              {firstTime && <GlassInput value={confirm} onChange={setConfirm} placeholder="Confirm password" type="password" />}
+              {error && <div style={{ fontSize: 13, color: '#ef4444', textAlign: 'center', fontFamily: 'Inter, sans-serif' }}>{error}</div>}
+              <PillButton type="submit" disabled={loading} className="w-full">
+                <IconLock size={16} />
+                {loading ? 'Unlocking…' : firstTime ? 'Create & Enter' : 'Unlock'}
+              </PillButton>
+            </form>
+          )}
+          {mode === 'pin' && (
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
+              <div style={{ display: 'flex', gap: 12 }}>
+                {Array.from({ length: 6 }, (_, i) => i < (pinStep === 'confirm' ? confirmPin : pin).length).map((filled, i) => (
+                  <div key={i} style={{
+                    width: 14, height: 14, borderRadius: '50%',
+                    background: filled ? '#7c6af7' : 'rgba(124,106,247,0.2)',
+                    border: `2px solid ${filled ? '#7c6af7' : 'rgba(124,106,247,0.3)'}`,
+                    transition: 'all 150ms',
+                  }} />
+                ))}
+              </div>
+              {error && <div style={{ fontSize: 13, color: '#ef4444', textAlign: 'center', fontFamily: 'Inter, sans-serif', marginTop: -8 }}>{error}</div>}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, width: '100%', maxWidth: 240 }}>
+                {PIN_DIGITS.flat().map((key, i) => (
+                  <button key={i}
+                    onPointerDown={() => { if (key && !loading) { setPressedKey(key); handlePinKey(key) } }}
+                    onPointerUp={() => setPressedKey(null)}
+                    onPointerLeave={() => setPressedKey(null)}
+                    disabled={!key || loading}
+                    style={{
+                      height: 64, borderRadius: 16, border: '1px solid rgba(255,255,255,0.5)',
+                      background: pressedKey === key && key ? 'rgba(124,106,247,0.25)' : key ? 'rgba(255,255,255,0.5)' : 'transparent',
+                      cursor: key ? 'pointer' : 'default',
+                      fontFamily: 'Montserrat, sans-serif',
+                      fontSize: key === '⌫' ? 22 : 26, fontWeight: 600, color: '#1a1a2e',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transform: pressedKey === key && key ? 'scale(0.92)' : 'scale(1)',
+                      transition: 'background 80ms, transform 80ms',
+                    }}>
+                    {key}
+                  </button>
+                ))}
+              </div>
+              {loading && <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#7c6af7' }}>Unlocking…</div>}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
