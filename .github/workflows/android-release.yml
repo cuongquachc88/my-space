@@ -30,7 +30,7 @@ jobs:
 
       - name: Sync Capacitor Android assets
         working-directory: pwa
-        run: npx cap sync android --no-deps
+        run: npx cap copy android
 
       - name: Upload android assets
         uses: actions/upload-artifact@v4
