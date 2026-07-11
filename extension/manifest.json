@@ -9,7 +9,8 @@
     "offscreen",
     "identity",
     "sidePanel",
-    "activeTab"
+    "activeTab",
+    "clipboardWrite"
   ],
   "externally_connectable": {
     "matches": [

@@ -67,7 +67,21 @@ export function KeyvaultView({ sendMsg, onLock }: Props) {
 
   async function copySecret(id: string) {
     const val = await revealSecret(id)
-    try { await navigator.clipboard.writeText(val) } catch {}
+    if (!val) return
+    // clipboard.writeText may be blocked after async gap in extensions — use execCommand fallback
+    try {
+      await navigator.clipboard.writeText(val)
+    } catch {
+      const ta = document.createElement('textarea')
+      ta.value = val
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.focus()
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+    }
   }
 
   async function addSecret() {
