@@ -159,21 +159,18 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v3
 
-      - name: Decode keystore
+      - name: Decode keystore & write local.properties
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-        run: echo "$KEYSTORE_BASE64" | base64 --decode > /tmp/myspace-release.jks
-
-      - name: Write keystore.properties
-        env:
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          install -m 600 /dev/null pwa/android/keystore.properties
-          printf 'storeFile=/tmp/myspace-release.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+          echo "$KEYSTORE_BASE64" | base64 --decode > /tmp/myspace-release.jks
+          install -m 600 /dev/null pwa/android/local.properties
+          printf 'MYSPACE_KEYSTORE_PATH=/tmp/myspace-release.jks\nMYSPACE_KEYSTORE_PASSWORD=%s\nMYSPACE_KEY_ALIAS=%s\nMYSPACE_KEY_PASSWORD=%s\n' \
             "$STORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" \
-            > pwa/android/keystore.properties
+            > pwa/android/local.properties
 
       - name: Build release AAB
         working-directory: pwa/android
