@@ -65,7 +65,7 @@ export function KeyvaultView({ sendMsg, onLock }: Props) {
     return res.ok ? (res.data as { value: string }).value : ''
   }
 
-  async function copySecret(id: string) {
+  async function copySecret(id: string): Promise<void> {
     const val = await revealSecret(id)
     if (!val) return
     // clipboard.writeText may be blocked after async gap in extensions — use execCommand fallback

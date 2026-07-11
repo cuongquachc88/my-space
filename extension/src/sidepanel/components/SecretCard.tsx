@@ -11,7 +11,7 @@ interface UpdateFields {
 interface Props {
   secret: SecretMeta
   onReveal: (id: string) => Promise<string>
-  onCopy: (id: string) => void
+  onCopy: (id: string) => Promise<void>
   onDelete: (id: string) => void
   onUpdate: (id: string, fields: UpdateFields) => Promise<boolean>
 }
@@ -25,6 +25,7 @@ const inputBase = {
 export function SecretCard({ secret, onReveal, onCopy, onDelete, onUpdate }: Props) {
   const [revealed, setRevealed] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [copied, setCopied] = useState(false)
   const [copiedField, setCopiedField] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
   const [editLabel, setEditLabel] = useState(secret.label)
@@ -142,8 +143,9 @@ export function SecretCard({ secret, onReveal, onCopy, onDelete, onUpdate }: Pro
           <button onClick={handleReveal} className="text-xs" style={{ color: 'rgba(251,191,36,0.6)' }}>
             {loading ? '...' : revealed ? 'Hide' : 'Reveal'}
           </button>
-          <button onClick={() => onCopy(secret.id)} className="text-xs" style={{ color: 'rgba(251,191,36,0.6)' }}>
-            Copy
+          <button onClick={async () => { await onCopy(secret.id); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
+            className="text-xs" style={{ color: copied ? 'rgba(110,231,183,0.8)' : 'rgba(251,191,36,0.6)', transition: 'color 150ms' }}>
+            {copied ? '✓ Copied' : 'Copy'}
           </button>
           <button onClick={startEdit} className="text-xs" style={{ color: 'rgba(96,165,250,0.6)' }}>
             Edit
