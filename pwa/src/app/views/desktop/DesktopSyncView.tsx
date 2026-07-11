@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { ACCENT } from '../../../design/tokens'
 import { IconSync } from '../../../design/icons'
 import { useSyncLogic } from '../SyncView'
@@ -13,8 +12,7 @@ const logColor = (type: 'info' | 'ok' | 'error') =>
   type === 'error' ? '#f87171' : type === 'ok' ? '#34d399' : 'rgba(255,255,255,0.7)'
 
 export default function DesktopSyncView() {
-  const { status, logs, syncPw, setSyncPw, connected, connect, disconnect, push, pull, clearLogs } = useSyncLogic()
-  const [showPw, setShowPw] = useState(false)
+  const { status, logs, connected, pendingPull, pullPassword, setPullPassword, connect, disconnect, push, pull, confirmPull, cancelPull, clearLogs } = useSyncLogic()
 
   const inputStyle: React.CSSProperties = {
     width: '100%', boxSizing: 'border-box',
@@ -88,37 +86,52 @@ export default function DesktopSyncView() {
         {/* ── Backup & Restore card ── */}
         <div style={{ background: 'rgba(255,255,255,0.55)', borderRadius: 20, padding: 24 }}>
           <div style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 16, color: '#1a1a2e', marginBottom: 6 }}>Backup & Restore</div>
-          <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#94a3b8', marginBottom: 20 }}>Use the same sync password on all devices.</div>
+          <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#94a3b8', marginBottom: 20 }}>
+            {pendingPull ? 'Enter your master password to decrypt the backup.' : 'Encrypted with your vault password. Compatible with the Chrome extension.'}
+          </div>
 
-          <div style={{ marginBottom: 14 }}>
-            <label style={{ display: 'block', fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 600, color: '#4a4a6a', marginBottom: 6 }}>Vault password</label>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input
-                value={syncPw} onChange={e => setSyncPw(e.target.value)}
-                type={showPw ? 'text' : 'password'}
-                placeholder="Enter sync password…"
-                style={{ ...inputStyle, flex: 1 }}
-              />
-              <button onClick={() => setShowPw(p => !p)} style={{
-                padding: '10px 14px', borderRadius: 12, border: '1.5px solid rgba(255,255,255,0.7)', background: 'rgba(255,255,255,0.6)',
-                cursor: 'pointer', fontFamily: 'Inter, sans-serif', fontSize: 13, fontWeight: 600, color: '#4a4a6a', flexShrink: 0,
-              }}>{showPw ? 'Hide' : 'Show'}</button>
+          {pendingPull ? (
+            <>
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: 'block', fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 600, color: '#7c6af7', marginBottom: 6 }}>Master password</label>
+                <input
+                  type="password"
+                  autoFocus
+                  value={pullPassword}
+                  onChange={e => setPullPassword(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && confirmPull()}
+                  placeholder="Master password…"
+                  style={inputStyle}
+                />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10 }}>
+                <button onClick={confirmPull} disabled={!pullPassword.trim() || status === 'busy'} style={{
+                  padding: '13px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                  background: 'linear-gradient(135deg, #7c6af7 0%, #6366f1 100%)',
+                  color: '#fff', fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 14,
+                  opacity: !pullPassword.trim() || status === 'busy' ? 0.5 : 1,
+                }}>Decrypt & Import</button>
+                <button onClick={cancelPull} style={{
+                  padding: '13px 18px', borderRadius: 12, border: '1.5px solid rgba(124,106,247,0.25)', cursor: 'pointer',
+                  background: 'rgba(255,255,255,0.6)', color: '#4a4a6a', fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 13,
+                }}>Cancel</button>
+              </div>
+            </>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <button onClick={push} disabled={status === 'busy'} style={{
+                padding: '13px', borderRadius: 12, border: 'none', cursor: status === 'busy' ? 'not-allowed' : 'pointer',
+                background: `linear-gradient(135deg, ${accent} 0%, #ec4899 100%)`,
+                color: '#fff', fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 14,
+                boxShadow: `0 4px 14px ${accent}40`, opacity: status === 'busy' ? 0.6 : 1,
+              }}>↑ Push to Drive</button>
+              <button onClick={pull} disabled={status === 'busy'} style={{
+                padding: '13px', borderRadius: 12, border: '1.5px solid rgba(124,106,247,0.25)', cursor: status === 'busy' ? 'not-allowed' : 'pointer',
+                background: 'rgba(255,255,255,0.6)', color: '#1a1a2e', fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 14,
+                opacity: status === 'busy' ? 0.6 : 1,
+              }}>↓ Pull from Drive</button>
             </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <button onClick={push} disabled={status === 'busy'} style={{
-              padding: '13px', borderRadius: 12, border: 'none', cursor: status === 'busy' ? 'not-allowed' : 'pointer',
-              background: `linear-gradient(135deg, ${accent} 0%, #ec4899 100%)`,
-              color: '#fff', fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 14,
-              boxShadow: `0 4px 14px ${accent}40`, opacity: status === 'busy' ? 0.6 : 1,
-            }}>↑ Push to Drive</button>
-            <button onClick={pull} disabled={status === 'busy'} style={{
-              padding: '13px', borderRadius: 12, border: '1.5px solid rgba(124,106,247,0.25)', cursor: status === 'busy' ? 'not-allowed' : 'pointer',
-              background: 'rgba(255,255,255,0.6)', color: '#1a1a2e', fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 14,
-              opacity: status === 'busy' ? 0.6 : 1,
-            }}>↓ Pull from Drive</button>
-          </div>
+          )}
 
           {status === 'busy' && (
             <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'Inter, sans-serif', fontSize: 12, color: accent }}>
