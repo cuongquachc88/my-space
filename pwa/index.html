@@ -3,16 +3,85 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#0f2020" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; connect-src 'self' blob: https://www.googleapis.com https://oauth2.googleapis.com https://accounts.google.com; font-src 'self' data: https://fonts.gstatic.com; frame-ancestors 'none';" />
+
+    <!-- Primary SEO -->
+    <title>My SPACE — Private Encrypted Vault, Notes & Todos</title>
+    <meta name="description" content="My SPACE is your private digital space — encrypted password vault, notes, todos, maps, and subscriptions. All data stays on your device. Zero cloud, zero tracking." />
+    <meta name="keywords" content="encrypted vault, private notes, password manager, todo app, offline app, PWA, end-to-end encryption, private digital space" />
+    <meta name="author" content="My SPACE" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://cuongquachc88.github.io/my-space/" />
+
+    <!-- Theme -->
+    <meta name="theme-color" content="#7c6af7" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0f0f1a" media="(prefers-color-scheme: dark)" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="My SPACE" />
+    <meta property="og:title" content="My SPACE — Private Encrypted Vault, Notes & Todos" />
+    <meta property="og:description" content="Your private digital space — encrypted password vault, notes, todos, maps, and subscriptions. All data stays on your device. Zero cloud, zero tracking." />
+    <meta property="og:url" content="https://cuongquachc88.github.io/my-space/" />
+    <meta property="og:image" content="https://cuongquachc88.github.io/my-space/pwa-512.png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:image:alt" content="My SPACE app icon — golden shield on dark background" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="My SPACE — Private Encrypted Vault" />
+    <meta name="twitter:description" content="Your private digital space. Encrypted vault, notes, todos & more. Zero cloud, zero tracking." />
+    <meta name="twitter:image" content="https://cuongquachc88.github.io/my-space/pwa-512.png" />
+    <meta name="twitter:image:alt" content="My SPACE app icon" />
+
+    <!-- PWA / Apple -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://api.fontshare.com; img-src 'self' data: blob:; connect-src 'self' blob: https://www.googleapis.com https://oauth2.googleapis.com https://accounts.google.com; font-src 'self' data: https://fonts.gstatic.com https://api.fontshare.com; frame-ancestors 'none';" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <title>My SPACE</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@600,700&f[]=switzer@300,400,500,600,700&display=swap">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Montserrat:wght@300;700;800;900&display=swap">
+    <meta name="apple-mobile-web-app-title" content="My SPACE" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="My SPACE" />
+
+    <!-- Icons -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://api.fontshare.com" crossorigin />
+    <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@600,700&f[]=switzer@300,400,500,600,700&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Montserrat:wght@300;700;800;900&display=swap" />
+
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "My SPACE",
+      "applicationCategory": "ProductivityApplication",
+      "operatingSystem": "Web, Android, iOS",
+      "description": "Your private digital space — encrypted password vault, notes, todos, maps, and subscriptions. All data stays on your device with end-to-end encryption.",
+      "url": "https://cuongquachc88.github.io/my-space/",
+      "image": "https://cuongquachc88.github.io/my-space/pwa-512.png",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "featureList": [
+        "End-to-end encrypted password vault",
+        "Private notes with tags",
+        "Todo lists with priorities",
+        "Map pins and stacks",
+        "Subscription tracker",
+        "Offline-first PWA",
+        "Zero cloud storage"
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>
