@@ -6,6 +6,7 @@ import ViewHeader from '../ViewHeader'
 import { IconSync } from '../../design/icons'
 import { useIsDesktop } from '../useIsDesktop'
 import DesktopSyncView from './desktop/DesktopSyncView'
+import { Capacitor } from '@capacitor/core'
 import {
   authorize, getStoredToken, clearToken,
   findFile, uploadFile, downloadFile,
@@ -59,9 +60,11 @@ export function useSyncLogic() {
   async function connect() {
     try {
       log('Opening Google authorization…')
-      // Open popup synchronously in the click handler so Safari doesn't block it,
-      // then authorize() navigates the already-open window to the Google URL.
-      const popup = window.open('', 'google-auth', 'width=520,height=620,left=200,top=100')
+      // Native Capacitor uses its own Browser plugin — never open a popup.
+      // Web: open popup synchronously in click handler so Safari doesn't block it.
+      const popup = Capacitor.isNativePlatform()
+        ? null
+        : window.open('', 'google-auth', 'width=520,height=620,left=200,top=100')
       await authorize(popup)
       setConnected(true)
       log('Connected to Google Drive ✓', 'ok')
