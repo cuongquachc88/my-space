@@ -38,22 +38,7 @@ jobs:
         working-directory: pwa
       - name: Dependency security audit
         working-directory: pwa
-        # high/critical only — moderate acceptable for a PWA
         run: npm audit --audit-level=high || true
-      - name: Check for known vulnerable deps
-        working-directory: pwa
-        run: npx better-npm-audit audit --level high 2>/dev/null || npm audit --audit-level=high --json | python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-vulns = data.get('vulnerabilities', {})
-high = [(k, v['severity']) for k, v in vulns.items() if v['severity'] in ('high', 'critical')]
-if high:
-    print('HIGH/CRITICAL vulnerabilities found:')
-    for name, sev in high: print(f'  {sev.upper()}: {name}')
-    sys.exit(1)
-else:
-    print('No high/critical vulnerabilities found.')
-" 2>/dev/null || true
 
   pwa-build:
     name: PWA Build
