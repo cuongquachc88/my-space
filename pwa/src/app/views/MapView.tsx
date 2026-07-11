@@ -37,6 +37,7 @@ export default function MapView() {
   const [newStackVisible, setNewStackVisible] = useState(false)
   const [newStackName, setNewStackName] = useState('')
   const [newStackColor, setNewStackColor] = useState(COLORS[0])
+  const [editingStack, setEditingStack] = useState<MapStack | null>(null)
 
   // Pin detail push screen
   const [editingPin, setEditingPin] = useState<MapPin | null>(null)
@@ -76,6 +77,14 @@ export default function MapView() {
     const db = await getDb()
     await db.query('INSERT INTO map_stacks (name,color) VALUES ($1,$2)', [newStackName, newStackColor])
     setNewStackName(''); await loadStacks()
+  }
+
+  async function updateStack() {
+    if (!newStackName.trim() || !editingStack) return
+    const db = await getDb()
+    await db.query('UPDATE map_stacks SET name=$1,color=$2 WHERE id=$3', [newStackName, newStackColor, editingStack.id])
+    if (activeStack?.id === editingStack.id) setActiveStack({ ...editingStack, name: newStackName, color: newStackColor })
+    setEditingStack(null); await loadStacks()
   }
 
   async function deleteStack(id: string) {
@@ -157,17 +166,29 @@ export default function MapView() {
               {stacks.map(s => {
                 const fg = contrastColor(s.color)
                 return (
-                  <button key={s.id} onClick={() => openStack(s)} style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    padding: '14px 16px', borderRadius: 14, border: 'none', cursor: 'pointer',
-                    background: s.color, boxShadow: `0 4px 14px ${s.color}50`,
-                    transition: 'transform 120ms, box-shadow 120ms',
-                  }}>
-                    <span style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 15, color: fg, flex: 1, textAlign: 'left' }}>{s.name}</span>
-                    <svg width="7" height="12" viewBox="0 0 7 12" fill="none" style={{ opacity: 0.6 }}>
-                      <path d="M1 1l5 5-5 5" stroke={fg} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </button>
+                  <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <button onClick={() => openStack(s)} style={{
+                      display: 'flex', alignItems: 'center', gap: 10, flex: 1,
+                      padding: '14px 16px', borderRadius: 14, border: 'none', cursor: 'pointer',
+                      background: s.color, boxShadow: `0 4px 14px ${s.color}50`,
+                      transition: 'transform 120ms, box-shadow 120ms',
+                    }}>
+                      <span style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 15, color: fg, flex: 1, textAlign: 'left' }}>{s.name}</span>
+                      <svg width="7" height="12" viewBox="0 0 7 12" fill="none" style={{ opacity: 0.6 }}>
+                        <path d="M1 1l5 5-5 5" stroke={fg} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </button>
+                    <button onClick={() => { setEditingStack(s); setNewStackName(s.name); setNewStackColor(s.color); setShowNewStack(true); setTimeout(() => setNewStackVisible(true), 10) }} style={{
+                      alignSelf: 'stretch', minWidth: 52, borderRadius: 14, border: 'none', cursor: 'pointer', flexShrink: 0,
+                      background: s.color, boxShadow: `0 4px 14px ${s.color}50`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={contrastColor(s.color)} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.85 }}>
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
+                    </button>
+                  </div>
                 )
               })}
             </div>
@@ -315,7 +336,7 @@ export default function MapView() {
           <div style={{ background: `linear-gradient(145deg, ${newStackColor} 0%, ${newStackColor}cc 100%)`, paddingBottom: 28, position: 'relative', overflow: 'hidden', zIndex: 1 }}>
             <div style={{ position: 'absolute', width: 180, height: 180, borderRadius: '50%', background: 'rgba(255,255,255,0.07)', top: -60, right: -40, pointerEvents: 'none' }} />
             <div style={{ display: 'flex', alignItems: 'center', padding: 'calc(env(safe-area-inset-top) + 14px) 20px 10px', position: 'relative' }}>
-              <button onClick={() => { setNewStackVisible(false); setTimeout(() => setShowNewStack(false), 560) }} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif', fontSize: 15, fontWeight: 600, color: contrastColor(newStackColor), opacity: 0.9, padding: 0 }}>
+              <button onClick={() => { setNewStackVisible(false); setTimeout(() => { setShowNewStack(false); setEditingStack(null) }, 560) }} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif', fontSize: 15, fontWeight: 600, color: contrastColor(newStackColor), opacity: 0.9, padding: 0 }}>
                 <svg width="8" height="13" viewBox="0 0 8 13" fill="none">
                   <path d="M7 1L1.5 6.5L7 12" stroke={contrastColor(newStackColor)} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
@@ -324,7 +345,7 @@ export default function MapView() {
             </div>
             <div style={{ padding: '8px 20px 0', position: 'relative' }}>
               <div style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 800, fontSize: 28, color: contrastColor(newStackColor), letterSpacing: '-0.02em', opacity: newStackName ? 1 : 0.4 }}>
-                {newStackName || 'New Stack'}
+                {newStackName || (editingStack ? 'Edit Stack' : 'New Stack')}
               </div>
             </div>
           </div>
@@ -343,7 +364,10 @@ export default function MapView() {
                 ))}
               </div>
             </div>
-            <PillButton onClick={async () => { await createStack(); setNewStackVisible(false); setTimeout(() => setShowNewStack(false), 560) }} accent={newStackColor}>Create Stack</PillButton>
+            <PillButton onClick={async () => {
+              if (editingStack) { await updateStack() } else { await createStack() }
+              setNewStackVisible(false); setTimeout(() => { setShowNewStack(false); setEditingStack(null) }, 560)
+            }} accent={newStackColor}>{editingStack ? 'Save' : 'Create Stack'}</PillButton>
           </div>
         </div>,
         document.body

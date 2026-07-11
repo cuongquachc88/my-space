@@ -42,6 +42,7 @@ export default function TodoView() {
   const [newListVisible, setNewListVisible] = useState(false)
   const [newListName, setNewListName] = useState('')
   const [newListColor, setNewListColor] = useState(COLORS[0])
+  const [editingList, setEditingList] = useState<TodoList | null>(null)
   const [newTaskTitle, setNewTaskTitle] = useState('')
 
   // Screen stack: null = list screen, TodoList = task screen
@@ -91,6 +92,14 @@ export default function TodoView() {
     const db = await getDb()
     await db.query('INSERT INTO todo_lists (name,color) VALUES ($1,$2)', [newListName, newListColor])
     setNewListName(''); await loadLists()
+  }
+
+  async function updateList() {
+    if (!newListName.trim() || !editingList) return
+    const db = await getDb()
+    await db.query('UPDATE todo_lists SET name=$1,color=$2 WHERE id=$3', [newListName, newListColor, editingList.id])
+    if (activeList?.id === editingList.id) setActiveList({ ...editingList, name: newListName, color: newListColor })
+    setEditingList(null); await loadLists()
   }
 
   async function deleteList(id: string) {
@@ -163,18 +172,29 @@ export default function TodoView() {
               {lists.map(l => {
                 const fg = contrastColor(l.color)
                 return (
-                  <button key={l.id} onClick={() => openList(l)} style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    padding: '14px 16px', borderRadius: 14, border: 'none', cursor: 'pointer',
-                    background: l.color,
-                    boxShadow: `0 4px 14px ${l.color}50`,
-                    transition: 'transform 120ms, box-shadow 120ms',
-                  }}>
-                    <span style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 15, color: fg, flex: 1, textAlign: 'left' }}>{l.name}</span>
-                    <svg width="7" height="12" viewBox="0 0 7 12" fill="none" style={{ opacity: 0.6 }}>
-                      <path d="M1 1l5 5-5 5" stroke={fg} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </button>
+                  <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <button onClick={() => openList(l)} style={{
+                      display: 'flex', alignItems: 'center', gap: 10, flex: 1,
+                      padding: '14px 16px', borderRadius: 14, border: 'none', cursor: 'pointer',
+                      background: l.color, boxShadow: `0 4px 14px ${l.color}50`,
+                      transition: 'transform 120ms, box-shadow 120ms',
+                    }}>
+                      <span style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 15, color: fg, flex: 1, textAlign: 'left' }}>{l.name}</span>
+                      <svg width="7" height="12" viewBox="0 0 7 12" fill="none" style={{ opacity: 0.6 }}>
+                        <path d="M1 1l5 5-5 5" stroke={fg} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </button>
+                    <button onClick={() => { setEditingList(l); setNewListName(l.name); setNewListColor(l.color); setShowNewList(true); setTimeout(() => setNewListVisible(true), 10) }} style={{
+                      alignSelf: 'stretch', minWidth: 52, borderRadius: 14, border: 'none', cursor: 'pointer', flexShrink: 0,
+                      background: l.color, boxShadow: `0 4px 14px ${l.color}50`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={contrastColor(l.color)} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.85 }}>
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
+                    </button>
+                  </div>
                 )
               })}
             </div>
@@ -379,7 +399,7 @@ export default function TodoView() {
           <div style={{ background: `linear-gradient(145deg, ${newListColor} 0%, ${newListColor}cc 100%)`, paddingBottom: 28, position: 'relative', overflow: 'hidden', zIndex: 1 }}>
             <div style={{ position: 'absolute', width: 180, height: 180, borderRadius: '50%', background: 'rgba(255,255,255,0.07)', top: -60, right: -40, pointerEvents: 'none' }} />
             <div style={{ display: 'flex', alignItems: 'center', padding: 'calc(env(safe-area-inset-top) + 14px) 20px 10px', position: 'relative' }}>
-              <button onClick={() => { setNewListVisible(false); setTimeout(() => setShowNewList(false), 560) }} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif', fontSize: 15, fontWeight: 600, color: contrastColor(newListColor), opacity: 0.9, padding: 0 }}>
+              <button onClick={() => { setNewListVisible(false); setTimeout(() => { setShowNewList(false); setEditingList(null) }, 560) }} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif', fontSize: 15, fontWeight: 600, color: contrastColor(newListColor), opacity: 0.9, padding: 0 }}>
                 <svg width="8" height="13" viewBox="0 0 8 13" fill="none">
                   <path d="M7 1L1.5 6.5L7 12" stroke={contrastColor(newListColor)} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
@@ -388,7 +408,7 @@ export default function TodoView() {
             </div>
             <div style={{ padding: '8px 20px 0', position: 'relative' }}>
               <div style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 800, fontSize: 28, color: contrastColor(newListColor), letterSpacing: '-0.02em', opacity: newListName ? 1 : 0.4 }}>
-                {newListName || 'New List'}
+                {newListName || (editingList ? 'Edit List' : 'New List')}
               </div>
             </div>
           </div>
@@ -407,7 +427,10 @@ export default function TodoView() {
                 ))}
               </div>
             </div>
-            <PillButton onClick={async () => { await createList(); setNewListVisible(false); setTimeout(() => setShowNewList(false), 560) }} accent={newListColor}>Create List</PillButton>
+            <PillButton onClick={async () => {
+              if (editingList) { await updateList() } else { await createList() }
+              setNewListVisible(false); setTimeout(() => { setShowNewList(false); setEditingList(null) }, 560)
+            }} accent={newListColor}>{editingList ? 'Save' : 'Create List'}</PillButton>
           </div>
         </div>,
         document.body
