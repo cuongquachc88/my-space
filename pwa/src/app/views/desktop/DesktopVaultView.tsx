@@ -24,6 +24,7 @@ export default function DesktopVaultView() {
   const [revealId, setRevealId] = useState<string | null>(null)
   const [revealValue, setRevealValue] = useState('')
   const [revealError, setRevealError] = useState<string | null>(null)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
 
   // Modal
   const [modalOpen, setModalOpen] = useState(false)
@@ -96,6 +97,22 @@ export default function DesktopVaultView() {
     if (revealId === id) { setRevealId(null); setRevealValue('') }
     if (editing?.id === id) closeModal()
     await load()
+  }
+
+  async function copySecret(id: string, value: string) {
+    try {
+      await navigator.clipboard.writeText(value)
+    } catch {
+      const ta = document.createElement('textarea')
+      ta.value = value
+      ta.style.position = 'fixed'; ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.focus(); ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+    }
+    setCopiedId(id)
+    setTimeout(() => setCopiedId(null), 2000)
   }
 
   async function reveal(s: SecretMeta) {
@@ -184,7 +201,7 @@ export default function DesktopVaultView() {
           <div style={{ overflowX: 'auto' }}>
           <div style={{ minWidth: 780 }}>
           {/* Table header */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 140px 100px 160px', gap: 12, padding: '10px 20px', borderBottom: '1px solid rgba(124,106,247,0.08)', background: 'rgba(255,255,255,0.3)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 140px 100px 210px', gap: 12, padding: '10px 20px', borderBottom: '1px solid rgba(124,106,247,0.08)', background: 'rgba(255,255,255,0.3)' }}>
             {['Label', 'Tags', 'URL', 'Updated', ''].map(h => (
               <div key={h} style={{ fontFamily: 'Inter, sans-serif', fontSize: 11, fontWeight: 600, color: '#94a3b8', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{h}</div>
             ))}
@@ -192,7 +209,7 @@ export default function DesktopVaultView() {
           {secrets.map((s, i) => (
             <div key={s.id} style={{ borderTop: i > 0 ? '1px solid rgba(124,106,247,0.06)' : 'none' }}>
               <div style={{
-                display: 'grid', gridTemplateColumns: '1.5fr 1fr 140px 100px 160px', gap: 12,
+                display: 'grid', gridTemplateColumns: '1.5fr 1fr 140px 100px 210px', gap: 12,
                 padding: '12px 20px', alignItems: 'center',
                 transition: 'background 120ms',
                 background: 'transparent',
@@ -218,6 +235,16 @@ export default function DesktopVaultView() {
                     background: revealId === s.id ? `${accent}18` : 'transparent',
                     color: accent, fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
                   }}>{revealId === s.id ? 'Hide' : 'Reveal'}</button>
+                  {revealId === s.id && (
+                    <button onClick={e => { e.stopPropagation(); copySecret(s.id, revealValue) }} style={{
+                      padding: '5px 10px', borderRadius: 8, cursor: 'pointer', whiteSpace: 'nowrap',
+                      border: `1px solid ${copiedId === s.id ? '#10b981' : accent}30`,
+                      background: copiedId === s.id ? '#10b981' : 'transparent',
+                      color: copiedId === s.id ? '#fff' : accent,
+                      fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 600,
+                      transition: 'all 150ms',
+                    }}>{copiedId === s.id ? '✓ Copied' : 'Copy'}</button>
+                  )}
                   <button onClick={e => { e.stopPropagation(); openEdit(s) }} style={{
                     padding: '5px 10px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.08)', cursor: 'pointer',
                     background: 'transparent', color: '#4a4a6a', fontFamily: 'Inter, sans-serif', fontSize: 12, whiteSpace: 'nowrap',
