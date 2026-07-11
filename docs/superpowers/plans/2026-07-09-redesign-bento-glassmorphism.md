@@ -1,3 +1,4 @@
+{% raw %}
 # Bento Glassmorphism Redesign Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -1979,3 +1980,4 @@ Check in browser:
 git add pwa/src/app/views/SyncView.tsx pwa/src/app/views/SettingsView.tsx
 git commit -m "feat: SyncView + SettingsView bento layout, full redesign complete"
 ```
+{% endraw %}

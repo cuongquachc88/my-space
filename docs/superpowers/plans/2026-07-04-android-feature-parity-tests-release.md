@@ -1,3 +1,4 @@
+{% raw %}
 # Android Feature Parity, Tests & Release Pipeline Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -2027,3 +2028,4 @@ If there are any modified files not yet committed, stage and commit them now.
 | GitHub Actions CI/CD | Task 12 |
 
 All spec requirements are covered. No gaps found.
+{% endraw %}
