@@ -8,7 +8,7 @@ import GlassInput from '../../design/GlassInput'
 import PillButton from '../../design/PillButton'
 import { BentoGrid, BentoCell } from '../../design/BentoGrid'
 import ViewHeader from '../ViewHeader'
-import { IconVault, IconTrash } from '../../design/icons'
+import { IconVault, IconTrash, IconCopy, IconCheck, IconEye } from '../../design/icons'
 import TagInput from '../components/TagInput'
 import { useIsDesktop } from '../useIsDesktop'
 import DesktopVaultView from './desktop/DesktopVaultView'
@@ -179,19 +179,21 @@ export default function VaultView() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 13, color: '#1a1a2e', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.label}</span>
                       <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                        <button onClick={() => reveal(s)} style={{ padding: '4px 10px', borderRadius: 100, border: `1px solid ${accent}`, background: revealId === s.id ? accent : 'transparent', color: revealId === s.id ? '#fff' : accent, fontFamily: 'Inter, sans-serif', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
-                          {revealId === s.id ? 'Hide' : 'Reveal'}
+                        <button onClick={async () => {
+                          const db = await getDb()
+                          const row = await db.query<{ ciphertext: string; iv: string }>('SELECT ciphertext,iv FROM secrets WHERE id=$1', [s.id])
+                          if (row.rows[0]) { const val = await decrypt(row.rows[0].ciphertext, row.rows[0].iv); await copySecret(s.id, val) }
+                        }} style={{ width: 30, height: 30, borderRadius: 8, border: `1.5px solid ${copiedId === s.id ? '#10b981' : accent}`, background: copiedId === s.id ? '#10b981' : `${accent}10`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 150ms', flexShrink: 0 }}>
+                          {copiedId === s.id ? <IconCheck size={14} accent="#fff" /> : <IconCopy size={14} accent={accent} />}
                         </button>
-                        {revealId === s.id && (
-                          <button onClick={() => copySecret(s.id, revealValue)} style={{ padding: '4px 10px', borderRadius: 100, border: `1px solid ${copiedId === s.id ? '#10b981' : accent}`, background: copiedId === s.id ? '#10b981' : 'transparent', color: copiedId === s.id ? '#fff' : accent, fontFamily: 'Inter, sans-serif', fontSize: 11, fontWeight: 600, cursor: 'pointer', transition: 'all 150ms' }}>
-                            {copiedId === s.id ? '✓ Copied' : 'Copy'}
-                          </button>
-                        )}
-                        <button onClick={() => startEdit(s)} style={{ padding: '4px 10px', borderRadius: 100, border: '1px solid rgba(0,0,0,0.15)', background: 'transparent', color: '#4a4a6a', fontFamily: 'Inter, sans-serif', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                        <button onClick={() => reveal(s)} style={{ width: 30, height: 30, borderRadius: 8, border: `1.5px solid ${revealId === s.id ? accent : 'rgba(0,0,0,0.12)'}`, background: revealId === s.id ? accent : `${accent}10`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 150ms', flexShrink: 0 }}>
+                          <IconEye size={14} accent={revealId === s.id ? '#fff' : accent} off={revealId === s.id} />
+                        </button>
+                        <button onClick={() => startEdit(s)} style={{ padding: '4px 10px', borderRadius: 8, border: '1.5px solid rgba(0,0,0,0.12)', background: 'transparent', color: '#4a4a6a', fontFamily: 'Inter, sans-serif', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
                           Edit
                         </button>
-                        <button onClick={() => deleteSecret(s.id)} style={{ width: 26, height: 26, borderRadius: 100, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <IconTrash size={12} accent="#ef4444" />
+                        <button onClick={() => deleteSecret(s.id)} style={{ width: 30, height: 30, borderRadius: 8, border: '1.5px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <IconTrash size={13} accent="#ef4444" />
                         </button>
                       </div>
                     </div>
