@@ -2,7 +2,6 @@ import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
-import { cloudflare } from '@cloudflare/vite-plugin'
 import fs from 'fs'
 import path from 'path'
 
@@ -102,17 +101,9 @@ export default defineConfig(({ mode }) => {
           maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,
         },
       }),
-      // Skip the Cloudflare plugin for Capacitor native builds (CAPACITOR=1 vite build).
-      // The plugin restructures output to dist/client/ + dist/my_space/ which breaks
-      // Capacitor's webDir:'dist'. For native builds we want the flat dist/ layout.
-      ...(process.env.CAPACITOR ? [] : [cloudflare()]),
     ],
     optimizeDeps: {
       exclude: ['@electric-sql/pglite'],
     },
-    // Note: oauth-callback.html lives in public/ and is copied verbatim to
-    // dist/ as a static asset — it must NOT be a rollupOptions.input entry.
-    // Declaring an .html file in public/ as a build entry conflicts with the
-    // Cloudflare vite plugin's Worker build ("cannot be external").
   }
 })
