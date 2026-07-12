@@ -18,7 +18,13 @@ export default defineConfig(({ mode }) => {
         name: 'dev-middleware',
         configureServer(server) {
           server.middlewares.use(async (req, res, next) => {
-            if (req.url?.startsWith('/oauth-callback')) {
+            if (req.url?.match(/^\/oauth-callback\.js(\?.*)?$/)) {
+              const js = fs.readFileSync(path.resolve(__dirname, 'public/oauth-callback.js'), 'utf-8')
+              res.setHeader('Content-Type', 'text/javascript')
+              res.end(js)
+              return
+            }
+            if (req.url?.match(/^\/oauth-callback(\.html)?(\?.*)?$/)) {
               const html = fs.readFileSync(path.resolve(__dirname, 'public/oauth-callback.html'), 'utf-8')
               res.setHeader('Content-Type', 'text/html')
               res.end(html)
