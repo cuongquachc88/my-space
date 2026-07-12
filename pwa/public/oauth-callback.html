@@ -13,8 +13,13 @@
       const state = params.get('state')
       const error = params.get('error')
 
-      if (!window.opener) {
-        // Mobile browser redirect flow: store code in sessionStorage, redirect back to app
+      // window.name === 'google-auth' means this was opened by window.open() as a popup.
+      // window.opener may be null on some browsers after a cross-origin redirect
+      // even in a popup context, so window.name is the reliable signal.
+      const isPopup = window.name === 'google-auth'
+
+      if (!isPopup) {
+        // Mobile browser redirect flow: store in sessionStorage, redirect back to app
         if (error) {
           sessionStorage.setItem('oauth_error', error)
         } else if (code && state) {
@@ -27,19 +32,33 @@
         return
       }
 
+      // Popup flow: postMessage to opener if available, else use localStorage
+      // as a cross-window channel (parent polls via storage event).
       if (error) {
-        window.opener.postMessage({ type: 'OAUTH_ERROR', error }, window.location.origin)
+        if (window.opener) {
+          window.opener.postMessage({ type: 'OAUTH_ERROR', error }, window.location.origin)
+        } else {
+          localStorage.setItem('oauth_result', JSON.stringify({ type: 'OAUTH_ERROR', error }))
+        }
         window.close()
         return
       }
 
       if (code && state) {
-        window.opener.postMessage({ type: 'OAUTH_CODE', code, state }, window.location.origin)
+        if (window.opener) {
+          window.opener.postMessage({ type: 'OAUTH_CODE', code, state }, window.location.origin)
+        } else {
+          localStorage.setItem('oauth_result', JSON.stringify({ type: 'OAUTH_CODE', code, state }))
+        }
         window.close()
         return
       }
 
-      window.opener.postMessage({ type: 'OAUTH_ERROR', error: 'no_code' }, window.location.origin)
+      if (window.opener) {
+        window.opener.postMessage({ type: 'OAUTH_ERROR', error: 'no_code' }, window.location.origin)
+      } else {
+        localStorage.setItem('oauth_result', JSON.stringify({ type: 'OAUTH_ERROR', error: 'no_code' }))
+      }
       window.close()
     })()
   </script>

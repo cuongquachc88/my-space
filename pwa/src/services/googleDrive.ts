@@ -174,40 +174,63 @@ function authorizeWeb(url: string, preOpenedPopup?: Window | null): Promise<stri
   return new Promise((resolve, reject) => {
     const storedState = localStorage.getItem('oauth_state')
 
-    // Use pre-opened popup (passed from click handler to survive Safari blocker),
-    // or open a new one for desktop browsers where async open still works.
+    // Clear any stale result from a previous attempt
+    localStorage.removeItem('oauth_result')
+
     if (preOpenedPopup) {
       preOpenedPopup.location.href = url
     }
     const popup = preOpenedPopup ?? window.open(url, 'google-auth', 'width=520,height=620,left=200,top=100')
     if (!popup) { reject(new Error('Popup blocked — allow popups for this site')); return }
 
-    const handler = async (e: MessageEvent) => {
-      if (e.origin !== location.origin) return
-      if (e.data?.type === 'OAUTH_CODE') {
-        clearInterval(poll)
-        window.removeEventListener('message', handler)
-        if (!storedState || storedState !== e.data.state) { reject(new Error('State mismatch')); return }
-        try {
-          const token = await exchangeCode(e.data.code)
+    let done = false
+    function finish(data: { type: string; code?: string; state?: string; error?: string }) {
+      if (done) return
+      done = true
+      clearInterval(poll)
+      window.removeEventListener('message', msgHandler)
+      window.removeEventListener('storage', storageHandler)
+      localStorage.removeItem('oauth_result')
+
+      if (data.type === 'OAUTH_CODE') {
+        if (!storedState || storedState !== data.state) { reject(new Error('State mismatch')); return }
+        exchangeCode(data.code!).then(token => {
           localStorage.setItem('drive_token', token)
           localStorage.removeItem('oauth_state')
           localStorage.removeItem('oauth_verifier')
           resolve(token)
-        } catch (err) { reject(err) }
-      } else if (e.data?.type === 'OAUTH_ERROR') {
-        clearInterval(poll)
-        window.removeEventListener('message', handler)
-        reject(new Error(`OAuth error: ${e.data.error}`))
+        }).catch(reject)
+      } else {
+        reject(new Error(`OAuth error: ${data.error ?? 'unknown'}`))
       }
     }
-    window.addEventListener('message', handler)
+
+    // Primary channel: postMessage from popup
+    const msgHandler = (e: MessageEvent) => {
+      if (e.origin !== location.origin) return
+      if (e.data?.type === 'OAUTH_CODE' || e.data?.type === 'OAUTH_ERROR') finish(e.data)
+    }
+    window.addEventListener('message', msgHandler)
+
+    // Fallback channel: localStorage when window.opener is null in popup
+    const storageHandler = (e: StorageEvent) => {
+      if (e.key !== 'oauth_result' || !e.newValue) return
+      try { finish(JSON.parse(e.newValue)) } catch { /* ignore */ }
+    }
+    window.addEventListener('storage', storageHandler)
 
     const poll = setInterval(() => {
       if (popup.closed) {
+        if (done) return
+        // Give storage event 200ms to fire after popup closes
+        setTimeout(() => {
+          if (!done) {
+            const stored = localStorage.getItem('oauth_result')
+            if (stored) { try { finish(JSON.parse(stored)) } catch { /* ignore */ } }
+            else { done = true; clearInterval(poll); window.removeEventListener('message', msgHandler); window.removeEventListener('storage', storageHandler); reject(new Error('Authorization cancelled')) }
+          }
+        }, 200)
         clearInterval(poll)
-        window.removeEventListener('message', handler)
-        reject(new Error('Authorization cancelled'))
       }
     }, 500)
   })
