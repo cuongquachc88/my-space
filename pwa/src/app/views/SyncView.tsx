@@ -8,7 +8,7 @@ import { useIsDesktop } from '../useIsDesktop'
 import DesktopSyncView from './desktop/DesktopSyncView'
 import { Capacitor } from '@capacitor/core'
 import {
-  authorize, resumeRedirectAuth, isMobileBrowser, getStoredToken, clearToken,
+  authorize, isMobileBrowser, getStoredToken, clearToken,
   findFile, uploadFile, downloadFile,
 } from '../../services/googleDrive'
 
@@ -39,21 +39,13 @@ export function useSyncLogic() {
   const [pullPassword, setPullPassword] = useState('')
 
   useEffect(() => {
-    // Handle mobile browser redirect-flow OAuth return
-    resumeRedirectAuth()
-      .then(token => {
-        if (token) {
-          setConnected(true)
-          log('Connected to Google Drive ✓', 'ok')
-        } else if (getStoredToken() && !connected) {
-          setConnected(true)
-          log('Connected to Google Drive ✓', 'ok')
-        }
-      })
-      .catch(err => {
-        log(`OAuth failed: ${String(err)}`, 'error')
-        setStatus('error')
-      })
+    // The mobile-browser redirect handoff is consumed at app boot in App.tsx
+    // (before the unlock gate), so by the time SyncView mounts the token — if
+    // OAuth succeeded — is already in localStorage. Just reflect that here.
+    if (getStoredToken() && !connected) {
+      setConnected(true)
+      log('Connected to Google Drive ✓', 'ok')
+    }
   }, [])
 
   function log(msg: string, type: 'info' | 'ok' | 'error' = 'info') {

@@ -8,7 +8,7 @@ vi.mock('@capacitor/app', () => ({ App: { addListener: vi.fn(), removeAllListene
 // ── Mock import.meta.env ────────────────────────────────────────────────────
 vi.stubGlobal('import', { meta: { env: { VITE_GOOGLE_CLIENT_ID: 'test-client-id.apps.googleusercontent.com' } } })
 
-import { authorize, getStoredToken, clearToken, findFile, uploadFile, downloadFile } from '../../src/services/googleDrive'
+import { authorize, resumeRedirectAuth, getStoredToken, clearToken, findFile, uploadFile, downloadFile } from '../../src/services/googleDrive'
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -237,6 +237,59 @@ describe('OAuth state validation', () => {
   it('verifier is also stored in localStorage', () => {
     localStorage.setItem('oauth_verifier', 'pkce-verifier-xyz')
     expect(localStorage.getItem('oauth_verifier')).toBe('pkce-verifier-xyz')
+  })
+})
+
+// ── resumeRedirectAuth() — mobile browser redirect return ───────────────────
+// This runs at app boot (before the unlock gate), independent of any view mounting.
+// It consumes the pending code from sessionStorage and persists the token.
+
+describe('resumeRedirectAuth — mobile browser redirect flow', () => {
+  beforeEach(() => { localStorage.clear(); sessionStorage.clear() })
+  afterEach(() => { localStorage.clear(); sessionStorage.clear(); vi.restoreAllMocks() })
+
+  it('returns null when there is no pending redirect', async () => {
+    const token = await resumeRedirectAuth()
+    expect(token).toBeNull()
+  })
+
+  it('exchanges the pending code and persists the token', async () => {
+    localStorage.setItem('oauth_state', 'state-123')
+    localStorage.setItem('oauth_verifier', 'verifier-xyz')
+    sessionStorage.setItem('oauth_code', 'auth-code-abc')
+    sessionStorage.setItem('oauth_state_return', 'state-123')
+    mockFetch([{ ok: true, body: { access_token: 'drive-tok-999' } }])
+
+    const token = await resumeRedirectAuth()
+
+    expect(token).toBe('drive-tok-999')
+    expect(getStoredToken()).toBe('drive-tok-999')
+    // sessionStorage consumed so it never processes twice
+    expect(sessionStorage.getItem('oauth_code')).toBeNull()
+    // transient PKCE material cleared after success
+    expect(localStorage.getItem('oauth_state')).toBeNull()
+    expect(localStorage.getItem('oauth_verifier')).toBeNull()
+  })
+
+  it('rejects on state mismatch (CSRF guard)', async () => {
+    localStorage.setItem('oauth_state', 'expected-state')
+    localStorage.setItem('oauth_verifier', 'verifier-xyz')
+    sessionStorage.setItem('oauth_code', 'auth-code-abc')
+    sessionStorage.setItem('oauth_state_return', 'attacker-state')
+
+    await expect(resumeRedirectAuth()).rejects.toThrow(/State mismatch/)
+    expect(getStoredToken()).toBeNull()
+  })
+
+  it('surfaces an OAuth error returned via sessionStorage', async () => {
+    sessionStorage.setItem('oauth_error', 'access_denied')
+    await expect(resumeRedirectAuth()).rejects.toThrow(/access_denied/)
+  })
+
+  it('clears sessionStorage even when no valid code (never re-processes)', async () => {
+    sessionStorage.setItem('oauth_error', 'access_denied')
+    await expect(resumeRedirectAuth()).rejects.toThrow()
+    expect(sessionStorage.getItem('oauth_error')).toBeNull()
   })
 })
 
