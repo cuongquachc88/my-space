@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "my-space",
+  "main": "./worker/index.ts",
+  "compatibility_date": "2026-07-12",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true
+  },
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    // Run the Worker first for API routes; everything else serves static
+    // assets directly. This is what makes POST /api/token reach the Worker
+    // instead of being swallowed by the SPA fallback.
+    "run_worker_first": ["/api/*"]
+  }
+}
