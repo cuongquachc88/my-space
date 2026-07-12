@@ -19,3 +19,9 @@ android/app/build
 # CocoaPods
 ios/App/Pods
 ios/App/Podfile.lock
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
