@@ -3,8 +3,10 @@ dist
 .env
 *.local
 
-# Playwright artifacts
+# Cloudflare Wrangler / Playwright artifacts
+.wrangler
 test-results
+.dev.vars
 
 # Capacitor build outputs (generated from dist)
 android/app/src/main/assets/public
