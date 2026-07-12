@@ -9,6 +9,10 @@ type Screen = 'splash' | 'unlock' | 'app'
 
 const IDLE_MS = 5 * 60 * 1000 // 5 minutes
 
+// Fired after resumeRedirectAuth() successfully saves a token — lets SyncView
+// update its connected state without reloading or prop drilling.
+export const OAUTH_TOKEN_READY = 'oauth:token-ready'
+
 export default function App() {
   const [screen, setScreen] = useState<Screen>('splash')
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -20,7 +24,9 @@ export default function App() {
   // tab, so its useEffect never ran on return. Token exchange needs only the
   // PKCE verifier in localStorage (survives reload), not an unlocked vault.
   useEffect(() => {
-    resumeRedirectAuth().catch(err => {
+    resumeRedirectAuth().then(token => {
+      if (token) window.dispatchEvent(new CustomEvent(OAUTH_TOKEN_READY))
+    }).catch(err => {
       console.error('[oauth] redirect resume failed:', err)
     })
   }, [])

@@ -11,6 +11,7 @@ import {
   authorize, isMobileBrowser, getStoredToken, clearToken,
   findFile, uploadFile, downloadFile,
 } from '../../services/googleDrive'
+import { OAUTH_TOKEN_READY } from '../../App'
 
 export { authorize, getStoredToken, clearToken, findFile, uploadFile, downloadFile }
 
@@ -39,13 +40,21 @@ export function useSyncLogic() {
   const [pullPassword, setPullPassword] = useState('')
 
   useEffect(() => {
-    // The mobile-browser redirect handoff is consumed at app boot in App.tsx
-    // (before the unlock gate), so by the time SyncView mounts the token — if
-    // OAuth succeeded — is already in localStorage. Just reflect that here.
+    // Check immediately in case token was already in localStorage before mount
     if (getStoredToken() && !connected) {
       setConnected(true)
       log('Connected to Google Drive ✓', 'ok')
     }
+    // Also listen for the event fired by App.tsx after mobile-redirect token exchange
+    // completes asynchronously (race: SyncView may mount before exchangeCode() resolves)
+    const onTokenReady = () => {
+      if (getStoredToken()) {
+        setConnected(true)
+        log('Connected to Google Drive ✓', 'ok')
+      }
+    }
+    window.addEventListener(OAUTH_TOKEN_READY, onTokenReady)
+    return () => window.removeEventListener(OAUTH_TOKEN_READY, onTokenReady)
   }, [])
 
   function log(msg: string, type: 'info' | 'ok' | 'error' = 'info') {
@@ -56,10 +65,14 @@ export function useSyncLogic() {
   async function connect() {
     try {
       log('Opening Google authorization…')
-      // Native: no popup. Mobile browser: no popup (redirect flow). Desktop: pre-open popup synchronously.
+      // Native: no popup. Mobile browser: no popup (redirect flow).
+      // Desktop: pre-open popup synchronously in click handler (before any await)
+      // so Safari's popup blocker doesn't block it. Use /oauth-loading.html so
+      // the popup shows a friendly screen instead of flashing the app's unlock form
+      // while authorize() awaits PKCE key generation.
       const popup = (Capacitor.isNativePlatform() || isMobileBrowser())
         ? null
-        : window.open('', 'google-auth', 'width=520,height=620,left=200,top=100')
+        : window.open('/oauth-loading.html', 'google-auth', 'width=520,height=620,left=200,top=100')
       await authorize(popup)
       setConnected(true)
       log('Connected to Google Drive ✓', 'ok')
