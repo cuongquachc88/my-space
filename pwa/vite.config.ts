@@ -102,7 +102,10 @@ export default defineConfig(({ mode }) => {
           maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,
         },
       }),
-      cloudflare(),
+      // Skip the Cloudflare plugin for Capacitor native builds (CAPACITOR=1 vite build).
+      // The plugin restructures output to dist/client/ + dist/my_space/ which breaks
+      // Capacitor's webDir:'dist'. For native builds we want the flat dist/ layout.
+      ...(process.env.CAPACITOR ? [] : [cloudflare()]),
     ],
     optimizeDeps: {
       exclude: ['@electric-sql/pglite'],
