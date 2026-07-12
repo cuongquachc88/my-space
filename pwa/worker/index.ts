@@ -117,6 +117,15 @@ export default {
       return handleToken(request, env)
     }
 
+    // Temporary debug endpoint — remove after confirming env vars are bound
+    if (url.pathname === '/api/debug-env') {
+      return json({
+        has_client_id: !!env.VITE_GOOGLE_CLIENT_ID,
+        has_client_secret: !!env.GOOGLE_CLIENT_SECRET,
+        client_id_prefix: env.VITE_GOOGLE_CLIENT_ID?.slice(0, 12) ?? null,
+      }, 200)
+    }
+
     // Any other /api/* path: explicit 404 so it never falls into the SPA shell.
     if (url.pathname.startsWith('/api/')) {
       return json({ error: 'not_found' }, 404)
