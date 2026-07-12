@@ -99,6 +99,9 @@ export default defineConfig(({ mode }) => {
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,wasm}'],
           maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,
+          // Don't let the SW intercept OAuth callback pages — they must load
+          // their own scripts, not get SPA-fallback'd to index.html.
+          navigateFallbackDenylist: [/^\/oauth-callback/, /^\/oauth-loading/],
         },
       }),
     ],
