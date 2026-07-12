@@ -5,6 +5,8 @@ import { VitePWA } from 'vite-plugin-pwa'
 import fs from 'fs'
 import path from 'path'
 
+import { cloudflare } from "@cloudflare/vite-plugin";
+
 export default defineConfig(({ mode }) => {
   // Load ALL env vars (including non-VITE_ ones) for use in server-side middleware
   const env = loadEnv(mode, process.cwd(), '')
@@ -101,9 +103,10 @@ export default defineConfig(({ mode }) => {
           maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,
         },
       }),
+      cloudflare()
     ],
     optimizeDeps: {
       exclude: ['@electric-sql/pglite'],
     },
-  }
+  };
 })
