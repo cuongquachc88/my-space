@@ -45,8 +45,8 @@ export default function DesktopNotesView() {
   const load = useCallback(async (q = '', tag: string | null = null) => {
     const db = await getDb()
     let rows
-    if (tag) rows = await db.query<Note>('SELECT * FROM notes WHERE $1 = ANY(tags) ORDER BY updated_at DESC', [tag])
-    else if (q) rows = await db.query<Note>('SELECT * FROM notes WHERE title ILIKE $1 OR content ILIKE $1 ORDER BY updated_at DESC', [`%${q}%`])
+    if (tag) rows = await db.query<Note>('SELECT * FROM notes WHERE tags LIKE $1 ORDER BY updated_at DESC', [`%"${tag}"%`])
+    else if (q) rows = await db.query<Note>('SELECT * FROM notes WHERE title LIKE $1 OR content LIKE $1 ORDER BY updated_at DESC', [`%${q}%`])
     else rows = await db.query<Note>('SELECT * FROM notes ORDER BY updated_at DESC')
     const list = rows.rows
     setNotes(list)

@@ -1,9 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { MemoryFS } from '@electric-sql/pglite'
 import { resetDb, getDb } from '../../src/db'
 
 beforeEach(async () => {
-  await resetDb(new MemoryFS())
+  await resetDb()
 })
 
 // ── Notes ──────────────────────────────────────────────────────────────────
@@ -30,7 +29,7 @@ describe('notes table', () => {
   it('stores and retrieves tags', async () => {
     const db = await getDb()
     const res = await db.query<{ tags: string[] }>(
-      "INSERT INTO notes (title, content, tags) VALUES ('T', 'C', ARRAY['work','urgent']) RETURNING tags"
+      "INSERT INTO notes (title, content, tags) VALUES ('T', 'C', $1) RETURNING tags", [['work', 'urgent']]
     )
     expect(res.rows[0].tags).toEqual(['work', 'urgent'])
   })
@@ -337,7 +336,7 @@ describe('export / import data copy round-trip', () => {
     const db = await getDb()
 
     // Seed data across all tables
-    await db.query("INSERT INTO notes (title, content, tags) VALUES ('Note A', 'content', ARRAY['tag1'])")
+    await db.query("INSERT INTO notes (title, content, tags) VALUES ('Note A', 'content', $1)", [['tag1']])
     await db.query("INSERT INTO secrets (label, ciphertext, iv) VALUES ('My secret', 'cipherXYZ', 'ivABC')")
     await db.query("INSERT INTO subscriptions (name, amount, start_date) VALUES ('Netflix', 15.99, '2024-01-01')")
 
@@ -363,7 +362,7 @@ describe('export / import data copy round-trip', () => {
     ])
 
     // Fresh database
-    await resetDb(new MemoryFS())
+    await resetDb()
     const db2 = await getDb()
 
     // Import notes

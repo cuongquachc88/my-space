@@ -1,23 +1,27 @@
 // pwa/src/app/AppShell.tsx
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import AppBackground from '../design/AppBackground'
 import { IconAppShield, IconStatusOffline, IconStatusEncrypted } from '../design/icons'
 import NavRail, { type Tab } from './NavRail'
 import NavPill from './NavPill'
-import NotesView from './views/NotesView'
-import VaultView from './views/VaultView'
-import TodoView from './views/TodoView'
-import SubscriptionsView from './views/SubscriptionsView'
-import MapView from './views/MapView'
-import GeneratorView from './views/GeneratorView'
-import ReportsView from './views/ReportsView'
-import SyncView from './views/SyncView'
-import SettingsView from './views/SettingsView'
+
+// Each tab's view (and its desktop variant, imported internally by the view
+// itself) only downloads once the user actually opens that tab, instead of
+// all 9 views loading eagerly on every app start.
+const NotesView = lazy(() => import('./views/NotesView'))
+const VaultView = lazy(() => import('./views/VaultView'))
+const TodoView = lazy(() => import('./views/TodoView'))
+const SubscriptionsView = lazy(() => import('./views/SubscriptionsView'))
+const MapView = lazy(() => import('./views/MapView'))
+const GeneratorView = lazy(() => import('./views/GeneratorView'))
+const ReportsView = lazy(() => import('./views/ReportsView'))
+const SyncView = lazy(() => import('./views/SyncView'))
+const SettingsView = lazy(() => import('./views/SettingsView'))
 
 interface Props { onLogout: () => void }
 
 const VIEW = ({ tab, onLogout }: { tab: Tab; onLogout: () => void }) => (
-  <>
+  <Suspense fallback={null}>
     {tab === 'notes'    && <NotesView />}
     {tab === 'vault'    && <VaultView />}
     {tab === 'todo'     && <TodoView />}
@@ -27,7 +31,7 @@ const VIEW = ({ tab, onLogout }: { tab: Tab; onLogout: () => void }) => (
     {tab === 'reports'  && <ReportsView />}
     {tab === 'sync'     && <SyncView />}
     {tab === 'settings' && <SettingsView onLogout={onLogout} />}
-  </>
+  </Suspense>
 )
 
 export default function AppShell({ onLogout }: Props) {

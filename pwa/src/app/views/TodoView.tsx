@@ -65,9 +65,9 @@ export default function TodoView() {
     const db = await getDb()
     const res = await db.query<TodoTask>(
       tag
-        ? 'SELECT * FROM todo_tasks WHERE list_id=$1 AND $2=ANY(tags) ORDER BY done ASC, created_at DESC'
+        ? 'SELECT * FROM todo_tasks WHERE list_id=$1 AND tags LIKE $2 ORDER BY done ASC, created_at DESC'
         : 'SELECT * FROM todo_tasks WHERE list_id=$1 ORDER BY done ASC, created_at DESC',
-      tag ? [listId, tag] : [listId]
+      tag ? [listId, `%"${tag}"%`] : [listId]
     )
     setTasks(res.rows)
     setAllTags([...new Set(res.rows.flatMap(t => t.tags ?? []))].sort())

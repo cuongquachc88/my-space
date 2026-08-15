@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     environment: 'happy-dom',
     globals: true,
+    setupFiles: ['tests/setup.ts'],
     include: ['tests/unit/**/*.test.ts'],
     coverage: {
       provider: 'v8',

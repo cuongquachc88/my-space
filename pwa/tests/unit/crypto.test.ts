@@ -1,10 +1,26 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { deriveKey, unlock, lock, isLocked, getKey, encrypt, decrypt, encryptWithKey, decryptWithKey } from '../../src/crypto'
+import { deriveKey, unlock, lock, isLocked, getKey, encrypt, decrypt, encryptWithKey, decryptWithKey, resumeFromReload, _simulateReloadForTest } from '../../src/crypto'
+import { _setKeyStorage, type KeyStorage } from '../../src/crypto/keyStore'
 
 const password = 'correct-horse-battery-staple'
 const salt = new Uint8Array(16).fill(0xab)
 
-beforeEach(() => lock())
+// happy-dom's IndexedDB doesn't reliably structured-clone real CryptoKey
+// objects, so route the reload-persistence side effect through an
+// in-memory fake here too (see tests/unit/keyStore.test.ts for that layer).
+class FakeKeyStorage implements KeyStorage {
+  map = new Map<string, CryptoKey>()
+  async put(id: string, key: CryptoKey) { this.map.set(id, key) }
+  async get(id: string) { return this.map.get(id) }
+  async delete(id: string) { this.map.delete(id) }
+  async clear() { this.map.clear() }
+}
+
+beforeEach(() => {
+  _setKeyStorage(new FakeKeyStorage())
+  sessionStorage.clear()
+  lock()
+})
 
 describe('deriveKey', () => {
   it('returns a CryptoKey', async () => {
@@ -47,6 +63,31 @@ describe('lock / unlock / isLocked', () => {
     const key = getKey()
     expect(key).toBeDefined()
     expect(key.type).toBe('secret')
+  })
+})
+
+describe('resumeFromReload (F5 session persistence)', () => {
+  it('resumes an unlocked vault after simulated reload (in-memory key cleared)', async () => {
+    await unlock(password, salt)
+    // Simulate what a page reload does to the module: memory is wiped, but
+    // sessionStorage/IndexedDB survive.
+    _simulateReloadForTest()
+    const resumed = await resumeFromReload()
+    expect(resumed).toBe(true)
+    expect(isLocked()).toBe(false)
+  })
+
+  it('returns false when nothing was ever unlocked in this tab', async () => {
+    const resumed = await resumeFromReload()
+    expect(resumed).toBe(false)
+    expect(isLocked()).toBe(true)
+  })
+
+  it('after lock(), a later resume attempt fails (tab-close/logout semantics)', async () => {
+    await unlock(password, salt)
+    lock()
+    const resumed = await resumeFromReload()
+    expect(resumed).toBe(false)
   })
 })
 
