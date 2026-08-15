@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import SplashScreen from './SplashScreen'
 import UnlockForm from './UnlockForm'
 import AppShell from './app/AppShell'
-import { lock } from './crypto'
+import { lock, resumeFromReload } from './crypto'
 import { resumeRedirectAuth } from './services/googleDrive'
 
 type Screen = 'splash' | 'unlock' | 'app'
@@ -46,6 +46,15 @@ export default function App() {
     resetIdle()
   }, [resetIdle])
 
+  // After splash: if this tab already had an unlocked vault before a reload
+  // (F5), resume it silently instead of asking for the PIN/password again.
+  const afterSplash = useCallback(() => {
+    resumeFromReload().then(resumed => {
+      if (resumed) enterApp()
+      else setScreen('unlock')
+    })
+  }, [enterApp])
+
   // Attach idle listeners when app is unlocked
   useEffect(() => {
     if (screen !== 'app') return
@@ -57,7 +66,7 @@ export default function App() {
     }
   }, [screen, resetIdle])
 
-  if (screen === 'splash') return <SplashScreen onDone={() => setScreen('unlock')} />
+  if (screen === 'splash') return <SplashScreen onDone={afterSplash} />
   if (screen === 'unlock') return <UnlockForm onUnlocked={enterApp} />
   return <AppShell onLogout={doLock} />
 }

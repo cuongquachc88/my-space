@@ -104,6 +104,12 @@ export default defineConfig(({ mode }) => {
         },
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,wasm}'],
+          // PGlite (initdb-*.wasm, pglite-*.wasm, pglite-*.data) is only
+          // reachable via a dynamic import in the legacy-data migration path
+          // (see src/db/legacyMigration.ts) — precaching it would defeat the
+          // point of code-splitting it out, downloading ~16.7MB for every
+          // install even though only upgrading users ever need it.
+          globIgnores: ['**/initdb-*.wasm', '**/pglite-*.wasm', '**/pglite-*.data'],
           maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,
           // Don't let the SW intercept OAuth callback pages — they must load
           // their own scripts, not get SPA-fallback'd to index.html.

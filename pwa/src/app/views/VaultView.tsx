@@ -42,11 +42,11 @@ export default function VaultView() {
     const db = await getDb()
     const res = await db.query<SecretMeta>(
       query
-        ? 'SELECT id,label,tags,url,description,updated_at FROM secrets WHERE label ILIKE $1 OR description ILIKE $1 ORDER BY updated_at DESC'
+        ? 'SELECT id,label,tags,url,description,updated_at FROM secrets WHERE label LIKE $1 OR description LIKE $1 ORDER BY updated_at DESC'
         : activeTag
-          ? 'SELECT id,label,tags,url,description,updated_at FROM secrets WHERE $1=ANY(tags) ORDER BY updated_at DESC'
+          ? 'SELECT id,label,tags,url,description,updated_at FROM secrets WHERE tags LIKE $1 ORDER BY updated_at DESC'
           : 'SELECT id,label,tags,url,description,updated_at FROM secrets ORDER BY updated_at DESC',
-      query ? [`%${query}%`] : activeTag ? [activeTag] : []
+      query ? [`%${query}%`] : activeTag ? [`%"${activeTag}"%`] : []
     )
     setSecrets(res.rows)
     setAllTags([...new Set(res.rows.flatMap(s => s.tags ?? []))].sort())

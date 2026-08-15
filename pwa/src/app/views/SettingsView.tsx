@@ -135,7 +135,7 @@ export default function SettingsView({ onLogout }: Props) {
                 <div style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 14, color: '#1a1a2e' }}>My SPACE v1.0.0</div>
                 <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#4a4a6a' }}>Privacy-first · No servers · No tracking</div>
                 <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#94a3b8', lineHeight: 1.5, marginTop: 4 }}>
-                  Data stored in PGlite (WASM Postgres) — offline-first PWA. Works without internet.
+                  Data stored in SQLite (WASM) — offline-first PWA. Works without internet.
                 </div>
               </div>
             </div>

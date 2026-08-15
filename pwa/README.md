@@ -53,7 +53,7 @@ Required only for Google Drive Sync. All other features work without it.
 ```
 src/
 ├── crypto/         AES-GCM 256-bit + PBKDF2 600k iterations
-├── db/             PGlite (WASM Postgres) — offline-first, no server
+├── db/             SQLite (sql.js WASM) — offline-first, no server
 ├── lib/            Pure utilities: currency, markdown, password gen, safeHtml
 ├── landing/        Public landing page
 └── app/
