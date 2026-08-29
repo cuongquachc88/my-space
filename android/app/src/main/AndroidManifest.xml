@@ -28,7 +28,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- Google Drive OAuth deep link (implicit flow redirect) -->
+            <!-- Google Drive OAuth deep link -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -36,21 +36,6 @@
                 <data android:scheme="com.myspace.app" android:host="oauth-callback" />
             </intent-filter>
         </activity>
-
-        <!-- AppAuth redirect activity — handles the OAuth callback from the browser -->
-        <activity
-            android:name="net.openid.appauth.RedirectUriReceiverActivity"
-            android:exported="true"
-            tools:node="replace"
-            xmlns:tools="http://schemas.android.com/tools">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="com.myspace.app" android:host="oauth-callback" />
-            </intent-filter>
-        </activity>
-
     </application>
 
 </manifest>
