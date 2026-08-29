@@ -17,6 +17,9 @@ android {
         versionCode = 1
         versionName = "1.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // AppAuth redirect URI scheme
+        manifestPlaceholders["appAuthRedirectScheme"] = "com.myspace.app"
     }
 
     buildTypes {
@@ -57,7 +60,7 @@ dependencies {
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.compose.material3)
     implementation(libs.compose.material.icons)
-    implementation(libs.compose.google.fonts)
+    implementation(libs.compose.foundation)
     debugImplementation(libs.compose.ui.tooling)
 
     // Navigation
@@ -77,6 +80,9 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.retrofit.gson)
     implementation(libs.okhttp.logging)
+
+    // OAuth — AppAuth for Android
+    implementation(libs.appauth)
 
     // Image loading
     implementation(libs.coil.compose)
@@ -105,6 +111,9 @@ dependencies {
 
     // Tests
     testImplementation(libs.junit)
+    testImplementation(libs.mockk)
+    testImplementation(libs.coroutines.test)
+    testImplementation(libs.turbine)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.compose.test)
 }
