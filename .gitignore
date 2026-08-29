@@ -1,23 +1,20 @@
 # Keys / secrets
 keys/
 
-# Chrome extension
-chrome-extension/node_modules/
-chrome-extension/dist/
-chrome-extension/*.zip
+# Extension
+extension/node_modules/
+extension/dist/
+extension/output/
 
-# Android build
+# Android build artefacts
 android/.gradle/
 android/build/
 android/app/build/
 android/local.properties
+android/keystore.properties
+android/output/
 *.apk
 *.aab
-
-# Android signing — never commit these
-android/keystore.properties
-android/output/*.aab
-android/output/*.apk
 
 # Environment
 .env
@@ -39,4 +36,3 @@ npm-debug.log*
 # Dev tools
 .playwright-mcp/
 .claude/
-.superpowers/

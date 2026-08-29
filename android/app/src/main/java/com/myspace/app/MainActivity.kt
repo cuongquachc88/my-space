@@ -1,0 +1,22 @@
+package com.myspace.app
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import com.myspace.app.ui.MySpaceNavHost
+import com.myspace.app.ui.theme.MySpaceTheme
+import dagger.hilt.android.AndroidEntryPoint
+
+@AndroidEntryPoint
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        setContent {
+            MySpaceTheme {
+                MySpaceNavHost()
+            }
+        }
+    }
+}

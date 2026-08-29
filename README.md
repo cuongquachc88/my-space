@@ -1,10 +1,9 @@
 # My SPACE
 
-> Private, offline-first vault for notes, secrets, passwords, and subscriptions. No servers. No analytics. Your data stays on your device.
+> Private, offline-first vault for notes, secrets, passwords, subscriptions, to-dos, and map pins. No servers. No analytics. Your data stays on your device.
 
 [![Chrome Web Store](https://img.shields.io/badge/Chrome-Extension-4285F4?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/my-space/jepnoaiigfppibgfcjmecfoepjipngjb)
 [![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.3.2-green.svg)](chrome-extension/package.json)
 
 ---
 
@@ -12,19 +11,18 @@
 
 | Feature | Description |
 |---|---|
-| 📝 **Notes** | Markdown notes with tag filtering, image attachments, and full-text search |
-| 🔐 **Secret Vault** | AES-GCM encrypted credentials, unlocked with your master password (PBKDF2, 600k iterations) |
-| 🔐 **URL + Description on Secrets** | Each secret can carry its origin URL and a free-form note (for the autofill matcher and human context) |
-| ✏️ **Inline Edit Vault Items** | Edit label, value, URL and description directly from each secret card without retyping |
-| 💾 **Save Password Prompt** | Floating "Save to My SPACE?" badge appears on login forms across the web — one click sends credentials to the side panel for review and save |
-| 🔑 **Password Generator** | Crypto-random passwords with strength meter, configurable length and charset |
-| 💳 **Subscriptions** | Track recurring costs with multi-currency conversion and renewal date alerts |
-| 📊 **Reports & Bills** | Monthly spending reports with 6-month bar chart, actual vs expected, receipt images |
-| ✅ **To-Do Lists** | Colour-coded lists with priority, due dates, recurrence, and timeline grouping |
-| 📍 **Map Pins** | Save locations from any map URL (Google, OSM, Bing, Apple), share stacks via compressed links |
-| 📍 **Pin Button on Map Pages** | Floating "Pin to My SPACE" button on Google Maps, OSM, Bing and Apple Maps — click to capture current coordinates into the active map stack |
-| ☁️ **Google Drive Sync** | End-to-end encrypted push/pull via Drive appDataFolder, cross-device password prompt |
-| 📥 **Import** | 1Password and Bitwarden CSV/JSON import |
+| **Notes** | Markdown notes with tag filtering, image attachments, and full-text search |
+| **Secret Vault** | AES-GCM encrypted credentials, unlocked with your master password (PBKDF2, 600 000 iterations) |
+| **URL + Description on Secrets** | Each secret carries its origin URL and a free-form note |
+| **Inline Edit Vault Items** | Edit label, value, URL and description directly from each secret card |
+| **Save Password Prompt** | Floating "Save to My SPACE?" badge on login forms (extension only) |
+| **Password Generator** | Crypto-random passwords with configurable length and charset |
+| **Subscriptions** | Track recurring costs with multi-currency conversion and renewal date alerts |
+| **Reports & Bills** | Monthly spending reports with 6-month summary, actual vs expected |
+| **To-Do Lists** | Colour-coded lists with priority, due dates, recurrence, and timeline grouping |
+| **Map Pins** | Save locations from any map URL (Google, OSM, Bing, Apple) into named stacks |
+| **QR Scan** | Scan a shared map-stack QR code (Android) to import pins instantly |
+| **Google Drive Sync** | End-to-end encrypted push/pull via Drive `appDataFolder` — same backup works on both platforms |
 
 ---
 
@@ -32,138 +30,52 @@
 
 ```
 my-space/
-├── pwa/                  PWA + Capacitor mobile app (main codebase)
+├── extension/              Chrome MV3 side panel extension (primary shipped product)
 │   ├── src/
-│   │   ├── app/          AppShell, NavRail, NavPill, views (mobile + desktop)
-│   │   ├── crypto/       AES-GCM-256 + PBKDF2 encryption
-│   │   ├── db/           PGlite WASM PostgreSQL (offline-first)
-│   │   ├── design/       Glass UI components, icons, tokens
-│   │   ├── lib/          Password gen, billing, markdown, currency
-│   │   └── services/     Google Drive sync service
-│   ├── public/           Static assets (favicon, oauth-callback.html)
-│   ├── ios/              Xcode project (Capacitor)
-│   ├── android/          Android Studio project (Capacitor)
-│   └── tests/            Unit tests (Vitest) + E2E (Playwright)
+│   │   ├── sidepanel/      React UI — 9 views + 6 components
+│   │   ├── offscreen/      PGlite WASM database + AES-GCM crypto host
+│   │   ├── service-worker/ OAuth, Drive sync, message router
+│   │   ├── content/        Map URL extractor + save-password badge
+│   │   ├── shared/         Message type definitions (single source of truth for all data models)
+│   │   └── lib/            Password gen, billing, markdown, import, currency, share links
+│   ├── public/             Extension icons
+│   ├── scripts/            Version bump script
+│   └── output/             Packed .zip files (gitignored)
 │
-├── chrome-extension/     Chrome MV3 side panel extension
-│   ├── src/
-│   │   ├── sidepanel/    React UI (9 views + 6 components)
-│   │   ├── offscreen/    PGlite WASM database + crypto host
-│   │   ├── service-worker/  OAuth + Drive sync + message router
-│   │   ├── content/      Map page coordinate extractor
-│   │   ├── shared/       Message type definitions
-│   │   └── lib/          Password gen, billing, markdown, import, currency, share links
-│   ├── public/           Extension icons
-│   ├── scripts/          Version bump script
-│   └── output/           Packed .zip files (gitignored)
+├── android/                Native Android app (Kotlin + Jetpack Compose)
+│   └── app/src/main/java/com/myspace/app/
+│       ├── crypto/         VaultCrypto — PBKDF2 + AES-GCM matching extension crypto exactly
+│       ├── data/
+│       │   ├── entity/     Room entities mirroring extension DB schema 1:1
+│       │   ├── dao/        DAOs for all 8 tables
+│       │   └── AppDatabase.kt
+│       ├── di/             Hilt modules (DB, DataStore)
+│       ├── ui/
+│       │   ├── screen/     One screen per feature (Unlock, Notes, Keyvault, Generator,
+│       │   │               Subscriptions, Reports, Todos, MapPins, QrScanner, Sync, Settings)
+│       │   ├── viewmodel/  One ViewModel per screen
+│       │   ├── navigation/ Sealed Screen routes
+│       │   └── theme/      Dark glassmorphism palette matching extension
+│       └── util/           MapUrlParser — port of extension mapExtractor.ts
 │
-└── docs/                 GitHub Pages landing page
-    ├── index.html        Landing page
+└── docs/                   GitHub Pages landing page
+    ├── index.html
     ├── privacy-policy.html
     └── terms-of-service.html
 ```
 
 ---
 
-## PWA + Mobile App (`/pwa`)
-
-The primary codebase — a React PWA that runs in the browser and is packaged as a native iOS/Android app via Capacitor.
-
-### Prerequisites
-- Node.js 18+
-- For iOS: macOS + Xcode + CocoaPods
-- For Android: Android Studio + Android SDK + JDK 17
-
-### Setup
-
-```bash
-cd pwa
-npm install
-cp .env.example .env.local
-# Edit .env.local — set VITE_GOOGLE_CLIENT_ID (required for Google Drive sync)
-```
-
-### Development
-
-```bash
-npm run dev          # Vite dev server at http://localhost:5173
-npm run build        # Production build → dist/
-npm run preview      # Serve dist/ locally
-```
-
-### Testing
-
-```bash
-npm test             # Unit tests (Vitest) — 132 tests
-npm run test:watch   # Watch mode
-npm run test:coverage # Coverage report
-npm run test:e2e     # E2E tests (Playwright)
-```
-
-### Deploy to Cloudflare Pages
-
-```
-Root directory:        pwa
-Build command:         npm run build
-Build output directory: dist
-```
-
-Set these in Cloudflare Dashboard → Pages → Settings → Environment variables:
-
-| Variable | Where to find it |
-|---|---|
-| `VITE_GOOGLE_CLIENT_ID` | Google Cloud Console → Credentials → OAuth client |
-| `GOOGLE_CLIENT_ID` | Same value as above (used by the token exchange Function) |
-| `GOOGLE_CLIENT_SECRET` | Same OAuth client page — mark as **Secret** |
-
-The `GOOGLE_CLIENT_SECRET` is kept server-side in a [Cloudflare Pages Function](pwa/functions/api/token.js) at `/api/token` and is never bundled into the browser JavaScript.
-
-### Mobile (Capacitor)
-
-```bash
-npm run cap:sync     # Build PWA + sync to iOS/Android
-npm run cap:ios      # Open Xcode
-npm run cap:android  # Open Android Studio
-```
-
-**App ID:** `com.myspace.app`
-
-**OAuth Deep Link:** `com.myspace.app:/oauth-callback`
-
-### Architecture
-
-| Layer | Technology |
-|---|---|
-| UI | React 19 + inline styles (glassmorphism) |
-| Database | PGlite (PostgreSQL in WASM) → IndexedDB |
-| Crypto | Web Crypto API — AES-GCM-256, PBKDF2 600k iterations |
-| Mobile | Capacitor 7 (iOS + Android) |
-| Sync | Google Drive REST API (`drive.appdata` scope) — PKCE OAuth via Cloudflare proxy |
-| Build | Vite 6 + TypeScript + Tailwind 4 |
-| PWA | vite-plugin-pwa + Workbox (15MB cache) |
-
-**Desktop vs Mobile:** At ≥640px, each view renders a completely separate desktop dashboard component with sidebar navigation. Mobile keeps the bottom nav + bottom sheet layout.
-
-**Google Drive OAuth flow:**
-1. PWA opens a popup → Google consent screen (PKCE `response_type=code`)
-2. Google redirects to `/oauth-callback` → `postMessage` back to parent → popup closes
-3. Parent calls `/api/token` (Cloudflare Pages Function) which holds `client_secret` server-side
-4. Token stored in `localStorage` — app shows Connected without a page reload
-
-**Session management:** The master password is never persisted. The derived `CryptoKey` lives in memory only. Idle for 5 minutes → auto-lock. F5/reload → unlock screen (by design). Only new windows, idle timeout, or manual Lock trigger re-authentication.
-
----
-
 ## Chrome Extension
 
 ### Prerequisites
-- Node.js 18+
+- Node.js 20+
 - Chrome 114+ (Side Panel API)
 
 ### Development
 
 ```bash
-cd chrome-extension
+cd extension
 npm install
 npm run dev          # watch mode — reload unpacked extension in Chrome
 ```
@@ -171,7 +83,7 @@ npm run dev          # watch mode — reload unpacked extension in Chrome
 ### Build & Pack
 
 ```bash
-npm run build        # output to dist/
+npm run build        # output → dist/
 npm run pack         # build + zip → output/my-space-x.x.x.zip
 ```
 
@@ -185,10 +97,10 @@ npm run release:major   # bump major, build, zip
 
 ### Load as Unpacked Extension
 
-1. Run `npm run build`
+1. `npm run build`
 2. Open `chrome://extensions`
 3. Enable **Developer mode**
-4. Click **Load unpacked** → select `chrome-extension/dist/`
+4. Click **Load unpacked** → select `extension/dist/`
 
 ### Architecture
 
@@ -200,11 +112,17 @@ Service Worker
 Offscreen Document (PGlite WASM + Web Crypto)
 ```
 
-The offscreen document runs PGlite (PostgreSQL in WASM) and all crypto operations. The service worker handles OAuth via `chrome.identity.getAuthToken` and Google Drive REST calls. The side panel is a React app communicating via message passing.
+| Layer | Technology |
+|---|---|
+| UI | React 19 + Tailwind 4 + glassmorphism inline styles |
+| Database | PGlite (PostgreSQL in WASM) → IndexedDB |
+| Crypto | Web Crypto API — AES-GCM-256, PBKDF2 600k iterations |
+| Sync | Google Drive REST API (`drive.appdata` scope) |
+| Build | Vite 8 + crxjs |
 
 ---
 
-## Android
+## Android App
 
 ### Prerequisites
 - Android Studio Hedgehog or later
@@ -213,37 +131,73 @@ The offscreen document runs PGlite (PostgreSQL in WASM) and all crypto operation
 
 ### Open in Android Studio
 
-1. Open Android Studio
-2. **File → Open** → select the `android/` folder
-3. Let Gradle sync
-4. Run on device or emulator (API 26+)
+1. **File → Open** → select the `android/` folder
+2. Let Gradle sync
+3. Run on device or emulator (API 26+)
 
-### Tech Stack
+### Architecture
 
 | Layer | Technology |
 |---|---|
-| UI | Jetpack Compose + Material3 |
-| Database | Room (SQLite) |
-| Crypto | Android Keystore AES-GCM |
-| Sync | Drive REST API + Retrofit |
+| UI | Jetpack Compose + Material3 (dark glassmorphism) |
+| Database | Room (SQLite) — schema mirrors extension 1:1 |
+| Crypto | Android Keystore + PBKDF2-SHA256 600k iterations + AES-GCM-256 |
 | Navigation | Navigation Compose |
+| DI | Hilt |
+| QR Scanning | ML Kit Barcode + CameraX |
+| Sync | Google Drive REST API (same `appDataFolder` file as extension) |
 
-### Sync with Chrome Extension
+### Screens
 
-The Android app uses the same Drive `appDataFolder` file (`keyvault-backup.json`) and the same JSON format as the Chrome extension. Data encrypted on one platform can be decrypted on the other as long as you use the same vault key.
+| Screen | Extension equivalent |
+|---|---|
+| Unlock | Vault unlock prompt |
+| Notes | NotesView |
+| Note Edit | Note create/edit form |
+| Keyvault | KeyvaultView |
+| Generator | GeneratorView |
+| Subscriptions | SubscriptionsView |
+| Reports | ReportsView |
+| To-Dos | TodoView (list of lists) |
+| Todo Tasks | TodoView (tasks within a list) |
+| Map Pins | MapPinsView (list of stacks) |
+| Map Pin Stack | MapPinsView (pins within a stack) |
+| QR Scanner | — (Android exclusive: scan shared stack QR codes) |
+| Sync | SyncView |
+| Settings | SettingsView |
 
-> ⚠️ The encryption keys are platform-local (Android Keystore vs Web Crypto). Cross-platform sync currently transfers data in decrypted form within the app — re-encrypted with the local platform key on import.
+### Crypto compatibility
+
+The Android app uses the same encryption scheme as the extension so Drive backups are cross-platform:
+
+- **Key derivation**: PBKDF2-SHA256, 600 000 iterations, 256-bit output — matches extension `crypto.ts`
+- **Encryption**: AES-GCM-256, random 12-byte IV, base64-encoded ciphertext and IV — matches extension `encrypt()`/`decrypt()`
+- **Cross-platform import**: if the Drive backup was created on the extension with a different password, the pull flow re-derives the key using the provided password + embedded salt, then re-encrypts locally
+
+---
+
+## Google Drive Sync (both platforms)
+
+Both the extension and Android app write to the same Drive `appDataFolder` file (`myspace-backup.json`). The file format is:
+
+```json
+{
+  "salt": "<base64 16-byte PBKDF2 salt>",
+  "iv": "<base64 12-byte AES-GCM IV>",
+  "ciphertext": "<base64 AES-GCM ciphertext of the full JSON export>"
+}
+```
+
+The inner plaintext is a JSON export of all notes, secrets (raw values), subscriptions, bills, todos, and map pins. It is **never** stored in plaintext — only the AES-GCM ciphertext leaves the device.
 
 ---
 
 ## Privacy
 
-- **No servers** — all data stored locally (IndexedDB on Chrome, Room on Android)
+- **No servers** — all data stored locally (IndexedDB on extension, SQLite on Android)
 - **No analytics** — no tracking, no telemetry
 - **No plaintext secrets ever leave your device** — AES-GCM encrypted before Drive upload
 - Google Drive sync uses the private `appDataFolder` — not visible in your Drive UI
-
-See [Privacy Policy](docs/privacy-policy.md) and [Terms of Service](docs/terms-of-service.md).
 
 ---
 
