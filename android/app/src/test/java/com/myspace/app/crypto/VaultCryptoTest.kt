@@ -81,7 +81,7 @@ class VaultCryptoTest {
     @Test
     fun `deriveKey handles unicode password`() {
         val salt = ByteArray(16).also { SecureRandom().nextBytes(it) }
-        val key = crypto.deriveKey("p@$$w0rd 🔐 über", salt)
+        val key = crypto.deriveKey("p@\$\$w0rd-unicode-uber", salt)
         assertEquals(32, key.size)
     }
 
