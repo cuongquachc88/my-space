@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.MySpace" parent="android:Theme.Material.NoTitleBar">
+    <!-- Compose apps only need a minimal host theme. -->
+    <style name="Theme.MySpace" parent="Theme.AppCompat.NoActionBar">
         <item name="android:windowBackground">@android:color/black</item>
-        <item name="android:statusBarColor">#0F2020</item>
-        <item name="android:navigationBarColor">#0F2020</item>
+        <item name="android:statusBarColor">#0D1B16</item>
+        <item name="android:navigationBarColor">#0D1B16</item>
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>

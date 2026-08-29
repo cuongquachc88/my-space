@@ -5,24 +5,13 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.myspace.app.crypto.VaultCrypto
 import com.myspace.app.data.dao.*
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
  * Reads all DAOs, decrypts secret values, and serialises into the same JSON
- * format used by the Chrome extension's myspace-backup.json inner payload.
- *
- * Format (plaintext inner JSON before AES-GCM encryption):
- * {
- *   "notes":         [ { id, title, content, tags, imageData, createdAt, updatedAt } ],
- *   "secrets":       [ { id, label, value, tags, url, description, createdAt, updatedAt } ],
- *   "subscriptions": [ { id, name, amount, currency, cycle, startDate, tags, notes, active } ],
- *   "bills":         [ { subId, year, month, amount, currency, notes } ],
- *   "todoLists":     [ { id, name, color, icon } ],
- *   "todoTasks":     [ { id, listId, title, note, priority, dueDate, recurrence, done } ],
- *   "mapStacks":     [ { id, name, color, icon } ],
- *   "mapPins":       [ { id, stackId, label, lat, lng, url, note, priority, category, rating, reviewNote } ]
- * }
+ * format used by the Chrome extension's backup.
  */
 @Singleton
 class DatabaseExporter @Inject constructor(
@@ -38,7 +27,6 @@ class DatabaseExporter @Inject constructor(
 ) {
     private val gson = Gson()
 
-    /** Returns the full plaintext JSON string ready for AES-GCM encryption. */
     suspend fun exportToJson(): String {
         val root = JsonObject()
 
@@ -57,7 +45,7 @@ class DatabaseExporter @Inject constructor(
         }
         root.add("notes", notesArr)
 
-        // Secrets — decrypt values so the backup stores plaintext
+        // Secrets — decrypt so backup stores plaintext (re-encrypted on import)
         val secretsArr = JsonArray()
         secretDao.search("").forEach { s ->
             val plainValue = try { crypto.decrypt(s.ciphertext, s.iv) } catch (_: Exception) { "" }
@@ -76,18 +64,8 @@ class DatabaseExporter @Inject constructor(
 
         // Subscriptions
         val subsArr = JsonArray()
-        subDao.observeAll().let { flow ->
-            // We need a snapshot — call a one-shot query
-        }
-        // Use a direct approach via getAll workaround
-        val subsSnapshot = mutableListOf<JsonObject>()
-        // We collect from the DAO using a coroutine-safe method
-        // SubscriptionDao only has observeAll (Flow). We use first() equivalent here.
-        // Since we're in a suspend fun, just iterate flow's current value synchronously using runBlocking is wrong —
-        // instead, use the bills approach with a direct query (no flow available).
-        // We approximate: call getByMonth for subs isn't available. We iterate using the flow's first emission.
-        kotlinx.coroutines.flow.first(subDao.observeAll()).forEach { s ->
-            subsSnapshot.add(JsonObject().apply {
+        subDao.observeAll().first().forEach { s ->
+            subsArr.add(JsonObject().apply {
                 addProperty("id", s.id)
                 addProperty("name", s.name)
                 addProperty("amount", s.amount)
@@ -101,7 +79,7 @@ class DatabaseExporter @Inject constructor(
                 addProperty("updatedAt", s.updatedAt)
             })
         }
-        root.add("subscriptions", gson.toJsonTree(subsSnapshot))
+        root.add("subscriptions", subsArr)
 
         // Bills
         val billsArr = JsonArray()
@@ -118,8 +96,9 @@ class DatabaseExporter @Inject constructor(
         root.add("bills", billsArr)
 
         // Todo lists
+        val todoLists = todoListDao.observeAll().first()
         val todoListsArr = JsonArray()
-        kotlinx.coroutines.flow.first(todoListDao.observeAll()).forEach { l ->
+        todoLists.forEach { l ->
             todoListsArr.add(JsonObject().apply {
                 addProperty("id", l.id)
                 addProperty("name", l.name)
@@ -130,11 +109,10 @@ class DatabaseExporter @Inject constructor(
         }
         root.add("todoLists", todoListsArr)
 
-        // Todo tasks — no getAll; iterate per list
-        val todoListIds = kotlinx.coroutines.flow.first(todoListDao.observeAll()).map { it.id }
+        // Todo tasks — iterate per list
         val todoTasksArr = JsonArray()
-        todoListIds.forEach { listId ->
-            kotlinx.coroutines.flow.first(todoTaskDao.observeByList(listId)).forEach { t ->
+        todoLists.forEach { list ->
+            todoTaskDao.observeByList(list.id).first().forEach { t ->
                 todoTasksArr.add(JsonObject().apply {
                     addProperty("id", t.id)
                     addProperty("listId", t.listId)
@@ -152,8 +130,9 @@ class DatabaseExporter @Inject constructor(
         root.add("todoTasks", todoTasksArr)
 
         // Map stacks
+        val mapStacks = mapStackDao.observeAll().first()
         val mapStacksArr = JsonArray()
-        kotlinx.coroutines.flow.first(mapStackDao.observeAll()).forEach { s ->
+        mapStacks.forEach { s ->
             mapStacksArr.add(JsonObject().apply {
                 addProperty("id", s.id)
                 addProperty("name", s.name)
@@ -165,10 +144,9 @@ class DatabaseExporter @Inject constructor(
         root.add("mapStacks", mapStacksArr)
 
         // Map pins — iterate per stack
-        val stackIds = kotlinx.coroutines.flow.first(mapStackDao.observeAll()).map { it.id }
         val mapPinsArr = JsonArray()
-        stackIds.forEach { stackId ->
-            kotlinx.coroutines.flow.first(mapPinDao.observeByStack(stackId)).forEach { p ->
+        mapStacks.forEach { stack ->
+            mapPinDao.observeByStack(stack.id).first().forEach { p ->
                 mapPinsArr.add(JsonObject().apply {
                     addProperty("id", p.id)
                     addProperty("stackId", p.stackId)
@@ -190,7 +168,6 @@ class DatabaseExporter @Inject constructor(
         return gson.toJson(root)
     }
 
-    /** Import from the plaintext inner JSON (after decryption). */
     suspend fun importFromJson(json: String) {
         val root = gson.fromJson(json, JsonObject::class.java)
 
