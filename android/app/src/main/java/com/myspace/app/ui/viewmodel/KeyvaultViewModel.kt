@@ -60,4 +60,14 @@ class KeyvaultViewModel @Inject constructor(
     }
 
     fun lock() { crypto.lock() }
+
+    /** Returns decrypted value synchronously (only works when vault is unlocked). */
+    fun revealSecret(id: String): String {
+        // We need a blocking call here — this is only called from UI thread in compose
+        // Use runBlocking for simplicity since vault crypto is fast (in-memory).
+        return kotlinx.coroutines.runBlocking {
+            val secret = dao.getById(id) ?: return@runBlocking ""
+            crypto.decrypt(secret.ciphertext, secret.iv)
+        }
+    }
 }

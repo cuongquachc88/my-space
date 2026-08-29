@@ -23,7 +23,6 @@ import com.google.accompanist.permissions.rememberPermissionState
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
-import com.myspace.app.ui.theme.DarkBackground
 import java.util.concurrent.Executors
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
@@ -36,11 +35,11 @@ fun QrScannerScreen(onResult: (String) -> Unit, onBack: () -> Unit) {
     }
 
     Scaffold(
-        containerColor = DarkBackground,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = { Text("Scan QR Code") },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } }
             )
         }
